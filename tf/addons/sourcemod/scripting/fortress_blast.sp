@@ -3,27 +3,31 @@
 #include <sdkhooks>
 #include <ripext/json>
 #include <tf2>
-#define	MAX_EDICT_BITS	11
-#define	MAX_EDICTS		(1 << MAX_EDICT_BITS)
+
+#define	MAX_EDICT_BITS 11
+#define	MAX_EDICTS (1 << MAX_EDICT_BITS)
+
 int powerupid[MAX_EDICTS];
-float TimersDontSupportArrays[MAX_EDICTS][3];
+float StoredCoordinates[MAX_EDICTS][3];
 bool NoFallDamage[MAXPLAYERS+1] = false;
 bool VictoryTime = false;
 int powerup[MAXPLAYERS+1] = 0;
 bool ShockAbsorber[MAXPLAYERS + 1] = false;
 float OldSpeed[MAXPLAYERS+1] = 0.0;
 int SpeedRotationsLeft[MAXPLAYERS+1] = 100;
-// powerup ids
-// 1 = super bounce
-// 2 = shock absorber
-// 3 = super speed
-// 4 = super jump
-// 5 = gyrocopter
-// 6 = time travel
-public OnPluginStart(){
-	for (int client = 1; client <= MaxClients ; client++){
-		if(IsClientInGame(client)){
-			SDKHook(client, SDKHook_OnTakeDamageAlive, OnTakeDamage); // incase the plugin is reloaded midround
+
+/* Powerup IDs
+1 - Super Bounce
+2 - Shock Absorber
+3 - Super Speed
+4 - Super Jump
+5 - Gyrocopter
+6 - Time Travel */
+
+public OnPluginStart() {
+	for (int client = 1; client <= MaxClients ; client++) {
+		if (IsClientInGame(client)) {
+			SDKHook(client, SDKHook_OnTakeDamageAlive, OnTakeDamage); // In case the plugin is reloaded mid-round
 		}
 	}
 	HookEvent("teamplay_round_start", teamplay_round_start);
@@ -31,52 +35,50 @@ public OnPluginStart(){
 	PrecacheModel("models/props_halloween/pumpkin_loot.mdl");
 	RegConsoleCmd("sm_setpowerup", SetPowerup);
 }
-public Action SetPowerup(int client, int args){
+
+public Action SetPowerup(int client, int args) {
 	char arg[3];
 	GetCmdArg(1, arg, sizeof(arg));
 	powerup[client] = StringToInt(arg);
 }
-public Action teamplay_round_start(Event event, const char[] name, bool dontBroadcast){
+
+public Action teamplay_round_start(Event event, const char[] name, bool dontBroadcast) {
 	VictoryTime = false;
-	for (int client = 1; client <= MaxClients ; client++){
+	for (int client = 1; client <= MaxClients; client++) {
 		powerupid[client] = 0;
 	}
 	GetPowerupPlacements();
 }
-public Action teamplay_round_win(Event event, const char[] name, bool dontBroadcast){
+
+public Action teamplay_round_win(Event event, const char[] name, bool dontBroadcast) {
 	VictoryTime = true;
 }
-public OnClientPutInServer(int client){
+
+public OnClientPutInServer(int client) {
 	powerup[client] = 0;
 	SDKHook(client, SDKHook_OnTakeDamageAlive, OnTakeDamage);
 }
-SpawnPower(float location[3]){
+
+SpawnPower(float location[3]) {
 	int entity = CreateEntityByName("tf_halloween_pickup");
-	if(IsValidEdict(entity))
-	{
+	if (IsValidEdict(entity)) {
 		SetEntityModel(entity, "models/props_halloween/pumpkin_loot.mdl");
 		powerupid[entity] = GetRandomInt(1, 6);
-		if(powerupid[entity] == 1){
+		if (powerupid[entity] == 1) {
 			SetEntityRenderColor(entity, 100, 100, 255, 255);
-		}
-		if(powerupid[entity] == 2){
+		} else if (powerupid[entity] == 2) {
 			SetEntityRenderColor(entity, 255, 100, 100, 255);
-		}
-		if(powerupid[entity] == 3){
+		} else if (powerupid[entity] == 3) {
 			SetEntityRenderColor(entity, 255, 255, 100, 255);
-		}
-		if(powerupid[entity] == 4){
+		} else if (powerupid[entity] == 4) {
 			SetEntityRenderColor(entity, 255, 218, 100, 255);
-		}
-		if(powerupid[entity] == 5){
+		} else if (powerupid[entity] == 5) {
 			SetEntityRenderColor(entity, 100, 255, 255, 255);
-		}
-		if(powerupid[entity] == 6){
+		} else if (powerupid[entity] == 6) {
 			SetEntityRenderColor(entity, 100, 255, 100, 255);
 		}
-		
-		DispatchKeyValue(entity,"pickup_sound","GetOutOfTheConsoleYouSnoop");
-		DispatchKeyValue(entity,"pickup_particle","GetOutOfTheConsoleYouSnoop");
+		DispatchKeyValue(entity, "pickup_sound", "GetOutOfTheConsoleYouSnoop");
+		DispatchKeyValue(entity, "pickup_particle", "GetOutOfTheConsoleYouSnoop");
 		AcceptEntityInput(entity, "EnableCollision");
 		DispatchSpawn(entity);
 		ActivateEntity(entity);
@@ -85,64 +87,60 @@ SpawnPower(float location[3]){
 	}
 }
 
-public Action OnStartTouch(entity, other)
-{
-	if (other > 0 && other <= MaxClients){
+public Action OnStartTouch(entity, other) {
+	if (other > 0 && other <= MaxClients) {
 		float coords[3];
 		GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
-		TimersDontSupportArrays[entity][0] = coords[0];
-		TimersDontSupportArrays[entity][1] = coords[1];
-		TimersDontSupportArrays[entity][2] = coords[2];
-		if(!VictoryTime){
-			CreateTimer(10.0, TheyDontSupportMainstreamFunctionsEither, entity);
+		StoredCoordinates[entity][0] = coords[0];
+		StoredCoordinates[entity][1] = coords[1];
+		StoredCoordinates[entity][2] = coords[2];
+		if (!VictoryTime) {
+			CreateTimer(10.0, SpawnPowerAfterDelay, entity);
 		}
 		RemoveEntity(entity);
-		PrintToChatAll("Stop groping the ducks, %N", other);
+		// PrintToChatAll("%N has collected a powerup", other);
 		powerup[other] = powerupid[entity];
-		PrintToChat(other, "Giving you powerup %d", powerupid[entity]);
-		if(powerup[other] == 1){
+		// PrintToChat(other, "You have received the powerup with ID %d", powerupid[entity]);
+		if (powerup[other] == 1) {
 			ClientCommand(other, "playgamesound fortressblast/superbounce_pickup.wav");
-		}
-		if(powerup[other] == 2){
+		} else if (powerup[other] == 2) {
 			ClientCommand(other, "playgamesound fortressblast/shockabsorber_pickup.wav");
-		}
-		if(powerup[other] == 3){
+		} else if(powerup[other] == 3) {
 			ClientCommand(other, "playgamesound fortressblast/superspeed_pickup.wav");
-		}
-		if(powerup[other] == 4){
+		} else if(powerup[other] == 4) {
 			ClientCommand(other, "playgamesound fortressblast/superjump_pickup.wav");
-		}
-		if(powerup[other] == 5){
+		} else if(powerup[other] == 5) {
 			ClientCommand(other, "playgamesound fortressblast/gyrocopter_pickup.wav");
-		}
-		if(powerup[other] == 6){
+		} else if(powerup[other] == 6) {
 			ClientCommand(other, "playgamesound fortressblast/timetravel_pickup.wav");
 		}
 		return Plugin_Continue;
 	}
 	return Plugin_Continue;
 }
-public Action TheyDontSupportMainstreamFunctionsEither(Handle timer, int entity){
-	PrintToChatAll("replacement duck spawned"); 
+
+public Action SpawnPowerAfterDelay(Handle timer, int entity) {
+	// PrintToChatAll("A replacement duck has been spawned");
 	float coords[3];
-	coords[0] = TimersDontSupportArrays[entity][0];
-	coords[1] = TimersDontSupportArrays[entity][1];
-	coords[2] = TimersDontSupportArrays[entity][2];
-	SpawnPower(coords); 
+	coords[0] = StoredCoordinates[entity][0];
+	coords[1] = StoredCoordinates[entity][1];
+	coords[2] = StoredCoordinates[entity][2];
+	SpawnPower(coords);
 }
-public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float ang[3], int &weapon)
-{
-	if(buttons & IN_ATTACK3){
+
+public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float ang[3], int &weapon) {
+	if (buttons & IN_ATTACK3) {
 		UsePower(client);
 	}
-	if(NoFallDamage[client] && GetEntityFlags(client) & FL_ONGROUND){
-		NoFallDamage[client] = false; // may be necessary to set this twice incase their jump doesn't result in fall damage they can't bank it
+	if (NoFallDamage[client] && GetEntityFlags(client) & FL_ONGROUND) {
+		NoFallDamage[client] = false; // May be necessary to set this twice, in case their jump doesn't result in fall damage
 	}
 	DoHudText(client);
 }
+
 public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3]){
 	if(attacker == 0 && NoFallDamage[victim]){
-		PrintToChatAll("damage blocked :)");
+		// PrintToChatAll("Fall damage negated");
 		NoFallDamage[victim] = false;
 		return Plugin_Handled;
 	}
@@ -154,35 +152,44 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
 	}
 	return Plugin_Changed;
 }
-UsePower(client){
-	if(powerup[client] == 2){
+
+UsePower(client) {
+	if (powerup[client] == 1) {
+		// Super Bounce - Uncontrollable bunny hop for 5 seconds
+	} else if (powerup[client] == 2) {
+		// Shock Absorber - 75% damage and 100% knockback resistances for 5 seconds
 		ShockAbsorber[client] = true;
-		CreateTimer(10.0, RemoveShockAbsorb, client);
-	}
-	if(powerup[client] == 3){
+		CreateTimer(5.0, RemoveShockAbsorb, client);
+	} else if (powerup[client] == 3) {
+		// Super Speed - Increased speed, gradually wears off over 10 seconds
 		OldSpeed[client] = GetEntPropFloat(client, Prop_Send, "m_flMaxspeed");
 		SpeedRotationsLeft[client] = 100;
 		CreateTimer(0.1, RecalcSpeed, client);
-	}
-	if(powerup[client] == 4){
+	} else if (powerup[client] == 4) {
+		// Super Jump - Launch into air and resist initial fall damage
 		float vel[3];
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel);
-		vel[2] = 800.0
+		vel[2] = 800.0;
 		TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vel);
 		NoFallDamage[client] = true;
-	}
-	if(powerup[client] == 5){
+	} else if (powerup[client] == 5) {
+		// Gyrocopter - 25% gravity for 5 seconds
 		SetEntityGravity(client, 0.25);
 		CreateTimer(5.0, RestoreGravity, client);
+	} else if (powerup[client] == 6 ) {
+		// Time Travel - Increased speed and Bonk Atomic Punch effect for 5 seconds
 	}
 	powerup[client] = 0;
 }
+
 public Action RestoreGravity(Handle timer, int client){
 	SetEntityGravity(client, 1.0);
 }
+
 public Action RemoveShockAbsorb(Handle timer, int client){
 	ShockAbsorber[client] = false;
 }
+
 public Action RecalcSpeed(Handle timer, int client){
 	if(SpeedRotationsLeft[client] > 1){
 		SetEntPropFloat(client, Prop_Send, "m_flMaxspeed", OldSpeed[client] + (SpeedRotationsLeft[client] * 2));
@@ -193,7 +200,8 @@ public Action RecalcSpeed(Handle timer, int client){
 	}
 	SpeedRotationsLeft[client]--;
 }
-DoHudText(client){
+
+DoHudText(client) {
 	if (powerup[client] != 0){
 		Handle text = CreateHudSynchronizer();
   		SetHudTextParams(0.8, 0.1, 0.25, 255, 255, 0, 255);
@@ -219,15 +227,7 @@ DoHudText(client){
 	}
 }
 
-
-
-
-
-
-
-// the sight of eyes below was not meant for mann
-// thank the folks at sourcepawn who decided that reporting strings was overrated
-GetPowerupPlacements(){
+GetPowerupPlacements() {
 	char map[80];
 	GetCurrentMap(map, sizeof(map));
 	char path[PLATFORM_MAX_PATH + 1];
@@ -242,79 +242,76 @@ GetPowerupPlacements(){
 	float centerx = 0.0;
 	float centery = 0.0;
 	char cent[80];
-	if(HandleHasKey(handle, "flipx")){
+	if (HandleHasKey(handle, "flipx")) {
 		flipx = handle.GetBool("flipx");
 	}
-	if(HandleHasKey(handle, "flipy")){
+	if (HandleHasKey(handle, "flipy")) {
 		flipy = handle.GetBool("flipy");
 	}
-	if(HandleHasKey(handle, "centerx")){
-		handle.GetString("centerx", cent, sizeof(cent));
-		centerx = StringToFloat(cent);
-	}
-	if(HandleHasKey(handle, "centery")){
-		handle.GetString("centery", cent, sizeof(cent));
-		centery = StringToFloat(cent);
+	if (flipx || flipy) {
+		if (HandleHasKey(handle, "centerx")) {
+			handle.GetString("centerx", cent, sizeof(cent));
+			centerx = StringToFloat(cent);
+		}
+		if (HandleHasKey(handle, "centery")) {
+			handle.GetString("centery", cent, sizeof(cent));
+			centery = StringToFloat(cent);
+		}
 	}
 	IntToString(itemloop, stringamount, sizeof(stringamount));
 	bool spcontinue = true;
-	while(spcontinue){
-		//PrintToChatAll("Placing duck %d string %s", itemloop, stringamount);
+	while (spcontinue) {
 		float coords[3] = 0.001;
 		char query[80];
-		for(int to = 0 ; to <= 2 ; to++ ){
+		for (int to = 0; to <= 2; to++) {
 			char string[15];
 			query = "";
 			StrCat(query, sizeof(query), stringamount);
 			StrCat(query, sizeof(query), "-");
-			if(to == 0){
+			if (to == 0) {
 				StrCat(query, sizeof(query), "x");
 			}
-			if(to == 1){
+			if (to == 1) {
 				StrCat(query, sizeof(query), "y");
 			}
-			if(to == 2){
+			if (to == 2) {
 				StrCat(query, sizeof(query), "z");
 			}
-			if(HandleHasKey(handle, query)){
+			if (HandleHasKey(handle, query)) {
 				handle.GetString(query, string, sizeof(string));
-			//PrintToChatAll("Placing at duck %s with coord %f", stringamount, StringToFloat(string));
 				coords[to] = StringToFloat(string);
-			}
-			else{
+			} else {
 				spcontinue = false;
 			}
 		} 
-		PrintToChatAll("old duck is at %f %f %f", coords[0], coords[1], coords[2]);
+		// PrintToChatAll("Created powerup at %f, %f, %f", coords[0], coords[1], coords[2]);
 		if(coords[0] != 0.001){
 			SpawnPower(coords);
 			if (flipx && flipy) {
-    			if (coords[0] != centerx || coords[1] != centery) {
-        			coords[0] = coords[0] - ((coords[0] - centerx) * 2);
-        			coords[1] = coords[1] - ((coords[1] - centery) * 2);
-        			PrintToChatAll("flip all, new duck is at %f %f %f", coords[0], coords[1], coords[2]);
-        			SpawnPower(coords);
-    			} else {
-    			    PrintToChatAll("flip all, not flipping duck");
+				if (coords[0] != centerx || coords[1] != centery) {
+					coords[0] = coords[0] - ((coords[0] - centerx) * 2);
+					coords[1] = coords[1] - ((coords[1] - centery) * 2);
+					// PrintToChatAll("Flipping both axes, new powerup created at %f %f %f", coords[0], coords[1], coords[2]);
+					SpawnPower(coords);
+				} else {
+					// PrintToChatAll("Powerup is at the center and will not be flipped");
    	 			}
 			} else if (flipx) {
 				if (coords[0] != centerx) {
 					coords[0] = coords[0] - ((coords[0] - centerx) * 2);
-					PrintToChatAll("flip x, new duck is at %f %f %f", coords[0], coords[1], coords[2]);
+					// PrintToChatAll("Flipping X axis, new powerup created at %f, %f, %f", coords[0], coords[1], coords[2]);
 					SpawnPower(coords);
 				} else {
-					PrintToChatAll("flip x, not flipping duck");
-    			}
+					// PrintToChatAll("Powerup is at the X axis center and will not be flipped");
+    				}
 			} else if (flipy) {
-    			if (coords[1] != centery) {
-        			coords[1] = coords[1] - ((coords[1] - centery) * 2);
-        			PrintToChatAll("flip y, new duck is at %f %f %f", coords[0], coords[1], coords[2]);
-        			SpawnPower(coords);
-    			} else {
-        			PrintToChatAll("flip y, not flipping duck");
-    			}
-			} else {
-    			PrintToChatAll("flip nothing, not flipping duck");
+				if (coords[1] != centery) {
+					coords[1] = coords[1] - ((coords[1] - centery) * 2);
+					// PrintToChatAll("Flipping Y axis, new powerup created at %f, %f, %f", coords[0], coords[1], coords[2]);
+					SpawnPower(coords);
+				} else {
+					// PrintToChatAll("Powerup is at the Y axis center and will not be flipped");
+				}
 			}
 			itemloop++;
 			IntToString(itemloop, stringamount, sizeof(stringamount));
@@ -323,7 +320,7 @@ GetPowerupPlacements(){
 	return;
 }
 
-bool HandleHasKey(JSONObject handle, char key[80]){
+bool HandleHasKey(JSONObject handle, char key[80]) {
 	char acctest[10000];
 	handle.ToString(acctest, sizeof(acctest));
 	return (StrContains(acctest, key, true) != -1);
