@@ -47,7 +47,13 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 	for (int client = 1; client <= MaxClients; client++) {
 		powerupid[client] = 0;
 	}
+	// Allow TF2 to properly spawn map entities
+	CreateTimer(0.1, timer_delayroundstart);
+}
+
+public Action:timer_delayroundstart(Handle:timer) {
 	GetPowerupPlacements();
+	return Plugin_Stop;
 }
 
 public Action teamplay_round_win(Event event, const char[] name, bool dontBroadcast) {
@@ -79,6 +85,16 @@ SpawnPower(float location[3]) {
 		}
 		DispatchKeyValue(entity, "pickup_sound", "GetOutOfTheConsoleYouSnoop");
 		DispatchKeyValue(entity, "pickup_particle", "GetOutOfTheConsoleYouSnoop");
+		// Set special tf_halloween_pickup attribute (default is 0, 0, 0) and convert coordinates float array to string for keyvalue
+		new String:num[10];
+		new String:num1[10];
+		new String:num2[10];
+		FloatToString(location[0], num, sizeof(num));
+		FloatToString(location[1], num1, sizeof(num1));
+		FloatToString(location[2], num2, sizeof(num2));
+		decl String:entitylocation[200];
+		Format(entitylocation, sizeof(entitylocation), "%s %s %s", num, num1, num2);
+		DispatchKeyValue(entity, "m_vOriginalSpawnOrigin", entitylocation);
 		AcceptEntityInput(entity, "EnableCollision");
 		DispatchSpawn(entity);
 		ActivateEntity(entity);
