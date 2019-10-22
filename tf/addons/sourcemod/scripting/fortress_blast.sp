@@ -202,26 +202,21 @@ public Action RecalcSpeed(Handle timer, int client){
 }
 
 DoHudText(client) {
-	if (powerup[client] != 0){
+	if (powerup[client] != 0) {
 		Handle text = CreateHudSynchronizer();
   		SetHudTextParams(0.8, 0.1, 0.25, 255, 255, 0, 255);
-  		if(powerup[client] == 1){
-			ShowSyncHudText(client, text, "Collected powerup\nSuper Bounce");
-		}
-		if(powerup[client] == 2){
-			ShowSyncHudText(client, text, "Collected powerup\nShock Absorber");
-		}
-		if(powerup[client] == 3){
-			ShowSyncHudText(client, text, "Collected powerup\nSuper Speed");
-		}
-		if(powerup[client] == 4){
-			ShowSyncHudText(client, text, "Collected powerup\nSuper Jump");
-		}
-		if(powerup[client] == 5){
-			ShowSyncHudText(client, text, "Collected powerup\nGyrocopter");
-		}
-		if(powerup[client] == 6){
-			ShowSyncHudText(client, text, "Collected powerup\nTime Travel");
+  		if (powerup[client] == 1) {
+			ShowSyncHudText(client, text, "Collected powerup:\nSuper Bounce");
+		} else if (powerup[client] == 2) {
+			ShowSyncHudText(client, text, "Collected powerup:\nShock Absorber");
+		} else if (powerup[client] == 3) {
+			ShowSyncHudText(client, text, "Collected powerup:\nSuper Speed");
+		} else if (powerup[client] == 4) {
+			ShowSyncHudText(client, text, "Collected powerup:\nSuper Jump");
+		} else if (powerup[client] == 5) {
+			ShowSyncHudText(client, text, "Collected powerup:\nGyrocopter");
+		} else if (powerup[client] == 6) {
+			ShowSyncHudText(client, text, "Collected powerup:\nTime Travel");
 		}
 		CloseHandle(text);
 	}
@@ -231,7 +226,7 @@ GetPowerupPlacements() {
 	char map[80];
 	GetCurrentMap(map, sizeof(map));
 	char path[PLATFORM_MAX_PATH + 1];
-	StrCat(path, sizeof(path), "fortress_blast/powerup_spots/");
+	StrCat(path, sizeof(path), "scripts/fortress_blast/powerup_spots/");
 	StrCat(path, sizeof(path), map);
 	StrCat(path, sizeof(path), ".json");
 	JSONObject handle = JSONObject.FromFile(path);
