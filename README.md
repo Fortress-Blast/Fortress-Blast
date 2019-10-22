@@ -14,6 +14,9 @@ The following powerups exist in the base version of this server mod:
 - Super Jump - The user is launched into the air and will resist the initial fall damage. Using this powerup immediately after jumping results in a higher launch.
 - Gyrocopter - The user has 25% gravity for 5 seconds.
 - Time Travel - The user cannot attack, but their speed is doubled and they are immune to all damage for 5 seconds. This allows for uncontested passage through or escape from challenging situations. *(In development)*
+
+The following powerups are planned for addition after release:
+
 - Blast - A large explosion is emitted from the user, hurting any enemies in its vicinity. *(In development)*
 - Mega Mann - The user's size is increased by 75% and they have 4 times their regular health for 10 seconds. This powerup is known in the Marble Blast series as 'Mega Marble'. *(In development)*
 
