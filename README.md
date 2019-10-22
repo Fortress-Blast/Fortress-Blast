@@ -42,4 +42,4 @@ Commands *(All in development)*
 - `fortressblast_drop_team 0|1|2|3` - Set the teams that will drop powerups on death. 0 = None, 1 = Both (default), 2 = RED, 3 = BLU.
 - `fortressblast_mannpower 0|1` - Disable or enable automatic replacement of Mannpower powerups with Fortress Blast powerups. Defaults to on.
 - `fortressblast_sound_pickup 0|1` - If set to off, picking up powerups will play the standard ammo pickup sound effect instead of the custom sound effects. Defaults to on.
-` `fortressblast_sound_use 0|1` - If set to off, using powerups will play the standard spell casting sound effect instead of the custom sound effects. Defaults to on.
+- `fortressblast_sound_use 0|1` - If set to off, using powerups will play the standard spell casting sound effect instead of the custom sound effects. Defaults to on.
