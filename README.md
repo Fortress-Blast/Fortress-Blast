@@ -34,7 +34,7 @@ Installation
 Commands *(All in development)*
 --------
 
-` `fortressblast_bot 0|1` - Disable or enable bots using powerups within a random amount of time. Defaults to on.
+- `fortressblast_bot 0|1` - Disable or enable bots using powerups within a random amount of time. Defaults to on.
 - `fortressblast_bot_thinktime 0-#` - Set the amount of seconds after a bot collects a powerup before it considers using it. Defaults to 2.
 - `fortressblast_bot_usetime 0-#` - Set the amount of seconds after a bot collects a powerup in which it must use it. Defaults to 15.
 - `fortressblast_drop 0|1` - Disable or enable players dropping powerups on death. Defauts to off.
