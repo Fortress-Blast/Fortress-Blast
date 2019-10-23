@@ -8,7 +8,6 @@
 #define	MAX_EDICTS (1 << MAX_EDICT_BITS)
 
 int powerupid[MAX_EDICTS];
-float StoredCoordinates[MAX_EDICTS][3];
 bool NoFallDamage[MAXPLAYERS+1] = false;
 bool VictoryTime = false;
 int powerup[MAXPLAYERS+1] = 0;
@@ -61,6 +60,7 @@ public OnClientPutInServer(int client) {
 
 SpawnPower(float location[3]) {
 	int entity = CreateEntityByName("tf_halloween_pickup");
+	PrintToChatAll("Spawning duck with id %d at x %f y %f z %f", entity, location[0], location[1], location[2]);
 	if (IsValidEdict(entity)) {
 		SetEntityModel(entity, "models/props_halloween/pumpkin_loot.mdl");
 		powerupid[entity] = GetRandomInt(1, 6);
@@ -89,13 +89,14 @@ SpawnPower(float location[3]) {
 
 public Action OnStartTouch(entity, other) {
 	if (other > 0 && other <= MaxClients) {
-		float coords[3];
-		GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
-		StoredCoordinates[entity][0] = coords[0];
-		StoredCoordinates[entity][1] = coords[1];
-		StoredCoordinates[entity][2] = coords[2];
 		if (!VictoryTime) {
-			CreateTimer(10.0, SpawnPowerAfterDelay, entity);
+			float coords[3];
+			GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
+			Handle coordskv = CreateKeyValues("coordskv");
+			KvSetFloat(coordskv, "0", coords[0]);
+			KvSetFloat(coordskv, "1", coords[1]);
+			KvSetFloat(coordskv, "2", coords[2]);
+			CreateTimer(10.0, SpawnPowerAfterDelay, coordskv);
 		}
 		RemoveEntity(entity);
 		// PrintToChatAll("%N has collected a powerup", other);
@@ -119,12 +120,13 @@ public Action OnStartTouch(entity, other) {
 	return Plugin_Continue;
 }
 
-public Action SpawnPowerAfterDelay(Handle timer, int entity) {
+public Action SpawnPowerAfterDelay(Handle timer, any data) {
 	// PrintToChatAll("A replacement duck has been spawned");
 	float coords[3];
-	coords[0] = StoredCoordinates[entity][0];
-	coords[1] = StoredCoordinates[entity][1];
-	coords[2] = StoredCoordinates[entity][2];
+	Handle coordskv = data;
+	coords[0] = KvGetFloat(coordskv, "0");
+	coords[1] = KvGetFloat(coordskv, "1");
+	coords[2] = KvGetFloat(coordskv, "2");
 	SpawnPower(coords);
 }
 
