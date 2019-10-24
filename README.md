@@ -8,7 +8,7 @@ Powerups
 
 The following powerups exist in the base version of this server mod:
 
-- Super Bounce - The user is forced to uncontrollably bunny hop for 5 seconds. Air-strafing while this is active allows the user to build up speed. *(In development)*
+- Super Bounce - The user is forced to uncontrollably bunny hop for 5 seconds. Air-strafing while this is active allows the user to build up speed.
 - Shock Absorber - The user gets 75% damage resistance and full knockback immunity for 5 seconds.
 - Super Speed - The user's speed is drastically increased, but gradually wears off over the course of 10 seconds.
 - Super Jump - The user is launched into the air and will resist the initial fall damage. Using this powerup immediately after jumping results in a higher launch.
