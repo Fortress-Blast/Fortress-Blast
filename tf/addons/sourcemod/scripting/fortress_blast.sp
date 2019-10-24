@@ -11,8 +11,10 @@ int powerupid[MAX_EDICTS];
 bool NoFallDamage[MAXPLAYERS+1] = false;
 bool VictoryTime = false;
 int powerup[MAXPLAYERS+1] = 0;
+bool SuperBounce[MAXPLAYERS + 1] = false;
 bool ShockAbsorber[MAXPLAYERS + 1] = false;
 float OldSpeed[MAXPLAYERS+1] = 0.0;
+float VerticalVelocity[MAXPLAYERS + 1];
 int SpeedRotationsLeft[MAXPLAYERS+1] = 100;
 
 /* Powerup IDs
@@ -31,14 +33,26 @@ public OnPluginStart() {
 	}
 	HookEvent("teamplay_round_start", teamplay_round_start);
 	HookEvent("teamplay_round_win", teamplay_round_win);
-	PrecacheModel("models/props_halloween/pumpkin_loot.mdl");
 	RegConsoleCmd("sm_setpowerup", SetPowerup);
+	CreateConVar("sm_fortressblast_bot_powerup_min", "2", "Minimum time for bots to use a powerup");
+	CreateConVar("sm_fortressblast_bot_powerup_max", "15", "Maximum time for bots to use a powerup");
+	PrecacheModel("models/props_halloween/pumpkin_loot.mdl");
 }
-
+public OnMapStart(){
+	PrecacheSound("fortressblast/superjump_use.wav");
+	PrefetchSound("fortessblast/superjump_use.wav");
+}
 public Action SetPowerup(int client, int args) {
-	char arg[3];
+	char arg[MAX_NAME_LENGTH + 1];
+	char arg2[3];
 	GetCmdArg(1, arg, sizeof(arg));
-	powerup[client] = StringToInt(arg);
+	GetCmdArg(2, arg2, sizeof(arg2));
+	int player = FindTarget(client, arg);
+	powerup[player] = StringToInt(arg2);
+	PlayPowerupSound(player);
+	if(IsFakeClient(player)){
+		CreateTimer(GetRandomFloat(GetConVarFloat(FindConVar("sm_fortressblast_bot_powerup_min")), GetConVarFloat(FindConVar("sm_fortressblast_bot_powerup_max"))), BotUsePowerup, player);
+	}
 }
 
 public Action teamplay_round_start(Event event, const char[] name, bool dontBroadcast) {
@@ -102,24 +116,18 @@ public Action OnStartTouch(entity, other) {
 		// PrintToChatAll("%N has collected a powerup", other);
 		powerup[other] = powerupid[entity];
 		// PrintToChat(other, "You have received the powerup with ID %d", powerupid[entity]);
-		if (powerup[other] == 1) {
-			ClientCommand(other, "playgamesound fortressblast/superbounce_pickup.wav");
-		} else if (powerup[other] == 2) {
-			ClientCommand(other, "playgamesound fortressblast/shockabsorber_pickup.wav");
-		} else if(powerup[other] == 3) {
-			ClientCommand(other, "playgamesound fortressblast/superspeed_pickup.wav");
-		} else if(powerup[other] == 4) {
-			ClientCommand(other, "playgamesound fortressblast/superjump_pickup.wav");
-		} else if(powerup[other] == 5) {
-			ClientCommand(other, "playgamesound fortressblast/gyrocopter_pickup.wav");
-		} else if(powerup[other] == 6) {
-			ClientCommand(other, "playgamesound fortressblast/timetravel_pickup.wav");
+		PlayPowerupSound(other);
+		if(IsFakeClient(other)){
+			CreateTimer(GetRandomFloat(GetConVarFloat(FindConVar("sm_fortressblast_bot_powerup_min")), GetConVarFloat(FindConVar("sm_fortressblast_bot_powerup_max"))), BotUsePowerup, other);
 		}
 		return Plugin_Continue;
 	}
 	return Plugin_Continue;
 }
-
+public Action BotUsePowerup(Handle timer, int client){
+	PrintToChatAll("Making %N use their powerup %d", client, powerup[client]);
+	UsePower(client);
+}
 public Action SpawnPowerAfterDelay(Handle timer, any data) {
 	// PrintToChatAll("A replacement duck has been spawned");
 	float coords[3];
@@ -129,15 +137,43 @@ public Action SpawnPowerAfterDelay(Handle timer, any data) {
 	coords[2] = KvGetFloat(coordskv, "2");
 	SpawnPower(coords);
 }
-
+PlayPowerupSound(int client){
+	if (powerup[client] == 1) {
+		ClientCommand(client, "playgamesound fortressblast/superbounce_pickup.wav");
+	} else if (powerup[client] == 2) {
+		ClientCommand(client, "playgamesound fortressblast/shockabsorber_pickup.wav");
+	} else if(powerup[client] == 3) {
+		ClientCommand(client, "playgamesound fortressblast/superspeed_pickup.wav");
+	} else if(powerup[client] == 4) {
+		ClientCommand(client, "playgamesound fortressblast/superjump_pickup.wav");
+	} else if(powerup[client] == 5) {
+		ClientCommand(client, "playgamesound fortressblast/gyrocopter_pickup.wav");
+	} else if(powerup[client] == 6) {
+		ClientCommand(client, "playgamesound fortressblast/timetravel_pickup.wav");
+	}
+}
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float ang[3], int &weapon) {
 	if (buttons & IN_ATTACK3) {
 		UsePower(client);
 	}
-	if (NoFallDamage[client] && GetEntityFlags(client) & FL_ONGROUND) {
-		NoFallDamage[client] = false; // May be necessary to set this twice, in case their jump doesn't result in fall damage
+	float vel2[3];
+	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel2);
+	if(GetEntityFlags(client) & FL_ONGROUND){
+		if (NoFallDamage[client]) {
+			NoFallDamage[client] = false; // May be necessary to set this twice, in case their jump doesn't result in fall damage
+		}
+		if(VerticalVelocity[client] != 0.0 && SuperBounce[client]){
+			vel2[2] = (VerticalVelocity[client] * -1);
+			TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vel2);
+			PrintToChat(client, "setting velocity to %f", vel2[2]);
+		}
+		PrintCenterText(client, "tracking current as %f , stored as %f, on ground", vel2[2], VerticalVelocity[client]);
+	}
+	else{
+		PrintCenterText(client, "tracking current as %f , stored as %f, not on ground", vel2[2], VerticalVelocity[client]);
 	}
 	DoHudText(client);
+	VerticalVelocity[client] = vel2[2];
 }
 
 public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3]){
@@ -158,6 +194,10 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
 UsePower(client) {
 	if (powerup[client] == 1) {
 		// Super Bounce - Uncontrollable bunny hop for 5 seconds
+		EmitSoundToAll("fortressblast/superbounce_active.wav", client, 69, 1, SND_NOFLAGS, 0.9, SNDPITCH_NORMAL);
+		VerticalVelocity[client] = 0.0;
+		SuperBounce[client] = true;
+		CreateTimer(5.0, RemoveSuperBounce, client);
 	} else if (powerup[client] == 2) {
 		// Shock Absorber - 75% damage and 100% knockback resistances for 5 seconds
 		ShockAbsorber[client] = true;
@@ -174,6 +214,7 @@ UsePower(client) {
 		vel[2] = 800.0;
 		TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vel);
 		NoFallDamage[client] = true;
+		EmitSoundToAll("fortressblast/superjump_use.wav", client, 69, 1, SND_NOFLAGS, 0.9, SNDPITCH_NORMAL);
 	} else if (powerup[client] == 5) {
 		// Gyrocopter - 25% gravity for 5 seconds
 		SetEntityGravity(client, 0.25);
@@ -187,7 +228,9 @@ UsePower(client) {
 public Action RestoreGravity(Handle timer, int client){
 	SetEntityGravity(client, 1.0);
 }
-
+public Action RemoveSuperBounce(Handle timer, int client){
+	SuperBounce[client] = false;
+}
 public Action RemoveShockAbsorb(Handle timer, int client){
 	ShockAbsorber[client] = false;
 }
