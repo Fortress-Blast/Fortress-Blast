@@ -6,6 +6,12 @@
 
 #define	MAX_EDICT_BITS 11
 #define	MAX_EDICTS (1 << MAX_EDICT_BITS)
+#define gyrocopter_pickup_sound "fortressblast/gyrocopter_pickup.wav"
+#define shockabsorber_pickup_sound "fortressblast/shockabsorber_pickup.wav"
+#define superbounce_pickup_sound "fortressblast/superbounce_pickup.wav"
+#define superjump_pickup_sound "fortressblast/superjump_pickup.wav"
+#define superspeed_pickup_sound "fortressblast/superspeed_pickup.wav"
+#define timetravel_pickup_sound "fortressblast/timetravel_pickup.wav"
 
 int powerupid[MAX_EDICTS];
 bool NoFallDamage[MAXPLAYERS+1] = false;
@@ -39,8 +45,18 @@ public OnPluginStart() {
 	PrecacheModel("models/props_halloween/pumpkin_loot.mdl");
 }
 public OnMapStart(){
-	PrecacheSound("fortressblast/superjump_use.wav");
-	PrefetchSound("fortessblast/superjump_use.wav");
+	AddFileToDownloadsTable("sound/fortressblast/gyrocopter_pickup.wav");
+	AddFileToDownloadsTable("sound/fortressblast/shockabsorber_pickup.wav");
+	AddFileToDownloadsTable("sound/fortressblast/superbounce_pickup.wav");
+	AddFileToDownloadsTable("sound/fortressblast/superjump_pickup.wav");
+	AddFileToDownloadsTable("sound/fortressblast/superspeed_pickup.wav");
+	AddFileToDownloadsTable("sound/fortressblast/timetravel_pickup.wav");
+	PrecacheSound(gyrocopter_pickup_sound, true);
+	PrecacheSound(shockabsorber_pickup_sound, true);
+	PrecacheSound(superbounce_pickup_sound, true);
+	PrecacheSound(superjump_pickup_sound, true);
+	PrecacheSound(superspeed_pickup_sound, true);
+	PrecacheSound(timetravel_pickup_sound, true);
 }
 public Action SetPowerup(int client, int args) {
 	char arg[MAX_NAME_LENGTH + 1];
@@ -116,7 +132,25 @@ public Action OnStartTouch(entity, other) {
 		// PrintToChatAll("%N has collected a powerup", other);
 		powerup[other] = powerupid[entity];
 		// PrintToChat(other, "You have received the powerup with ID %d", powerupid[entity]);
-		PlayPowerupSound(other);
+		if (powerup[other] == 1) {
+			EmitSoundToClient(other, superbounce_pickup_sound, _, SNDCHAN_STATIC, 100);
+			//ClientCommand(other, "playgamesound fortressblast/superbounce_pickup.wav");
+		} else if (powerup[other] == 2) {
+			EmitSoundToClient(other, shockabsorber_pickup_sound, _, SNDCHAN_STATIC, 100);
+			//ClientCommand(other, "playgamesound fortressblast/shockabsorber_pickup.wav");
+		} else if(powerup[other] == 3) {
+			EmitSoundToClient(other, superspeed_pickup_sound, _, SNDCHAN_STATIC, 100);
+			//ClientCommand(other, "playgamesound fortressblast/superspeed_pickup.wav");
+		} else if(powerup[other] == 4) {
+			EmitSoundToClient(other, superjump_pickup_sound, _, SNDCHAN_STATIC, 100);
+			//ClientCommand(other, "playgamesound fortressblast/superjump_pickup.wav");
+		} else if(powerup[other] == 5) {
+			EmitSoundToClient(other, gyrocopter_pickup_sound, _, SNDCHAN_STATIC, 100);
+			//ClientCommand(other, "playgamesound fortressblast/gyrocopter_pickup.wav");
+		} else if(powerup[other] == 6) {
+			EmitSoundToClient(other, timetravel_pickup_sound, _, SNDCHAN_STATIC, 100);
+			//ClientCommand(other, "playgamesound fortressblast/timetravel_pickup.wav");
+		}
 		if(IsFakeClient(other)){
 			CreateTimer(GetRandomFloat(GetConVarFloat(FindConVar("sm_fortressblast_bot_powerup_min")), GetConVarFloat(FindConVar("sm_fortressblast_bot_powerup_max"))), BotUsePowerup, other);
 		}
@@ -192,6 +226,7 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
 }
 
 UsePower(client) {
+	Stoponpickupsounds(client);
 	if (powerup[client] == 1) {
 		// Super Bounce - Uncontrollable bunny hop for 5 seconds
 		EmitSoundToAll("fortressblast/superbounce_active.wav", client, 69, 1, SND_NOFLAGS, 0.9, SNDPITCH_NORMAL);
@@ -364,4 +399,14 @@ bool HandleHasKey(JSONObject handle, char key[80]) {
 	char acctest[10000];
 	handle.ToString(acctest, sizeof(acctest));
 	return (StrContains(acctest, key, true) != -1);
+}
+
+Stoponpickupsounds(client)
+{
+	StopSound(client, SNDCHAN_STATIC, gyrocopter_pickup_sound); 
+	StopSound(client, SNDCHAN_STATIC, shockabsorber_pickup_sound); 
+	StopSound(client, SNDCHAN_STATIC, superbounce_pickup_sound); 
+	StopSound(client, SNDCHAN_STATIC, superjump_pickup_sound); 
+	StopSound(client, SNDCHAN_STATIC, superspeed_pickup_sound); 
+	StopSound(client, SNDCHAN_STATIC, timetravel_pickup_sound);
 }
