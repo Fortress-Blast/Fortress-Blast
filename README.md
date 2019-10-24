@@ -8,12 +8,12 @@ Powerups
 
 The following powerups exist in the base version of this server mod:
 
-- Super Bounce - The user is forced to uncontrollably bunny hop for 5 seconds. Air-strafing while this is active allows the user to build up speed.
+- Super Bounce - The user is forced to uncontrollably bounce for 5 seconds. Air-strafing while this is active allows the user to build up speed.
 - Shock Absorber - The user gets 75% damage resistance and full knockback immunity for 5 seconds.
 - Super Speed - The user's speed is drastically increased, but gradually wears off over the course of 10 seconds.
 - Super Jump - The user is launched into the air and will resist the initial fall damage. Using this powerup immediately after jumping results in a higher launch.
 - Gyrocopter - The user has 25% gravity for 5 seconds.
-- Time Travel - The user cannot attack, but their speed is doubled and they are immune to all damage for 5 seconds. This allows for uncontested passage through or escape from challenging situations. *(In development)*
+- Time Travel - The user cannot attack, but their speed is doubled and they are immune to all damage for 5 seconds. *(In development)*
 
 The following powerups are planned for addition after release:
 
@@ -34,15 +34,15 @@ Installation
 
 <installation guide required here>
 
-Commands *(All in development)*
+Commands
 --------
 
-- `fortressblast_bot 0|1` - Disable or enable bots using powerups within a random amount of time. Defaults to on.
-- `sm_fortressblast_bot_powerup_min <#> (2)` - Minimum time for bots to use a powerup
-- `sm_fortressblast_bot_powerup_max <#> (15)` - Minimum time for bots to use a powerup
-- `fortressblast_drop 0|1` - Disable or enable players dropping powerups on death. Defauts to off.
-- `fortressblast_drop_rate 0-100` - Set the chance a player will drop a powerup on death out of 100. Defaults to 5.
-- `fortressblast_drop_team 0|1|2|3` - Set the teams that will drop powerups on death. 0 = None, 1 = Both (default), 2 = RED, 3 = BLU.
-- `fortressblast_mannpower 0|1` - Disable or enable automatic replacement of Mannpower powerups with Fortress Blast powerups. Defaults to on.
-- `fortressblast_sound_pickup 0|1` - If set to off, picking up powerups will play the standard ammo pickup sound effect instead of the custom sound effects. Defaults to on.
-- `fortressblast_sound_use 0|1` - If set to off, using powerups will play the standard spell casting sound effect instead of the custom sound effects. Defaults to on.
+- `sm_fortressblast_bot <0|1>` - Disable or enable bots using powerups. Default 1.
+- `sm_fortressblast_bot_min <0+>` - Minimum time for bots to use a powerup. Default 2.
+- `sm_fortressblast_bot_max <0+>` - Maximum time for bots to use a powerup. Default 15.
+- `sm_fortressblast_drop <0|1> ` - Disable or enable players dropping powerups on death. Default 0. *(In development)*
+- `sm_fortressblast_drop_rate <0-100>` - Chance a player will drop a powerup on death out of 100. Default 5. *(In development)*
+- `sm_fortressblast_drop_team <0|1|2|3>` - Teams that will drop powerups on death. 0 = None, 1 = Both (default), 2 = RED, 3 = BLU. *(In development)*
+- `sm_fortressblast_mannpower <0|1>` - Disable or enable automatic replacement of Mannpower powerups. Default 1. *(In development)*
+- `sm_fortressblast_sound_pickup <0|1>` - Disable or enable custom sound effects when picking up powerups. Default 1. *(In development)*
+- `sm_fortressblast_sound_use <0|1>` - Disable or enable custom sound effects when using powerups. Default 1. *(In development)*
