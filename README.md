@@ -38,8 +38,8 @@ Commands *(All in development)*
 --------
 
 - `fortressblast_bot 0|1` - Disable or enable bots using powerups within a random amount of time. Defaults to on.
-- `fortressblast_bot_thinktime 0-#` - Set the amount of seconds after a bot collects a powerup before it considers using it. Defaults to 2.
-- `fortressblast_bot_usetime 0-#` - Set the amount of seconds after a bot collects a powerup in which it must use it. Defaults to 15.
+- `sm_fortressblast_bot_powerup_min <#> (2)` - Minimum time for bots to use a powerup
+- `sm_fortressblast_bot_powerup_max <#> (15)` - Minimum time for bots to use a powerup
 - `fortressblast_drop 0|1` - Disable or enable players dropping powerups on death. Defauts to off.
 - `fortressblast_drop_rate 0-100` - Set the chance a player will drop a powerup on death out of 100. Defaults to 5.
 - `fortressblast_drop_team 0|1|2|3` - Set the teams that will drop powerups on death. 0 = None, 1 = Both (default), 2 = RED, 3 = BLU.
