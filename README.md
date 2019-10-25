@@ -25,22 +25,24 @@ Features
 
 Fortress Blast comes with a few quality-of-life features:
 
-- A menu is available to in-game players with the command **!fortressblast**, which will provide them with information on what powerups there are, what they do, and tips on how they can be used. *(In development)*
-- By default, Mannpower powerups are replaced with Fortress Blast powerups. This feature can be turned off with `fortressblast_mannpower`. *(In development)*
-- Players can drop Fortress Blast powerups on death if `fortressblast_drop` is turned on. *(In development)*
+- A menu is available to in-game players which provides them with information on what powerups there are, what they do, and tips on how they can be used.
+- A server admin can allow players to drop Fortress Blast powerups on death with a command. *(In development)*
+- Bots can pick up powerups and randomly use them based on a user-defined range of time.
+- By default, Mannpower powerups are replaced with Fortress Blast powerups. This feature can be turned off. *(In development)*
 
 Installation
 ------------
 
 <installation guide required here>
 
-Commands *(All in development)*
+Commands
 --------
 
+- `!fortressblast` - Opens the Fortress Blast help menu.
 - `sm_fortressblast_bot 0|1` - Disable or enable bots using powerups within a random amount of time. Default 1.
-- `sm_fortressblast_bot_powerup_min #` - Minimum time for bots to use a powerup. Default 2.
-- `sm_fortressblast_bot_powerup_max #` - Minimum time for bots to use a powerup. Default 15.
-- `fortressblast_drop 0|1` - Disable or enable players dropping powerups on death. Defaut 0.
-- `fortressblast_drop_rate 0-100` - Set the chance a player will drop a powerup on death out of 100. Default 5.
-- `fortressblast_drop_team 0|1|2` - Set the teams that will drop powerups on death. 0 = Both (default), 1 = RED, 2 = BLU.
-- `fortressblast_mannpower 0|1` - Disable or enable automatic replacement of Mannpower powerups with Fortress Blast powerups. Default 1.
+- `sm_fortressblast_bot_min #` - Minimum time for bots to use a powerup. Default 2.
+- `sm_fortressblast_bot_max #` - Minimum time for bots to use a powerup. Default 15.
+- `sm_fortressblast_drop 0|1` - Disable or enable players dropping powerups on death. Defaut 0. *(In development)*
+- `sm_fortressblast_drop_rate 0-100` - Set the chance a player will drop a powerup on death out of 100. Default 5. *(In development)*
+- `sm_fortressblast_drop_team 0|1|2` - Set the teams that will drop powerups on death. 0 = Both (default), 1 = RED, 2 = BLU. *(In development)*
+- `sm_fortressblast_mannpower 0|1` - Disable or enable automatic replacement of Mannpower powerups with Fortress Blast powerups. Default 1. *(In development)*
