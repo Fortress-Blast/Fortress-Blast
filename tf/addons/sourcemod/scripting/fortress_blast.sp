@@ -41,6 +41,7 @@ public OnPluginStart() {
 	PrecacheModel("models/props_halloween/pumpkin_loot.mdl");
 	LoadTranslations("common.phrases");
 }
+
 public OnMapStart() {
 	PrecacheSound("fortressblast/superbounce_use.mp3");
 	PrecacheSound("fortressblast/shockabsorber_use.mp3");
@@ -111,17 +112,19 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 		powerup[client] = 0;
 	}
 	GetPowerupPlacements();
-	CreateTimer(3.0, PesterTheCrowd); // I would also like to show this same message to any player that joins a team (after 3 seconds)
+	CreateTimer(3.0, PesterTheCrowd);
 }
 
 public Action PesterTheCrowd(Handle timer) {
 	for (int client = 1; client <= MaxClients; client++) {
-		PesterThisDude(client); // yes printtochatall exists but then you'd have to have the text twice, so its good this way
+		PesterThisDude(client);
 	}
 }
-PesterThisDude(int client){
+
+PesterThisDude(int client) {
 	CPrintToChat(client, "{haunted}This server is running {yellow}Fortress Blast! {haunted}If you would like to know more or are unsure what a powerup does, type the command {orange}!fortressblast {haunted}into chat.");
 }
+
 public Action teamplay_round_win(Event event, const char[] name, bool dontBroadcast) {
 	VictoryTime = true;
 }
@@ -247,7 +250,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	VerticalVelocity[client] = vel2[2];
 }
 
-public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3]){
+public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3]) {
 	if (ShockAbsorber[victim]) {
 		damage = damage * 0.25;
 		damageForce[0] = 0.0;
@@ -396,7 +399,7 @@ GetPowerupPlacements() {
 			}
 		} 
 		// PrintToChatAll("Created powerup at %f, %f, %f", coords[0], coords[1], coords[2]);
-		if(coords[0] != 0.001){
+		if (coords[0] != 0.001) {
 			SpawnPower(coords);
 			if (flipx && flipy) {
 				if (coords[0] != centerx || coords[1] != centery) {
@@ -447,34 +450,63 @@ DoMenu(int client, int menutype) {
 		menu.Display(client, MENU_TIME_FOREVER);
 	} else if (menutype == 1) {
 		Menu menu = new Menu(MenuHandle);
-		menu.SetTitle("Introduction\n\nFortress Blast adds collectable powerups to a map that give special abilities for a short amount of time.\nIf you have a powerup, you will be able to see what it is in the top-right corner of your screen.\nPress your 'Special attack' key to use a powerup. You can set this in TF2's Options.\nCheck out the Powerups submenu for information on each collectible.");
-		menu.AddItem("", "", ITEMDRAW_NOTEXT);
+		menu.SetTitle("Introduction\n");
+		menu.AddItem("", "Fortress Blast adds collectable powerups to a map that give special abilities for a", ITEMDRAW_RAWLINE);
+		menu.AddItem("", "short amount of time. If you have a powerup, you will be able to see what it is in", ITEMDRAW_RAWLINE);
+		menu.AddItem("", "the top-right corner of your screen.", ITEMDRAW_RAWLINE);
+		menu.AddItem("", "Press your 'Special attack' key to use a powerup. You can set this in TF2's Options.", ITEMDRAW_RAWLINE);
+		menu.AddItem("", "Check out the Powerups submenu for information on each collectible.", ITEMDRAW_RAWLINE);
+		menu.AddItem("", "", ITEMDRAW_IGNORE);
 		SetMenuOptionFlags(menu, MENUFLAG_BUTTON_EXITBACK);
 		menu.Display(client, MENU_TIME_FOREVER);
 	} else if (menutype == 2) {
 		Menu menu = new Menu(MenuHandle);
 		// I want each pwoerup to be on a different page, could you work this out for me?
-		menu.SetTitle("Powerups");
+		menu.SetTitle("Powerups\n");
 		// ------------
-		menu.AddItem("", "first", ITEMDRAW_DISABLED);
+		menu.AddItem("", "- Gyrocopter -", ITEMDRAW_RAWLINE);
+		menu.AddItem("", "The Gyrocopter powerup lowers you gravity to 25%. This powerup can be used to clear", ITEMDRAW_RAWLINE);
+		menu.AddItem("", "large gaps or reach new heights, if you are decent at parkour.", ITEMDRAW_RAWLINE);
 		NewPage(menu);
-		menu.AddItem("", "second", ITEMDRAW_DISABLED);
+		menu.AddItem("", "- Shock Absorber -", ITEMDRAW_RAWLINE);
+		menu.AddItem("", "Shock Absorber allows you to resist 75% of all damage and not take knockback. Use", ITEMDRAW_RAWLINE);
+		menu.AddItem("", "this when trying take down a player with a high push force.", ITEMDRAW_RAWLINE);
 		NewPage(menu);
-		menu.AddItem("", "third", ITEMDRAW_DISABLED);
-		// ------------
+		menu.AddItem("", "- Super Bounce -", ITEMDRAW_RAWLINE);
+		menu.AddItem("", "While this powerup is active, you are forced to uncontrollably bunny hop. This is", ITEMDRAW_RAWLINE);
+		menu.AddItem("", "mainly used to clear gaps by bouncing but you can also trick players with your", ITEMDRAW_RAWLINE);
+		menu.AddItem("". "unpredictable movement.", ITEMDRAW_RAWLINE);
+		NewPage(menu);
+		menu.AddItem("", "- Super Jump -", ITEMDRAW_RAWLINE);
+		menu.AddItem("", "Plain and simple, Super Jump launches you into the air. If you jump before using", ITEMDRAW_RAWLINE);
+		menu.AddItem("", "this powerup, you will travel even higher, just watch out for fall damage.", ITEMDRAW_RAWLINE);
+		NewPage(menu);
+		menu.AddItem("", "- Super Speed -", ITEMDRAW_RAWLINE);
+		menu.AddItem("", "The Super Speed powerup drastically speeds up your movement, but wears off over", ITEMDRAW_RAWLINE);
+		menu.AddItem("", "time. It's great for dodging focused fire.", ITEMDRAW_RAWLINE);
+		NewPage(menu);
+		menu.AddItem("", "- Time Travel -", ITEMDRAW_RAWLINE);
+		menu.AddItem("", "Using this powerup makes you invincible and fast, but prevents you from attacking.", ITEMDRAW_RAWLINE);
+		menu.AddItem("", "Use this to your advantage in order to get past sentries or difficult opponents.", ITEMDRAW_RAWLINE);
+		menu.AddItem("", "", ITEMDRAW_IGNORE);
 		SetMenuOptionFlags(menu, MENUFLAG_BUTTON_EXITBACK);
 		menu.Display(client, MENU_TIME_FOREVER);
 	} else if (menutype == 3) {
 		Menu menu = new Menu(MenuHandle);
-		menu.SetTitle("Credits\n\nProgrammers - Naleksuh, Jack5\nSound effects - GarageGames\n\nPlugin available at:\ngithub.com/jack5github/Fortress_Blast");
-		menu.AddItem("", "", ITEMDRAW_NOTEXT);
+		menu.SetTitle("Credits\n");
+		menu.AddItem("", "Programmers - Naleksuh, Jack5", ITEMDRAW_RAWLINE);
+		menu.AddItem("", "Sound effects - GarageGames", ITEMDRAW_RAWLINE);
+		menu.AddItem("", "", ITEMDRAW_IGNORE);
+		menu.AddItem("", "Plugin available at:", ITEMDRAW_RAWLINE);
+		menu.AddItem("", "github.com/jack5github/Fortress_Blast", ITEMDRAW_RAWLINE);
+		menu.AddItem("", "", ITEMDRAW_IGNORE);
 		SetMenuOptionFlags(menu, MENUFLAG_BUTTON_EXITBACK);
 		menu.Display(client, MENU_TIME_FOREVER);
 	}
 }
 
-NewPage(Menu menu){
-	for (int draw = 1; draw<= 7 ; draw++) {
+NewPage (Menu menu) {
+	for (int draw = 1; draw <= 7 ; draw++) {
 		menu.AddItem("", "", ITEMDRAW_NOTEXT);
 	}
 }
