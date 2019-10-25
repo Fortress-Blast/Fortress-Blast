@@ -116,14 +116,12 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 	VictoryTime = false;
 	for (int client = 1; client <= MaxClients; client++) {
 		powerup[client] = 0;
-	}
-	GetPowerupPlacements();
-	for (int client = 1; client <= MaxClients; client++) {
 		CreateTimer(3.0, PesterThisDude, client);
 	}
+	GetPowerupPlacements();
 }
 
-PesterThisDude(Handle timer, int client) {
+public Action PesterThisDude(Handle timer, int client) {
 	CPrintToChat(client, "{haunted}This server is running {yellow}Fortress Blast! {haunted}If you would like to know more or are unsure what a powerup does, type the command {orange}!fortressblast {haunted}into chat.");
 }
 
@@ -478,7 +476,7 @@ DoMenu(int client, int menutype) {
 		menu.AddItem("", "- Super Bounce -", ITEMDRAW_RAWLINE);
 		menu.AddItem("", "While this powerup is active, you are forced to uncontrollably bunny hop. This is", ITEMDRAW_RAWLINE);
 		menu.AddItem("", "mainly used to clear gaps by bouncing but you can also trick players with your", ITEMDRAW_RAWLINE);
-		menu.AddItem("". "unpredictable movement.", ITEMDRAW_RAWLINE);
+		menu.AddItem("", "unpredictable movement.", ITEMDRAW_RAWLINE);
 		NewPage(menu, 4);
 		menu.AddItem("", "- Super Jump -", ITEMDRAW_RAWLINE);
 		menu.AddItem("", "Plain and simple, Super Jump launches you into the air. If you jump before using", ITEMDRAW_RAWLINE);
