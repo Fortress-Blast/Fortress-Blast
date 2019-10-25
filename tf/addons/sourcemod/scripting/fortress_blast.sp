@@ -2,6 +2,7 @@
 #include <sdktools>
 #include <sdkhooks>
 #include <ripext/json>
+#include <morecolors>
 #include <tf2>
 
 #define	MAX_EDICT_BITS 11
@@ -113,10 +114,14 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 	CreateTimer(3.0, PesterTheCrowd); // I would also like to show this same message to any player that joins a team (after 3 seconds)
 }
 
-PesterTheCrowd() {
-	CPrintToChat("{haunted}This server is running {yellow}Fortress Blast! {haunted}If you would like to know more or are unsure what a powerup does, type the command {orange}!fortressblast {haunted}into chat.");
+public Action PesterTheCrowd(Handle timer) {
+	for (int client = 1; client <= MaxClients; client++) {
+		PesterThisDude(client); // yes printtochatall exists but then you'd have to have the text twice, so its good this way
+	}
 }
-
+PesterThisDude(int client){
+	CPrintToChat(client, "{haunted}This server is running {yellow}Fortress Blast! {haunted}If you would like to know more or are unsure what a powerup does, type the command {orange}!fortressblast {haunted}into chat.");
+}
 public Action teamplay_round_win(Event event, const char[] name, bool dontBroadcast) {
 	VictoryTime = true;
 }
@@ -124,6 +129,7 @@ public Action teamplay_round_win(Event event, const char[] name, bool dontBroadc
 public OnClientPutInServer(int client) {
 	powerup[client] = 0;
 	SDKHook(client, SDKHook_OnTakeDamageAlive, OnTakeDamage);
+	PesterThisDude(client);
 }
 
 SpawnPower(float location[3]) {
@@ -448,8 +454,14 @@ DoMenu(int client, int menutype) {
 	} else if (menutype == 2) {
 		Menu menu = new Menu(MenuHandle);
 		// I want each pwoerup to be on a different page, could you work this out for me?
-		menu.SetTitle("Powerups > Gyrocopter\n\nThe Gyrocopter powerup lowers you gravity to 25%.\nThis powerup can be used to clear large gaps or reach new heights, if you are decent at parkour.\n\nPowerups > Shock Absorber\n\nShock Absorber allows you to resist 75% of all damage and not take knockback. Use this when trying take down a player with a high push force.\n\nPowerups > Super Bounce\n\nWhile this powerup is active, you are forced to uncontrollably bunny hop. This is mainly used to clear gaps by bouncing but you can also trick players with your unpredictable movement.\n\nPowerups > Super Jump\n\nPlain and simple, Super Jump launches you into the air. If you jump before using this powerup, you will travel even higher, just watch out for fall damage.\n\nPowerups > Super Speed\n\nThe Super Speed powerup drastically speeds up your movement, but wears off over time. It's great for dodging focused fire.\n\nPowerups > Time Travel\n\nUsing this powerup makes you invincible and fast, but prevents you from attacking. Use this to your advantage in order to get past sentries or difficult opponents.");
-		menu.AddItem("", "", ITEMDRAW_NOTEXT);
+		menu.SetTitle("Powerups");
+		// ------------
+		menu.AddItem("", "first", ITEMDRAW_DISABLED);
+		NewPage(menu);
+		menu.AddItem("", "second", ITEMDRAW_DISABLED);
+		NewPage(menu);
+		menu.AddItem("", "third", ITEMDRAW_DISABLED);
+		// ------------
 		SetMenuOptionFlags(menu, MENUFLAG_BUTTON_EXITBACK);
 		menu.Display(client, MENU_TIME_FOREVER);
 	} else if (menutype == 3) {
@@ -458,5 +470,11 @@ DoMenu(int client, int menutype) {
 		menu.AddItem("", "", ITEMDRAW_NOTEXT);
 		SetMenuOptionFlags(menu, MENUFLAG_BUTTON_EXITBACK);
 		menu.Display(client, MENU_TIME_FOREVER);
+	}
+}
+
+NewPage(Menu menu){
+	for (int draw = 1; draw<= 7 ; draw++) {
+		menu.AddItem("", "", ITEMDRAW_NOTEXT);
 	}
 }
