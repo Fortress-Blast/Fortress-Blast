@@ -48,34 +48,34 @@ public OnMapStart() {
 	PrecacheSound("fortressblast/gyrocopter_use.mp3");
 	PrecacheSound("fortressblast/timetravel_use.mp3");
 }
-public TF2_OnConditionAdded(int client, TFCond condition){
-	if(condition == TFCond_HalloweenKart){
+
+public TF2_OnConditionAdded(int client, TFCond condition) {
+	if (condition == TFCond_HalloweenKart) {
 		powerup[client] = 0;
 	}
 }
-public Action FBMenu(int client, int args){
+
+public Action FBMenu(int client, int args) {
 	DoMenu(client, 0);
 }
-public int MenuHandle(Menu menu, MenuAction action, int param1, int param2)
-{
-	if (action == MenuAction_Select)
-	{
+
+public int MenuHandle(Menu menu, MenuAction action, int param1, int param2) {
+	if (action == MenuAction_Select) {
 		char choice[32];
 		menu.GetItem(param2, choice, sizeof(choice));
-		if(StrEqual(choice, "info")){
+		if (StrEqual(choice, "info")) {
 			DoMenu(param1, 1);
-		}
-		if(StrEqual(choice, "listpowerups")){
+		} else if (StrEqual(choice, "listpowerups")) {
 			DoMenu(param1, 2);
+		} else if (StrEqual(choice, "credits")) {
+			DoMenu(param1, 3);
 		}
 	}
-	if(action == MenuAction_Cancel){
-		if(param2 == MenuCancel_ExitBack){
+	if (action == MenuAction_Cancel) {
+		if (param2 == MenuCancel_ExitBack) {
 			DoMenu(param1, 0);
 		}
-	}
-	else if (action == MenuAction_End)
-	{
+	} else if (action == MenuAction_End) {
 		delete menu;
 	}
 }
@@ -110,6 +110,11 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 		powerup[client] = 0;
 	}
 	GetPowerupPlacements();
+	CreateTimer(3.0, PesterTheCrowd); // I would also like to show this same message to any player that joins a team (after 3 seconds)
+}
+
+PesterTheCrowd() {
+	CPrintToChat("{haunted}This server is running {yellow}Fortress Blast! {haunted}If you would like to know more or are unsure what a powerup does, type the command {orange}!fortressblast {haunted}into chat.");
 }
 
 public Action teamplay_round_win(Event event, const char[] name, bool dontBroadcast) {
@@ -426,24 +431,30 @@ bool HandleHasKey(JSONObject handle, char key[80]) {
 	return (StrContains(acctest, key, true) != -1);
 }
 
-DoMenu(int client, int menutype){
-	if(menutype == 0){
+DoMenu(int client, int menutype) {
+	if (menutype == 0) {
 		Menu menu = new Menu(MenuHandle);
-		menu.SetTitle("Fortress Blast");
+		menu.SetTitle("Fortress Blast (v0.1)\n============\n");
 		menu.AddItem("info", "Introduction");
 		menu.AddItem("listpowerups", "Powerups");
+		menu.AddItem("credits", "Credits");
 		menu.Display(client, MENU_TIME_FOREVER);
-	}
-	if(menutype == 1){
+	} else if (menutype == 1) {
 		Menu menu = new Menu(MenuHandle);
-		menu.SetTitle("Introduction\nWelcome to Fortress Blast!\njack5 put your stuff here");
+		menu.SetTitle("Introduction\n\nFortress Blast adds collectable powerups to a map that give special abilities for a short amount of time.\nIf you have a powerup, you will be able to see what it is in the top-right corner of your screen.\nPress your 'Special attack' key to use a powerup. You can set this in TF2's Options.\nCheck out the Powerups submenu for information on each collectible.");
 		menu.AddItem("", "", ITEMDRAW_NOTEXT);
 		SetMenuOptionFlags(menu, MENUFLAG_BUTTON_EXITBACK);
 		menu.Display(client, MENU_TIME_FOREVER);
-	}
-	if(menutype == 2){
+	} else if (menutype == 2) {
 		Menu menu = new Menu(MenuHandle);
-		menu.SetTitle("Powerups\nCheck out these cool powerups\nBut jack5 is writing the text so ill just put stuff ehre");
+		// I want each pwoerup to be on a different page, could you work this out for me?
+		menu.SetTitle("Powerups > Gyrocopter\n\nThe Gyrocopter powerup lowers you gravity to 25%.\nThis powerup can be used to clear large gaps or reach new heights, if you are decent at parkour.\n\nPowerups > Shock Absorber\n\nShock Absorber allows you to resist 75% of all damage and not take knockback. Use this when trying take down a player with a high push force.\n\nPowerups > Super Bounce\n\nWhile this powerup is active, you are forced to uncontrollably bunny hop. This is mainly used to clear gaps by bouncing but you can also trick players with your unpredictable movement.\n\nPowerups > Super Jump\n\nPlain and simple, Super Jump launches you into the air. If you jump before using this powerup, you will travel even higher, just watch out for fall damage.\n\nPowerups > Super Speed\n\nThe Super Speed powerup drastically speeds up your movement, but wears off over time. It's great for dodging focused fire.\n\nPowerups > Time Travel\n\nUsing this powerup makes you invincible and fast, but prevents you from attacking. Use this to your advantage in order to get past sentries or difficult opponents.");
+		menu.AddItem("", "", ITEMDRAW_NOTEXT);
+		SetMenuOptionFlags(menu, MENUFLAG_BUTTON_EXITBACK);
+		menu.Display(client, MENU_TIME_FOREVER);
+	} else if (menutype == 3) {
+		Menu menu = new Menu(MenuHandle);
+		menu.SetTitle("Credits\n\nProgrammers - Naleksuh, Jack5\nSound effects - GarageGames\n\nPlugin available at:\ngithub.com/jack5github/Fortress_Blast");
 		menu.AddItem("", "", ITEMDRAW_NOTEXT);
 		SetMenuOptionFlags(menu, MENUFLAG_BUTTON_EXITBACK);
 		menu.Display(client, MENU_TIME_FOREVER);
