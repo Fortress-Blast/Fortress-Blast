@@ -55,6 +55,12 @@ public OnMapStart() {
 	AddFileToDownloadsTable("sound/fortressblast/superjump_use.mp3");
 	AddFileToDownloadsTable("sound/fortressblast/gyrocopter_use.mp3");
 	AddFileToDownloadsTable("sound/fortressblast/timetravel_use.mp3");
+	AddFileToDownloadsTable("sound/fortressblast/superbounce_pickup.mp3");
+	AddFileToDownloadsTable("sound/fortressblast/shockabsorber_pickup.mp3");
+	AddFileToDownloadsTable("sound/fortressblast/superspeed_pickup.mp3");
+	AddFileToDownloadsTable("sound/fortressblast/superjump_pickup.mp3");
+	AddFileToDownloadsTable("sound/fortressblast/gyrocopter_pickup.mp3");
+	AddFileToDownloadsTable("sound/fortressblast/timetravel_pickup.mp3");
 }
 
 public TF2_OnConditionAdded(int client, TFCond condition) {
@@ -122,8 +128,11 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 }
 
 public Action PesterThisDude(Handle timer, int client) {
-	CPrintToChat(client, "{haunted}This server is running {yellow}Fortress Blast! {haunted}If you would like to know more or are unsure what a powerup does, type the command {orange}!fortressblast {haunted}into chat.");
+	if(IsClientInGame(client)){ // this is needed for two reasons, both because its not checked when the timer is made and because they could disconnect during the 3 seconds
+		CPrintToChat(client, "{haunted}This server is running {yellow}Fortress Blast! {haunted}If you would like to know more or are unsure what a powerup does, type the command {orange}!fortressblast {haunted}into chat.");
+	}
 }
+
 
 public Action teamplay_round_win(Event event, const char[] name, bool dontBroadcast) {
 	VictoryTime = true;
