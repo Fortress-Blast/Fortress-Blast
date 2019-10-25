@@ -49,6 +49,12 @@ public OnMapStart() {
 	PrecacheSound("fortressblast/superjump_use.mp3");
 	PrecacheSound("fortressblast/gyrocopter_use.mp3");
 	PrecacheSound("fortressblast/timetravel_use.mp3");
+	AddFileToDownloadsTable("sound/fortressblast/superbounce_use.mp3");
+	AddFileToDownloadsTable("sound/fortressblast/shockabsorber_use.mp3");
+	AddFileToDownloadsTable("sound/fortressblast/superspeed_use.mp3");
+	AddFileToDownloadsTable("sound/fortressblast/superjump_use.mp3");
+	AddFileToDownloadsTable("sound/fortressblast/gyrocopter_use.mp3");
+	AddFileToDownloadsTable("sound/fortressblast/timetravel_use.mp3");
 }
 
 public TF2_OnConditionAdded(int client, TFCond condition) {
@@ -112,16 +118,12 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 		powerup[client] = 0;
 	}
 	GetPowerupPlacements();
-	CreateTimer(3.0, PesterTheCrowd);
-}
-
-public Action PesterTheCrowd(Handle timer) {
 	for (int client = 1; client <= MaxClients; client++) {
-		PesterThisDude(client);
+		CreateTimer(3.0, PesterThisDude, client);
 	}
 }
 
-PesterThisDude(int client) {
+PesterThisDude(Handle timer, int client) {
 	CPrintToChat(client, "{haunted}This server is running {yellow}Fortress Blast! {haunted}If you would like to know more or are unsure what a powerup does, type the command {orange}!fortressblast {haunted}into chat.");
 }
 
@@ -132,7 +134,7 @@ public Action teamplay_round_win(Event event, const char[] name, bool dontBroadc
 public OnClientPutInServer(int client) {
 	powerup[client] = 0;
 	SDKHook(client, SDKHook_OnTakeDamageAlive, OnTakeDamage);
-	PesterThisDude(client);
+	CreateTimer(3.0, PesterThisDude, client);
 }
 
 SpawnPower(float location[3]) {
@@ -464,27 +466,28 @@ DoMenu(int client, int menutype) {
 		// I want each pwoerup to be on a different page, could you work this out for me?
 		menu.SetTitle("Powerups\n");
 		// ------------
+		// You need to make sure each page has 8 lines, both content and filler
 		menu.AddItem("", "- Gyrocopter -", ITEMDRAW_RAWLINE);
 		menu.AddItem("", "The Gyrocopter powerup lowers you gravity to 25%. This powerup can be used to clear", ITEMDRAW_RAWLINE);
 		menu.AddItem("", "large gaps or reach new heights, if you are decent at parkour.", ITEMDRAW_RAWLINE);
-		NewPage(menu);
+		NewPage(menu, 5);
 		menu.AddItem("", "- Shock Absorber -", ITEMDRAW_RAWLINE);
 		menu.AddItem("", "Shock Absorber allows you to resist 75% of all damage and not take knockback. Use", ITEMDRAW_RAWLINE);
 		menu.AddItem("", "this when trying take down a player with a high push force.", ITEMDRAW_RAWLINE);
-		NewPage(menu);
+		NewPage(menu, 5);
 		menu.AddItem("", "- Super Bounce -", ITEMDRAW_RAWLINE);
 		menu.AddItem("", "While this powerup is active, you are forced to uncontrollably bunny hop. This is", ITEMDRAW_RAWLINE);
 		menu.AddItem("", "mainly used to clear gaps by bouncing but you can also trick players with your", ITEMDRAW_RAWLINE);
 		menu.AddItem("". "unpredictable movement.", ITEMDRAW_RAWLINE);
-		NewPage(menu);
+		NewPage(menu, 4);
 		menu.AddItem("", "- Super Jump -", ITEMDRAW_RAWLINE);
 		menu.AddItem("", "Plain and simple, Super Jump launches you into the air. If you jump before using", ITEMDRAW_RAWLINE);
 		menu.AddItem("", "this powerup, you will travel even higher, just watch out for fall damage.", ITEMDRAW_RAWLINE);
-		NewPage(menu);
+		NewPage(menu, 5);
 		menu.AddItem("", "- Super Speed -", ITEMDRAW_RAWLINE);
 		menu.AddItem("", "The Super Speed powerup drastically speeds up your movement, but wears off over", ITEMDRAW_RAWLINE);
 		menu.AddItem("", "time. It's great for dodging focused fire.", ITEMDRAW_RAWLINE);
-		NewPage(menu);
+		NewPage(menu, 5);
 		menu.AddItem("", "- Time Travel -", ITEMDRAW_RAWLINE);
 		menu.AddItem("", "Using this powerup makes you invincible and fast, but prevents you from attacking.", ITEMDRAW_RAWLINE);
 		menu.AddItem("", "Use this to your advantage in order to get past sentries or difficult opponents.", ITEMDRAW_RAWLINE);
@@ -505,8 +508,8 @@ DoMenu(int client, int menutype) {
 	}
 }
 
-NewPage (Menu menu) {
-	for (int draw = 1; draw <= 7 ; draw++) {
+NewPage (Menu menu, int lines) {
+	for (int draw = 1; draw <= lines ; draw++) {
 		menu.AddItem("", "", ITEMDRAW_NOTEXT);
 	}
 }
