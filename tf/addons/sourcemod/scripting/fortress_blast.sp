@@ -6,16 +6,17 @@
 #include <tf2>
 
 #define	MAX_EDICT_BITS 11
-#define	MAX_EDICTS (1 << MAX_EDICT_BITS)
+#define	MAX_EDICTS (1<<MAX_EDICT_BITS)
+#define ITEMDRAW_SPACER_NOSLOT ((1<<1)|(1<<3)) // Trying fix from https://forums.alliedmods.net/showthread.php?t=287420
 
 int powerupid[MAX_EDICTS];
 bool VictoryTime = false;
-int powerup[MAXPLAYERS+1] = 0;
+int powerup[MAXPLAYERS + 1] = 0;
 bool SuperBounce[MAXPLAYERS + 1] = false;
 bool ShockAbsorber[MAXPLAYERS + 1] = false;
-float OldSpeed[MAXPLAYERS+1] = 0.0;
+float OldSpeed[MAXPLAYERS + 1] = 0.0;
 float VerticalVelocity[MAXPLAYERS + 1];
-int SpeedRotationsLeft[MAXPLAYERS+1] = 80;
+int SpeedRotationsLeft[MAXPLAYERS + 1] = 80;
 
 /* Powerup IDs
 1 - Super Bounce
@@ -38,6 +39,10 @@ public OnPluginStart() {
 	CreateConVar("sm_fortressblast_bot", "1", "Disable or enable bots using powerups.");
 	CreateConVar("sm_fortressblast_bot_min", "2", "Minimum time for bots to use a powerup.");
 	CreateConVar("sm_fortressblast_bot_max", "15", "Maximum time for bots to use a powerup.");
+	// CreateConVar("sm_fortressblast_drop", "0", "Disable or enable dropping powerups on death.");
+	// CreateConVar("sm_fortressblast_drop_rate", "5", "Chance out of 100 for a powerup to drop on death.");
+	// CreateConVar("sm_fortressblast_drop_teams", "1", "Set the teams that will drop powerups on death.");
+	CreateConVar("sm_fortressblast_mannpower", "1", "Disable or enable replacing Mannpower powerups.");
 	PrecacheModel("models/props_halloween/pumpkin_loot.mdl");
 	LoadTranslations("common.phrases");
 }
@@ -128,7 +133,7 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 }
 
 public Action PesterThisDude(Handle timer, int client) {
-	if(IsClientInGame(client)){ // this is needed for two reasons, both because its not checked when the timer is made and because they could disconnect during the 3 seconds
+	if (IsClientInGame(client)) { // this is needed for two reasons, both because its not checked when the timer is made and because they could disconnect during the 3 seconds
 		CPrintToChat(client, "{haunted}This server is running {yellow}Fortress Blast! {haunted}If you would like to know more or are unsure what a powerup does, type the command {orange}!fortressblast {haunted}into chat.");
 	}
 }
@@ -332,7 +337,7 @@ public Action RecalcSpeed(Handle timer, int client) {
 DoHudText(client) {
 	if (powerup[client] != 0) {
 		Handle text = CreateHudSynchronizer();
-  		SetHudTextParams(0.8, 0.1, 0.25, 255, 255, 0, 255);
+  		SetHudTextParams(0.8, 0.1, 0.25, 255, 255, 0, 255); // Need to move so that it does not conflict with killfeed
   		if (powerup[client] == 1) {
 			ShowSyncHudText(client, text, "Collected powerup:\nSuper Bounce");
 		} else if (powerup[client] == 2) {
@@ -426,7 +431,7 @@ GetPowerupPlacements() {
 					SpawnPower(coords);
 				} else {
 					// PrintToChatAll("Powerup is at the X axis center and will not be flipped");
-    				}
+    			}
 			} else if (flipy) {
 				if (coords[1] != centery) {
 					coords[1] = coords[1] - ((coords[1] - centery) * 2);
@@ -440,6 +445,12 @@ GetPowerupPlacements() {
 			IntToString(itemloop, stringamount, sizeof(stringamount));
 		}
 	}
+	if (GetConVarFloat(FindConVar("sm_fortressblast_mannpower")) >= 1) { // Replace with GetConVarBool
+		// Does the map have a tf_logic_mannpower entity?
+			// Get the position of each info_powerup_spawn entity
+			// Kill all info_powerup_spawn entities
+			// For each recorded position, spawn a powerup at that position
+	}
 	return;
 }
 
@@ -452,70 +463,70 @@ bool HandleHasKey(JSONObject handle, char key[80]) {
 DoMenu(int client, int menutype) {
 	if (menutype == 0) {
 		Menu menu = new Menu(MenuHandle);
-		menu.SetTitle("Fortress Blast (v0.1)\n============\n");
+		menu.SetTitle("Fortress Blast (v0.1)\n=============\n ");
 		menu.AddItem("info", "Introduction");
 		menu.AddItem("listpowerups", "Powerups");
 		menu.AddItem("credits", "Credits");
 		menu.Display(client, MENU_TIME_FOREVER);
 	} else if (menutype == 1) {
 		Menu menu = new Menu(MenuHandle);
-		menu.SetTitle("Introduction\n");
-		menu.AddItem("", "Fortress Blast adds collectable powerups to a map that give special abilities for a", ITEMDRAW_DISABLED);
-		menu.AddItem("", "short amount of time. If you have a powerup, you will be able to see what it is in", ITEMDRAW_DISABLED);
-		menu.AddItem("", "the top-right corner of your screen.", ITEMDRAW_DISABLED);
-		menu.AddItem("", "Press your 'Special attack' key to use a powerup. You can set this in TF2's Options.", ITEMDRAW_DISABLED);
-		menu.AddItem("", "Check out the Powerups submenu for information on each collectible.", ITEMDRAW_DISABLED);
-		menu.AddItem("", "", ITEMDRAW_IGNORE);
+		menu.SetTitle("Introduction\n ");
+		menu.AddItem("", "Fortress Blast adds collectable powerups to a map that give special abilities for a", ITEMDRAW_SPACER_NOSLOT);
+		menu.AddItem("", "short amount of time. If you have a powerup, you will be able to see what it is in", ITEMDRAW_SPACER_NOSLOT);
+		menu.AddItem("", "the top-right corner of your screen.", ITEMDRAW_SPACER_NOSLOT);
+		menu.AddItem("", "Press your 'Special attack' key to use a powerup. You can set this in TF2's Options.", ITEMDRAW_SPACER_NOSLOT);
+		menu.AddItem("", "Check out the Powerups submenu for information on each collectible.", ITEMDRAW_SPACER_NOSLOT);
+		NewLine(menu, 1);
 		SetMenuOptionFlags(menu, MENUFLAG_BUTTON_EXITBACK);
 		menu.Display(client, MENU_TIME_FOREVER);
 	} else if (menutype == 2) {
 		Menu menu = new Menu(MenuHandle);
 		// I want each pwoerup to be on a different page, could you work this out for me?
-		menu.SetTitle("Powerups\n");
+		menu.SetTitle("Powerups\n ");
 		// ------------
 		// You need to make sure each page has 8 lines, both content and filler
-		menu.AddItem("", "- Gyrocopter -", ITEMDRAW_DISABLED);
-		menu.AddItem("", "The Gyrocopter powerup lowers you gravity to 25%. This powerup can be used to clear", ITEMDRAW_DISABLED);
-		menu.AddItem("", "large gaps or reach new heights, if you are decent at parkour.", ITEMDRAW_DISABLED);
-		NewPage(menu, 5);
-		menu.AddItem("", "- Shock Absorber -", ITEMDRAW_DISABLED);
-		menu.AddItem("", "Shock Absorber allows you to resist 75% of all damage and not take knockback. Use", ITEMDRAW_DISABLED);
-		menu.AddItem("", "this when trying take down a player with a high push force.", ITEMDRAW_DISABLED);
-		NewPage(menu, 5);
-		menu.AddItem("", "- Super Bounce -", ITEMDRAW_DISABLED);
-		menu.AddItem("", "While this powerup is active, you are forced to uncontrollably bunny hop. This is", ITEMDRAW_DISABLED);
-		menu.AddItem("", "mainly used to clear gaps by bouncing but you can also trick players with your", ITEMDRAW_DISABLED);
-		menu.AddItem("", "unpredictable movement.", ITEMDRAW_DISABLED);
-		NewPage(menu, 4);
-		menu.AddItem("", "- Super Jump -", ITEMDRAW_DISABLED);
-		menu.AddItem("", "Plain and simple, Super Jump launches you into the air. If you jump before using", ITEMDRAW_DISABLED);
-		menu.AddItem("", "this powerup, you will travel even higher, just watch out for fall damage.", ITEMDRAW_DISABLED);
-		NewPage(menu, 5);
-		menu.AddItem("", "- Super Speed -", ITEMDRAW_DISABLED);
-		menu.AddItem("", "The Super Speed powerup drastically speeds up your movement, but wears off over", ITEMDRAW_DISABLED);
-		menu.AddItem("", "time. It's great for dodging focused fire.", ITEMDRAW_DISABLED);
-		NewPage(menu, 5);
-		menu.AddItem("", "- Time Travel -", ITEMDRAW_DISABLED);
-		menu.AddItem("", "Using this powerup makes you invincible and fast, but prevents you from attacking.", ITEMDRAW_DISABLED);
-		menu.AddItem("", "Use this to your advantage in order to get past sentries or difficult opponents.", ITEMDRAW_DISABLED);
-		menu.AddItem("", "", ITEMDRAW_IGNORE);
+		menu.AddItem("", "- Gyrocopter -", ITEMDRAW_SPACER_NOSLOT);
+		menu.AddItem("", "The Gyrocopter powerup lowers your gravity to 25%. This powerup can be used to clear", ITEMDRAW_SPACER_NOSLOT);
+		menu.AddItem("", "large gaps or reach new heights, if you are decent at parkour.", ITEMDRAW_SPACER_NOSLOT);
+		NewLine(menu, 5);
+		menu.AddItem("", "- Shock Absorber -", ITEMDRAW_SPACER_NOSLOT);
+		menu.AddItem("", "Shock Absorber allows you to resist 75% of all damage and not take knockback. Use", ITEMDRAW_SPACER_NOSLOT);
+		menu.AddItem("", "this when trying take down a player with a high push force.", ITEMDRAW_SPACER_NOSLOT);
+		NewLine(menu, 5);
+		menu.AddItem("", "- Super Bounce -", ITEMDRAW_SPACER_NOSLOT);
+		menu.AddItem("", "While this powerup is active, you are forced to uncontrollably bunny hop. This is", ITEMDRAW_SPACER_NOSLOT);
+		menu.AddItem("", "mainly used to clear gaps by bouncing but you can also trick players with your", ITEMDRAW_SPACER_NOSLOT);
+		menu.AddItem("", "unpredictable movement.", ITEMDRAW_SPACER_NOSLOT);
+		NewLine(menu, 4);
+		menu.AddItem("", "- Super Jump -", ITEMDRAW_SPACER_NOSLOT);
+		menu.AddItem("", "Plain and simple, Super Jump launches you into the air. If you jump before using", ITEMDRAW_SPACER_NOSLOT);
+		menu.AddItem("", "this powerup, you will travel even higher, just watch out for fall damage.", ITEMDRAW_SPACER_NOSLOT);
+		NewLine(menu, 5);
+		menu.AddItem("", "- Super Speed -", ITEMDRAW_SPACER_NOSLOT);
+		menu.AddItem("", "The Super Speed powerup drastically speeds up your movement, but wears off over", ITEMDRAW_SPACER_NOSLOT);
+		menu.AddItem("", "time. It's great for dodging focused fire.", ITEMDRAW_SPACER_NOSLOT);
+		NewLine(menu, 5);
+		menu.AddItem("", "- Time Travel -", ITEMDRAW_SPACER_NOSLOT);
+		menu.AddItem("", "Using this powerup makes you invincible and fast, but prevents you from attacking.", ITEMDRAW_SPACER_NOSLOT);
+		menu.AddItem("", "Use this to your advantage in order to get past sentries or difficult opponents.", ITEMDRAW_SPACER_NOSLOT);
+		NewLine(menu, 1);
 		SetMenuOptionFlags(menu, MENUFLAG_BUTTON_EXITBACK);
 		menu.Display(client, MENU_TIME_FOREVER);
 	} else if (menutype == 3) {
 		Menu menu = new Menu(MenuHandle);
-		menu.SetTitle("Credits\n");
-		menu.AddItem("", "Programmers - Naleksuh, Jack5", ITEMDRAW_DISABLED);
-		menu.AddItem("", "Sound effects - GarageGames", ITEMDRAW_DISABLED);
-		menu.AddItem("", "", ITEMDRAW_IGNORE);
-		menu.AddItem("", "Plugin available at:", ITEMDRAW_DISABLED);
-		menu.AddItem("", "github.com/jack5github/Fortress_Blast", ITEMDRAW_DISABLED);
-		menu.AddItem("", "", ITEMDRAW_IGNORE);
+		menu.SetTitle("Credits\n ");
+		menu.AddItem("", "Programmers - Naleksuh, Jack5", ITEMDRAW_SPACER_NOSLOT);
+		menu.AddItem("", "Sound effects - GarageGames", ITEMDRAW_SPACER_NOSLOT);
+		NewLine(menu, 1);
+		menu.AddItem("", "Plugin available at:", ITEMDRAW_SPACER_NOSLOT);
+		menu.AddItem("", "github.com/jack5github/Fortress_Blast", ITEMDRAW_SPACER_NOSLOT);
+		NewLine(menu, 1);
 		SetMenuOptionFlags(menu, MENUFLAG_BUTTON_EXITBACK);
 		menu.Display(client, MENU_TIME_FOREVER);
 	}
 }
 
-NewPage (Menu menu, int lines) {
+NewLine(Menu menu, int lines) {
 	for (int draw = 1; draw <= lines ; draw++) {
 		menu.AddItem("", "", ITEMDRAW_NOTEXT);
 	}
