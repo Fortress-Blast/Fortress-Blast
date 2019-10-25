@@ -15,7 +15,7 @@ bool SuperBounce[MAXPLAYERS + 1] = false;
 bool ShockAbsorber[MAXPLAYERS + 1] = false;
 float OldSpeed[MAXPLAYERS+1] = 0.0;
 float VerticalVelocity[MAXPLAYERS + 1];
-int SpeedRotationsLeft[MAXPLAYERS+1] = 100;
+int SpeedRotationsLeft[MAXPLAYERS+1] = 80;
 
 /* Powerup IDs
 1 - Super Bounce
@@ -55,12 +55,12 @@ public OnMapStart() {
 	AddFileToDownloadsTable("sound/fortressblast/superjump_use.mp3");
 	AddFileToDownloadsTable("sound/fortressblast/gyrocopter_use.mp3");
 	AddFileToDownloadsTable("sound/fortressblast/timetravel_use.mp3");
-	AddFileToDownloadsTable("sound/fortressblast/superbounce_pickup.mp3");
-	AddFileToDownloadsTable("sound/fortressblast/shockabsorber_pickup.mp3");
-	AddFileToDownloadsTable("sound/fortressblast/superspeed_pickup.mp3");
-	AddFileToDownloadsTable("sound/fortressblast/superjump_pickup.mp3");
-	AddFileToDownloadsTable("sound/fortressblast/gyrocopter_pickup.mp3");
-	AddFileToDownloadsTable("sound/fortressblast/timetravel_pickup.mp3");
+	AddFileToDownloadsTable("sound/fortressblast/superbounce_pickup.wav");
+	AddFileToDownloadsTable("sound/fortressblast/shockabsorber_pickup.wav");
+	AddFileToDownloadsTable("sound/fortressblast/superspeed_pickup.wav");
+	AddFileToDownloadsTable("sound/fortressblast/superjump_pickup.wav");
+	AddFileToDownloadsTable("sound/fortressblast/gyrocopter_pickup.wav");
+	AddFileToDownloadsTable("sound/fortressblast/timetravel_pickup.wav");
 }
 
 public TF2_OnConditionAdded(int client, TFCond condition) {
@@ -287,7 +287,7 @@ UsePower(client) {
 	} else if (powerup[client] == 3) {
 		// Super Speed - Increased speed, gradually wears off over 10 seconds
 		OldSpeed[client] = GetEntPropFloat(client, Prop_Send, "m_flMaxspeed");
-		SpeedRotationsLeft[client] = 100;
+		SpeedRotationsLeft[client] = 80;
 		EmitAmbientSound("fortressblast/superspeed_use.mp3", vel, client);
 		CreateTimer(0.1, RecalcSpeed, client);
 	} else if (powerup[client] == 4) {
@@ -460,11 +460,11 @@ DoMenu(int client, int menutype) {
 	} else if (menutype == 1) {
 		Menu menu = new Menu(MenuHandle);
 		menu.SetTitle("Introduction\n");
-		menu.AddItem("", "Fortress Blast adds collectable powerups to a map that give special abilities for a", ITEMDRAW_RAWLINE);
-		menu.AddItem("", "short amount of time. If you have a powerup, you will be able to see what it is in", ITEMDRAW_RAWLINE);
-		menu.AddItem("", "the top-right corner of your screen.", ITEMDRAW_RAWLINE);
-		menu.AddItem("", "Press your 'Special attack' key to use a powerup. You can set this in TF2's Options.", ITEMDRAW_RAWLINE);
-		menu.AddItem("", "Check out the Powerups submenu for information on each collectible.", ITEMDRAW_RAWLINE);
+		menu.AddItem("", "Fortress Blast adds collectable powerups to a map that give special abilities for a", ITEMDRAW_DISABLED);
+		menu.AddItem("", "short amount of time. If you have a powerup, you will be able to see what it is in", ITEMDRAW_DISABLED);
+		menu.AddItem("", "the top-right corner of your screen.", ITEMDRAW_DISABLED);
+		menu.AddItem("", "Press your 'Special attack' key to use a powerup. You can set this in TF2's Options.", ITEMDRAW_DISABLED);
+		menu.AddItem("", "Check out the Powerups submenu for information on each collectible.", ITEMDRAW_DISABLED);
 		menu.AddItem("", "", ITEMDRAW_IGNORE);
 		SetMenuOptionFlags(menu, MENUFLAG_BUTTON_EXITBACK);
 		menu.Display(client, MENU_TIME_FOREVER);
@@ -474,41 +474,41 @@ DoMenu(int client, int menutype) {
 		menu.SetTitle("Powerups\n");
 		// ------------
 		// You need to make sure each page has 8 lines, both content and filler
-		menu.AddItem("", "- Gyrocopter -", ITEMDRAW_RAWLINE);
-		menu.AddItem("", "The Gyrocopter powerup lowers you gravity to 25%. This powerup can be used to clear", ITEMDRAW_RAWLINE);
-		menu.AddItem("", "large gaps or reach new heights, if you are decent at parkour.", ITEMDRAW_RAWLINE);
+		menu.AddItem("", "- Gyrocopter -", ITEMDRAW_DISABLED);
+		menu.AddItem("", "The Gyrocopter powerup lowers you gravity to 25%. This powerup can be used to clear", ITEMDRAW_DISABLED);
+		menu.AddItem("", "large gaps or reach new heights, if you are decent at parkour.", ITEMDRAW_DISABLED);
 		NewPage(menu, 5);
-		menu.AddItem("", "- Shock Absorber -", ITEMDRAW_RAWLINE);
-		menu.AddItem("", "Shock Absorber allows you to resist 75% of all damage and not take knockback. Use", ITEMDRAW_RAWLINE);
-		menu.AddItem("", "this when trying take down a player with a high push force.", ITEMDRAW_RAWLINE);
+		menu.AddItem("", "- Shock Absorber -", ITEMDRAW_DISABLED);
+		menu.AddItem("", "Shock Absorber allows you to resist 75% of all damage and not take knockback. Use", ITEMDRAW_DISABLED);
+		menu.AddItem("", "this when trying take down a player with a high push force.", ITEMDRAW_DISABLED);
 		NewPage(menu, 5);
-		menu.AddItem("", "- Super Bounce -", ITEMDRAW_RAWLINE);
-		menu.AddItem("", "While this powerup is active, you are forced to uncontrollably bunny hop. This is", ITEMDRAW_RAWLINE);
-		menu.AddItem("", "mainly used to clear gaps by bouncing but you can also trick players with your", ITEMDRAW_RAWLINE);
-		menu.AddItem("", "unpredictable movement.", ITEMDRAW_RAWLINE);
+		menu.AddItem("", "- Super Bounce -", ITEMDRAW_DISABLED);
+		menu.AddItem("", "While this powerup is active, you are forced to uncontrollably bunny hop. This is", ITEMDRAW_DISABLED);
+		menu.AddItem("", "mainly used to clear gaps by bouncing but you can also trick players with your", ITEMDRAW_DISABLED);
+		menu.AddItem("", "unpredictable movement.", ITEMDRAW_DISABLED);
 		NewPage(menu, 4);
-		menu.AddItem("", "- Super Jump -", ITEMDRAW_RAWLINE);
-		menu.AddItem("", "Plain and simple, Super Jump launches you into the air. If you jump before using", ITEMDRAW_RAWLINE);
-		menu.AddItem("", "this powerup, you will travel even higher, just watch out for fall damage.", ITEMDRAW_RAWLINE);
+		menu.AddItem("", "- Super Jump -", ITEMDRAW_DISABLED);
+		menu.AddItem("", "Plain and simple, Super Jump launches you into the air. If you jump before using", ITEMDRAW_DISABLED);
+		menu.AddItem("", "this powerup, you will travel even higher, just watch out for fall damage.", ITEMDRAW_DISABLED);
 		NewPage(menu, 5);
-		menu.AddItem("", "- Super Speed -", ITEMDRAW_RAWLINE);
-		menu.AddItem("", "The Super Speed powerup drastically speeds up your movement, but wears off over", ITEMDRAW_RAWLINE);
-		menu.AddItem("", "time. It's great for dodging focused fire.", ITEMDRAW_RAWLINE);
+		menu.AddItem("", "- Super Speed -", ITEMDRAW_DISABLED);
+		menu.AddItem("", "The Super Speed powerup drastically speeds up your movement, but wears off over", ITEMDRAW_DISABLED);
+		menu.AddItem("", "time. It's great for dodging focused fire.", ITEMDRAW_DISABLED);
 		NewPage(menu, 5);
-		menu.AddItem("", "- Time Travel -", ITEMDRAW_RAWLINE);
-		menu.AddItem("", "Using this powerup makes you invincible and fast, but prevents you from attacking.", ITEMDRAW_RAWLINE);
-		menu.AddItem("", "Use this to your advantage in order to get past sentries or difficult opponents.", ITEMDRAW_RAWLINE);
+		menu.AddItem("", "- Time Travel -", ITEMDRAW_DISABLED);
+		menu.AddItem("", "Using this powerup makes you invincible and fast, but prevents you from attacking.", ITEMDRAW_DISABLED);
+		menu.AddItem("", "Use this to your advantage in order to get past sentries or difficult opponents.", ITEMDRAW_DISABLED);
 		menu.AddItem("", "", ITEMDRAW_IGNORE);
 		SetMenuOptionFlags(menu, MENUFLAG_BUTTON_EXITBACK);
 		menu.Display(client, MENU_TIME_FOREVER);
 	} else if (menutype == 3) {
 		Menu menu = new Menu(MenuHandle);
 		menu.SetTitle("Credits\n");
-		menu.AddItem("", "Programmers - Naleksuh, Jack5", ITEMDRAW_RAWLINE);
-		menu.AddItem("", "Sound effects - GarageGames", ITEMDRAW_RAWLINE);
+		menu.AddItem("", "Programmers - Naleksuh, Jack5", ITEMDRAW_DISABLED);
+		menu.AddItem("", "Sound effects - GarageGames", ITEMDRAW_DISABLED);
 		menu.AddItem("", "", ITEMDRAW_IGNORE);
-		menu.AddItem("", "Plugin available at:", ITEMDRAW_RAWLINE);
-		menu.AddItem("", "github.com/jack5github/Fortress_Blast", ITEMDRAW_RAWLINE);
+		menu.AddItem("", "Plugin available at:", ITEMDRAW_DISABLED);
+		menu.AddItem("", "github.com/jack5github/Fortress_Blast", ITEMDRAW_DISABLED);
 		menu.AddItem("", "", ITEMDRAW_IGNORE);
 		SetMenuOptionFlags(menu, MENUFLAG_BUTTON_EXITBACK);
 		menu.Display(client, MENU_TIME_FOREVER);
