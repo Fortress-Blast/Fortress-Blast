@@ -37,12 +37,10 @@ Installation
 Commands *(All in development)*
 --------
 
-- `fortressblast_bot 0|1` - Disable or enable bots using powerups within a random amount of time. Defaults to on.
-- `sm_fortressblast_bot_powerup_min <#> (2)` - Minimum time for bots to use a powerup
-- `sm_fortressblast_bot_powerup_max <#> (15)` - Minimum time for bots to use a powerup
-- `fortressblast_drop 0|1` - Disable or enable players dropping powerups on death. Defauts to off.
-- `fortressblast_drop_rate 0-100` - Set the chance a player will drop a powerup on death out of 100. Defaults to 5.
-- `fortressblast_drop_team 0|1|2|3` - Set the teams that will drop powerups on death. 0 = None, 1 = Both (default), 2 = RED, 3 = BLU.
-- `fortressblast_mannpower 0|1` - Disable or enable automatic replacement of Mannpower powerups with Fortress Blast powerups. Defaults to on.
-- `fortressblast_sound_pickup 0|1` - If set to off, picking up powerups will play the standard ammo pickup sound effect instead of the custom sound effects. Defaults to on.
-- `fortressblast_sound_use 0|1` - If set to off, using powerups will play the standard spell casting sound effect instead of the custom sound effects. Defaults to on.
+- `sm_fortressblast_bot 0|1` - Disable or enable bots using powerups within a random amount of time. Default 1.
+- `sm_fortressblast_bot_powerup_min #` - Minimum time for bots to use a powerup. Default 2.
+- `sm_fortressblast_bot_powerup_max #` - Minimum time for bots to use a powerup. Default 15.
+- `fortressblast_drop 0|1` - Disable or enable players dropping powerups on death. Defaut 0.
+- `fortressblast_drop_rate 0-100` - Set the chance a player will drop a powerup on death out of 100. Default 5.
+- `fortressblast_drop_team 0|1|2` - Set the teams that will drop powerups on death. 0 = Both (default), 1 = RED, 2 = BLU.
+- `fortressblast_mannpower 0|1` - Disable or enable automatic replacement of Mannpower powerups with Fortress Blast powerups. Default 1.
