@@ -48,5 +48,11 @@ Commands
 Known bugs (v0.1)
 -----------------
 
+- Dying sometimes does not remove powerups.
 - Menus display all items with numbers despite them not being links.
 - Not all Mannpower powerups end up being replaced.
+- Players dropping powerups defaults to on.
+- Players can use the grappling hook while Time Travel is active.
+- Powerups dropped by players do not disappear after a certain amount of time.
+- Shock Absorber sound plays twice on some clients.
+- You can use powerups while dead or in spectator.
