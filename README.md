@@ -55,4 +55,5 @@ Known bugs (v0.1)
 - Players can use the grappling hook while Time Travel is active.
 - Powerups dropped by players do not disappear after a certain amount of time.
 - Shock Absorber sound plays twice on some clients.
+- Using Super Bounce while Super Bounce is active does not extend the time it is active, and a similar case for other powerups.
 - You can use powerups while dead or in spectator.
