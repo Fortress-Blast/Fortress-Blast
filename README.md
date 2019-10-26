@@ -4,9 +4,9 @@ Fortress Blast
 Fortress Blast is a Team Fortress 2 server mod created by Naleksuh and Jack5 that adds powerups from the Marble Blast series into TF2. It can be run on top of other gamemodes and server mods. Fortress Blast is mostly dependent on user-defined spawning locations, but comes packaged with support for many official and custom maps.
 
 **Installation**
-1) Install [Rest in Pawn](https://github.com/ErikMinekus/sm-ripext)
-2) Download ZIP file from "clone or download"
-3) Extract contents of TF folder into your server's TF folder
+**-----------**
+1) Install [Rest in Pawn](https://github.com/ErikMinekus/sm-ripext/releases/tag/1.0.6) and extract the zip file into your server
+2) Download our ZIP file from "clone or download" and extract contents of TF folder into your server's TF folder
 
 
 Powerups
