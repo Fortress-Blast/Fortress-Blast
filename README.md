@@ -35,12 +35,15 @@ Installation
 3) You can download more pre-made .json files from the [maps repository](https://github.com/Fortress-Blast/Fortress-Blast-Maps) or create your own.
 4) It would greatly help this plugin thrive if you could add 'fortressblast' to the tag list of your server.
 
-Commands
+Commands (in chat, replace *sm_* with *!*)
 --------
 
 - `sm_fortressblast` - Opens the Fortress Blast help menu.
-- `sm_setpowerup` - Sets your powerup by ID number. (Only users with the Z flag can use this command)
-## ConVars
+- `sm_setpowerup` - Sets your powerup by ID number. Only users with the Z flag can use this command.
+
+ConVars
+-------
+
 - `sm_fortressblast_bot <0-1>` - Disable or enable bots using powerups within a random amount of time. Default 1.
 - `sm_fortressblast_bot_min <#>` - Minimum time for bots to use a powerup. Default 2.
 - `sm_fortressblast_bot_max <#>` - Minimum time for bots to use a powerup. Default 15.
