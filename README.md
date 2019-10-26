@@ -3,11 +3,6 @@ Fortress Blast
 
 Fortress Blast is a Team Fortress 2 server mod created by Naleksuh and Jack5 that adds powerups from the Marble Blast series into TF2. It can be run on top of other gamemodes and server mods. Fortress Blast is mostly dependent on user-defined spawning locations, but comes packaged with support for many official and custom maps.
 
-# Installation
---------
-1) Install [Rest in Pawn](https://github.com/ErikMinekus/sm-ripext/releases/tag/1.0.6) and extract the zip file into your server
-2) Download our ZIP file from "clone or download" and extract contents of TF folder into your server's TF folder
-
 
 Powerups
 --------
@@ -31,6 +26,12 @@ Fortress Blast comes with a few quality-of-life features:
 - Bots can pick up powerups and randomly use them based on a user-defined range of time.
 - By default, Mannpower powerups are replaced with Fortress Blast powerups.
 
+Installation
+------------
+
+1) Install [Rest in Pawn](https://github.com/ErikMinekus/sm-ripext/releases/tag/1.0.6) and extract the .zip file into your server.
+2) Download the Fortress Blast .zip file from "Clone or download" and extract the contents of the *tf* folder into your server's *tf* folder.
+
 Commands
 --------
 
@@ -38,6 +39,12 @@ Commands
 - `sm_fortressblast_bot <0-1>` - Disable or enable bots using powerups within a random amount of time. Default 1.
 - `sm_fortressblast_bot_min <#>` - Minimum time for bots to use a powerup. Default 2.
 - `sm_fortressblast_bot_max <#>` - Minimum time for bots to use a powerup. Default 15.
-- `sm_fortressblast_drop_rate <0-100>` - Set the chance a player will drop a powerup on death out of 100. Default 5. *In development*
-- `sm_fortressblast_drop_team <0-2>` - Set the teams that will drop powerups on death. 0 = Both (default), 1 = RED, 2 = BLU. *In development*
+- `sm_fortressblast_drop_rate <0-100>` - Set the chance a player will drop a powerup on death out of 100. Default 0 (5 recommended).
+- `sm_fortressblast_drop_team <0-2>` - Set the teams that will drop powerups on death. 0 = Both (default), 1 = RED, 2 = BLU.
 - `sm_fortressblast_mannpower <0-2>` - Set whether Mannpower powerups are replaced with Fortress Blast powerups. 0 = Don't replace, 1 = Replace only if there is no .json file (default), 2 = Always replace.
+
+Known bugs (v0.1)
+-----------------
+
+- Menus display all items with numbers despite them not being links
+- Not all Mannpower powerups end up being replaced.
