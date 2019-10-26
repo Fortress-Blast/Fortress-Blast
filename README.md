@@ -30,8 +30,8 @@ Installation
 ------------
 
 1) Install [Rest in Pawn](https://github.com/ErikMinekus/sm-ripext/releases/tag/1.0.6) and extract the .zip file into your server.
-2) Download the Fortress Blast .zip file from "Clone or download" and extract the contents of the *tf* folder into your server's *tf* folder.
-3) Download more pre-made .json files from the [maps repository](https://github.com/Fortress-Blast/Fortress-Blast-Maps) or create your own.
+2) Download the Fortress Blast .zip file from [our releases page](https://github.com/Fortress-Blast/Fortress-Blast/releases) and extract the contents of the *tf* folder into your server's *tf* folder.
+3) (optional) Download more pre-made .json files from the [maps repository](https://github.com/Fortress-Blast/Fortress-Blast-Maps) or create your own.
 
 Commands
 --------
