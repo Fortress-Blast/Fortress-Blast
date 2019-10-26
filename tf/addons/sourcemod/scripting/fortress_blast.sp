@@ -36,7 +36,7 @@ public OnPluginStart() {
 	HookEvent("teamplay_round_start", teamplay_round_start);
 	HookEvent("teamplay_round_win", teamplay_round_win);
 	HookEvent("player_death", player_death);
-	RegConsoleCmd("sm_setpowerup", SetPowerup);
+	RegAdminCmd("sm_setpowerup", SetPowerup, ADMFLAG_ROOT);
 	RegConsoleCmd("sm_fortressblast", FBMenu);
 	CreateConVar("sm_fortressblast_bot", "1", "Disable or enable bots using powerups.");
 	CreateConVar("sm_fortressblast_bot_min", "2", "Minimum time for bots to use a powerup.");
@@ -574,7 +574,7 @@ DoMenu(int client, int menutype) {
 		menu.AddItem("", "Sound effects - GarageGames", ITEMDRAW_DISABLED);
 		NewLine(menu, 1);
 		menu.AddItem("", "Plugin available at:", ITEMDRAW_DISABLED);
-		menu.AddItem("", "github.com/jack5github/Fortress_Blast", ITEMDRAW_DISABLED);
+		menu.AddItem("", "github.com/Fortress-Blast/Fortress-Blast", ITEMDRAW_DISABLED);
 		NewLine(menu, 1);
 		SetMenuOptionFlags(menu, MENUFLAG_BUTTON_EXITBACK);
 		menu.Display(client, MENU_TIME_FOREVER);
