@@ -41,10 +41,10 @@ public OnPluginStart() {
 	CreateConVar("sm_fortressblast_bot", "1", "Disable or enable bots using powerups.");
 	CreateConVar("sm_fortressblast_bot_min", "2", "Minimum time for bots to use a powerup.");
 	CreateConVar("sm_fortressblast_bot_max", "15", "Maximum time for bots to use a powerup.");
-	// CreateConVar("sm_fortressblast_drop", "0", "Disable or enable dropping powerups on death.");
-	// CreateConVar("sm_fortressblast_drop_rate", "5", "Chance out of 100 for a powerup to drop on death.");
+	CreateConVar("sm_fortressblast_drop", "0", "Disable or enable dropping powerups on death.");
+	CreateConVar("sm_fortressblast_drop_rate", "5", "Chance out of 100 for a powerup to drop on death.");
 	// CreateConVar("sm_fortressblast_drop_teams", "1", "Set the teams that will drop powerups on death.");
-	CreateConVar("sm_fortressblast_mannpower", "1", "What to do with Mannpower powerups");
+	CreateConVar("sm_fortressblast_mannpower", "2", "How to handle replacing Mannpower powerups.");
 	PrecacheModel("models/props_halloween/pumpkin_loot.mdl");
 	LoadTranslations("common.phrases");
 }
@@ -73,8 +73,7 @@ public OnMapStart() {
 	GetCurrentMap(map, sizeof(map));
 	char path[PLATFORM_MAX_PATH + 1];
 	Format(path, sizeof(path), "scripts/fortress_blast/powerup_spots/%s.json", map);
-	MapHasJsonFile = FileExists(path);
-	// so we dont overload read-writes
+	MapHasJsonFile = FileExists(path); // So we dont overload read-writes
 }
 
 public TF2_OnConditionAdded(int client, TFCond condition) {
@@ -141,15 +140,15 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 	GetPowerupPlacements();
 	
 	for (int entity = 1; entity <= MAX_EDICTS ; entity++) {
-		if(IsValidEntity(entity)){
-			if(FindEntityByClassname(0, "tf_logic_mannpower") != -1 && GetConVarInt(FindConVar("sm_fortressblast_mannpower")) != 0){
+		if (IsValidEntity(entity)) {
+			if (FindEntityByClassname(0, "tf_logic_mannpower") != -1 && GetConVarInt(FindConVar("sm_fortressblast_mannpower")) != 0) {
 				char classname[60];
 				GetEntityClassname(entity, classname, sizeof(classname));
-				if(StrEqual(classname, "item_powerup_rune") && (!MapHasJsonFile || GetConVarInt(FindConVar("sm_fortressblast_mannpower")) == 2)){
+				if (StrEqual(classname, "item_powerup_rune") && (!MapHasJsonFile || GetConVarInt(FindConVar("sm_fortressblast_mannpower")) == 2)) {
 					float coords[3] = 69.420;
 					GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
 					coords[2] -= 32;
-					//PrintToChatAll("Spawning a powerup at %f %f %f", coords[0], coords[1], coords[2]);
+					// PrintToChatAll("Spawning a powerup at %f %f %f", coords[0], coords[1], coords[2]);
 					SpawnPower(coords, true);
 					RemoveEntity(entity);
 				}
@@ -164,15 +163,24 @@ public Action PesterThisDude(Handle timer, int client) {
 	}
 }
 
-
 public Action teamplay_round_win(Event event, const char[] name, bool dontBroadcast) {
 	VictoryTime = true;
 }
-public Action player_death(Event event, const char[] name, bool dontBroadcast){
-	float coords[3];
-	GetEntPropVector(GetClientOfUserId(event.GetInt("userid")), Prop_Send, "m_vecOrigin", coords);
-	SpawnPower(coords, false);
+
+public Action player_death(Event event, const char[] name, bool dontBroadcast) {
+	// Is dropping powerups enabled
+	if (GetConVarFloat(FindConVar("sm_fortressblast_drop")) >= 1) { // Replace with GetConVarBool
+		// Get chance a powerup will be dropped
+		float convar = GetConVarFloat(FindConVar("sm_fortressblast_drop_rate"));
+		int randomNumber = GetRandomInt(0, 99);
+		if (convar > randomNumber) {
+			float coords[3];
+			GetEntPropVector(GetClientOfUserId(event.GetInt("userid")), Prop_Send, "m_vecOrigin", coords);
+			SpawnPower(coords, false);
+		}
+	}
 }
+
 public OnClientPutInServer(int client) {
 	powerup[client] = 0;
 	SDKHook(client, SDKHook_OnTakeDamageAlive, OnTakeDamage);
@@ -204,11 +212,13 @@ SpawnPower(float location[3], bool respawn) {
 		DispatchSpawn(entity);
 		ActivateEntity(entity);
 		TeleportEntity(entity, location, NULL_VECTOR, NULL_VECTOR);
-		if(respawn){
+		if (respawn) {
 			SDKHook(entity, SDKHook_StartTouch, OnStartTouchRespawn);
 		}
 		else{
 			SDKHook(entity, SDKHook_StartTouch, OnStartTouchDontRespawn);
+			// SetVariantString("OnUser1 !self:Kill::15:1");
+			// AcceptEntityInput(SOMEINDEX, "AddOutput");
 		}
 	}
 }
@@ -229,9 +239,11 @@ public Action OnStartTouchRespawn(entity, other) {
 	}
 	return Plugin_Continue;
 }
+
 public Action OnStartTouchDontRespawn(entity, other) {
 	DeletePowerup(entity, other);
 }
+
 DeletePowerup(int entity, other){
 	RemoveEntity(entity);
 	// PrintToChatAll("%N has collected a powerup", other);
@@ -253,6 +265,7 @@ DeletePowerup(int entity, other){
 		CreateTimer(GetRandomFloat(convar1, convar2), BotUsePowerup, other);
 	}
 }
+
 public Action BotUsePowerup(Handle timer, int client){
 	// PrintToChatAll("Making %N use powerup ID %d", client, powerup[client]);
 	UsePower(client);
@@ -285,7 +298,7 @@ PlayPowerupSound(int client) {
 }
 
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float ang[3], int &weapon) {
-	if(TimeTravel[client]){
+	if (TimeTravel[client]) {
 		SetEntPropFloat(client, Prop_Send, "m_flMaxspeed", 520.0);
 	}
 	if (buttons & IN_ATTACK3) {
@@ -315,7 +328,7 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
 		damageForce[1] = 0.0;
 		damageForce[2] = 0.0;
 	}
-	if(SuperBounce[victim] && attacker == 0 && damage < 100.0){
+	if (SuperBounce[victim] && attacker == 0 && damage < 100.0) {
 		return Plugin_Handled;
 	}
 	return Plugin_Changed;
@@ -362,15 +375,17 @@ UsePower(client) {
 				SetEntPropFloat(GetPlayerWeaponSlot(client, weapon), Prop_Send, "m_flNextSecondaryAttack", GetGameTime() + 5.0);
 			}
 		}
-		CreateTimer(5.0, DeTimeTravel, client);
+		CreateTimer(5.0, RemoveTimeTravel, client);
 		EmitAmbientSound("fortressblast/timetravel_use.mp3", vel, client);
 	}
 	powerup[client] = 0;
 }
-public Action DeTimeTravel(Handle timer, int client){
+
+public Action RemoveTimeTravel(Handle timer, int client) {
 	TimeTravel[client] = false;
 	TF2_StunPlayer(client, 0.0, 0.0, TF_STUNFLAG_SLOWDOWN);
 }
+
 public Action RestoreGravity(Handle timer, int client) {
 	SetEntityGravity(client, 1.0);
 }
@@ -415,8 +430,8 @@ DoHudText(client) {
 }
 
 GetPowerupPlacements() {
-	if(!MapHasJsonFile){
-		PrintToServer("[Fortress Blast] No json file for this map!");
+	if (!MapHasJsonFile) {
+		PrintToServer("[Fortress Blast] No .json file for this map! You can download pre-made files from https://github.com/Fortress-Blast/Fortress-Blast-Maps");
 		return;
 	}
 	char map[80];
@@ -518,7 +533,7 @@ bool HandleHasKey(JSONObject handle, char key[80]) {
 DoMenu(int client, int menutype) {
 	if (menutype == 0) {
 		Menu menu = new Menu(MenuHandle);
-		menu.SetTitle("Fortress Blast (v0.1)\n==============\n ");
+		menu.SetTitle("Fortress Blast (v0.2)\n==============\n ");
 		menu.AddItem("info", "Introduction");
 		menu.AddItem("listpowerups", "Powerups");
 		menu.AddItem("credits", "Credits");
@@ -574,7 +589,7 @@ DoMenu(int client, int menutype) {
 		menu.AddItem("", "Sound effects - GarageGames", ITEMDRAW_DISABLED);
 		NewLine(menu, 1);
 		menu.AddItem("", "Plugin available at:", ITEMDRAW_DISABLED);
-		menu.AddItem("", "github.com/Fortress-Blast/Fortress-Blast", ITEMDRAW_DISABLED);
+		menu.AddItem("", "https://github.com/Fortress-Blast/Fortress-Blast", ITEMDRAW_DISABLED);
 		NewLine(menu, 1);
 		SetMenuOptionFlags(menu, MENUFLAG_BUTTON_EXITBACK);
 		menu.Display(client, MENU_TIME_FOREVER);
