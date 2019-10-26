@@ -44,7 +44,7 @@ public OnPluginStart() {
 	// CreateConVar("sm_fortressblast_drop", "0", "Disable or enable dropping powerups on death.");
 	// CreateConVar("sm_fortressblast_drop_rate", "5", "Chance out of 100 for a powerup to drop on death.");
 	// CreateConVar("sm_fortressblast_drop_teams", "1", "Set the teams that will drop powerups on death.");
-	CreateConVar("sm_fortressblast_mannpower", "2", "What to do with Mannpower powerups");
+	CreateConVar("sm_fortressblast_mannpower", "1", "What to do with Mannpower powerups");
 	PrecacheModel("models/props_halloween/pumpkin_loot.mdl");
 	LoadTranslations("common.phrases");
 }
@@ -190,13 +190,13 @@ SpawnPower(float location[3], bool respawn) {
 		} else if (powerupid[entity] == 2) {
 			SetEntityRenderColor(entity, 255, 100, 100, 255);
 		} else if (powerupid[entity] == 3) {
-			SetEntityRenderColor(entity, 255, 255, 100, 255);
+			SetEntityRenderColor(entity, 255, 177, 100, 255);
 		} else if (powerupid[entity] == 4) {
-			SetEntityRenderColor(entity, 255, 218, 100, 255);
+			SetEntityRenderColor(entity, 255, 100, 255, 255);
 		} else if (powerupid[entity] == 5) {
-			SetEntityRenderColor(entity, 100, 255, 255, 255);
+			SetEntityRenderColor(entity, 255, 177, 255, 255);
 		} else if (powerupid[entity] == 6) {
-			SetEntityRenderColor(entity, 100, 255, 100, 255);
+			SetEntityRenderColor(entity, 100, 255, 255, 255);
 		}
 		DispatchKeyValue(entity, "pickup_sound", "GetOutOfTheConsoleYouSnoop");
 		DispatchKeyValue(entity, "pickup_particle", "GetOutOfTheConsoleYouSnoop");
