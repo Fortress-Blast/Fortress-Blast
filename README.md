@@ -30,10 +30,10 @@ Installation
 ------------
 
 1) Install [Rest in Pawn](https://github.com/ErikMinekus/sm-ripext/releases/tag/1.0.6) and extract the .zip file into your server.
-2) Install [More Colors](https://forums.alliedmods.net/showthread.php?t=185016) and extract the .inc file into your tf\addons\sourcemod\scripting
-2) Download the Fortress Blast .zip file from [our releases page](https://github.com/Fortress-Blast/Fortress-Blast/releases) and extract the contents of the *tf* folder into your server's *tf* folder.
-3) You can download more pre-made .json files from the [maps repository](https://github.com/Fortress-Blast/Fortress-Blast-Maps) or create your own.
-4) It would greatly help this plugin thrive if you could add 'fortressblast' to the tag list of your server.
+2) Install [More Colors](https://forums.alliedmods.net/showthread.php?t=185016) and extract the .inc file into *tf\addons\sourcemod\scripting*.
+3) Download the Fortress Blast .zip file from [the releases page](https://github.com/Fortress-Blast/Fortress-Blast/releases) and extract the contents of the *tf* folder into your server's *tf* folder.
+4) You can download extra pre-made .json files from the [maps repository](https://github.com/Fortress-Blast/Fortress-Blast-Maps) or create your own.
+5) It would greatly help this plugin thrive if you could add 'fortressblast' to the tags list of your server.
 
 Commands
 --------
@@ -44,11 +44,12 @@ Commands
 - `sm_fortressblast_bot_max <#>` - Minimum time for bots to use a powerup. Default 15.
 - `sm_fortressblast_drop_rate <0-100>` - Set the chance a player will drop a powerup on death out of 100. Default 0 (5 recommended).
 - `sm_fortressblast_drop_team <0-2>` - Set the teams that will drop powerups on death. 0 = Both (default), 1 = RED, 2 = BLU.
-- `sm_fortressblast_mannpower <0-2>` - Set whether Mannpower powerups are replaced with Fortress Blast powerups. 0 = Don't replace, 1 = Replace only if there is no .json file (default), 2 = Always replace.
+- `sm_fortressblast_mannpower <0-2>` - Set whether Mannpower powerups are replaced with Fortress Blast powerups. 0 = Don't replace, 1 = Replace only if there is no .json file, 2 = Always replace (default).
 
 Known bugs (v0.1)
 -----------------
 
+- Chat message happens during waiting for players.
 - Dying sometimes does not remove powerups.
 - Menus display all items with numbers despite them not being links.
 - Not all Mannpower powerups end up being replaced.
@@ -58,4 +59,3 @@ Known bugs (v0.1)
 - Shock Absorber sound plays twice on some clients.
 - Using Super Bounce while Super Bounce is active does not extend the time it is active, and a similar case for other powerups.
 - You can use powerups while dead or in spectator.
-- Chat message happens during waiting for players
