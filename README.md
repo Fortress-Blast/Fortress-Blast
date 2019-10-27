@@ -59,4 +59,3 @@ Known bugs (v0.1)
 - Powerups dropped by players do not disappear after a certain amount of time.
 - Shock Absorber sound plays twice on some clients.
 - Using Super Bounce while Super Bounce is active does not extend the time it is active, and a similar case for other powerups.
-- Super Speed may not properly act to speed changes in the middle
