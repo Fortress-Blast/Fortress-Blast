@@ -9,15 +9,20 @@
 #define	MAX_EDICTS (1<<MAX_EDICT_BITS)
 
 int powerupid[MAX_EDICTS];
-bool VictoryTime = false;
 int powerup[MAXPLAYERS + 1] = 0;
+int SpeedRotationsLeft[MAXPLAYERS + 1] = 80;
+bool VictoryTime = false;
+bool MapHasJsonFile = false;
 bool SuperBounce[MAXPLAYERS + 1] = false;
 bool ShockAbsorber[MAXPLAYERS + 1] = false;
 bool TimeTravel[MAXPLAYERS + 1] = true;
 float OldSpeed[MAXPLAYERS + 1] = 0.0;
+float SuperSpeed[MAXPLAYERS + 1] = 0.0;
 float VerticalVelocity[MAXPLAYERS + 1];
-int SpeedRotationsLeft[MAXPLAYERS + 1] = 80;
-bool MapHasJsonFile = false;
+Handle SuperBounceHandle[MAXPLAYERS + 1];
+Handle ShockAbsorberHandle[MAXPLAYERS + 1];
+Handle GyrocopterHandle[MAXPLAYERS + 1];
+Handle TimeTravelHandle[MAXPLAYERS + 1];
 
 /* Powerup IDs
 1 - Super Bounce
@@ -41,9 +46,9 @@ public OnPluginStart() {
 	CreateConVar("sm_fortressblast_bot", "1", "Disable or enable bots using powerups.");
 	CreateConVar("sm_fortressblast_bot_min", "2", "Minimum time for bots to use a powerup.");
 	CreateConVar("sm_fortressblast_bot_max", "15", "Maximum time for bots to use a powerup.");
-	CreateConVar("sm_fortressblast_drop", "0", "Disable or enable dropping powerups on death.");
+	CreateConVar("sm_fortressblast_drop", "0", "How to handle dropping powerups on death");
 	CreateConVar("sm_fortressblast_drop_rate", "5", "Chance out of 100 for a powerup to drop on death.");
-	// CreateConVar("sm_fortressblast_drop_teams", "1", "Set the teams that will drop powerups on death.");
+	CreateConVar("sm_fortressblast_drop_teams", "1", "Set the teams that will drop powerups on death.");
 	CreateConVar("sm_fortressblast_mannpower", "2", "How to handle replacing Mannpower powerups.");
 	PrecacheModel("models/props_halloween/pumpkin_loot.mdl");
 	LoadTranslations("common.phrases");
@@ -133,9 +138,13 @@ public Action SetPowerup(int client, int args) {
 
 public Action teamplay_round_start(Event event, const char[] name, bool dontBroadcast) {
 	VictoryTime = false;
-	for (int client = 1; client <= MaxClients; client++) {
-		powerup[client] = 0;
-		CreateTimer(3.0, PesterThisDude, client);
+	if(!GameRules_GetProp("m_bInWaitingForPlayers")){
+		for (int client = 1; client <= MaxClients; client++) {
+			powerup[client] = 0;
+			if(IsClientInGame(client)){
+				CreateTimer(3.0, PesterThisDude, client);
+			}
+		}
 	}
 	GetPowerupPlacements();
 	
@@ -168,12 +177,13 @@ public Action teamplay_round_win(Event event, const char[] name, bool dontBroadc
 }
 
 public Action player_death(Event event, const char[] name, bool dontBroadcast) {
+	powerup[GetClientOfUserId(event.GetInt("userid"))] = 0;
 	// Is dropping powerups enabled
-	if (GetConVarFloat(FindConVar("sm_fortressblast_drop")) >= 1) { // Replace with GetConVarBool
+	if (GetConVarFloat(FindConVar("sm_fortressblast_drop")) == 2 || (GetConVarFloat(FindConVar("sm_fortressblast_drop")) && !MapHasJsonFile)) { // Replace with GetConVarBool
 		// Get chance a powerup will be dropped
 		float convar = GetConVarFloat(FindConVar("sm_fortressblast_drop_rate"));
 		int randomNumber = GetRandomInt(0, 99);
-		if (convar > randomNumber) {
+		if (convar > randomNumber && (GetConVarFloat(FindConVar("sm_fortressblast_drop_teams")) == GetClientTeam(GetClientOfUserId(event.GetInt("userid")))|| GetConVarFloat(FindConVar("sm_fortressblast_drop_teams")) == 1)) {
 			float coords[3];
 			GetEntPropVector(GetClientOfUserId(event.GetInt("userid")), Prop_Send, "m_vecOrigin", coords);
 			SpawnPower(coords, false);
@@ -301,7 +311,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	if (TimeTravel[client]) {
 		SetEntPropFloat(client, Prop_Send, "m_flMaxspeed", 520.0);
 	}
-	if (buttons & IN_ATTACK3) {
+	if (buttons & IN_ATTACK3 && IsPlayerAlive(client)) {
 		UsePower(client);
 	}
 	float vel2[3];
@@ -343,12 +353,14 @@ UsePower(client) {
 		EmitAmbientSound("fortressblast/superbounce_use.mp3", vel, client);
 		VerticalVelocity[client] = 0.0; // Cancel previously stored vertical velocity
 		SuperBounce[client] = true;
-		CreateTimer(5.0, RemoveSuperBounce, client);
+		ClearTimer(SuperBounceHandle[client]);
+		SuperBounceHandle[client] = CreateTimer(5.0, RemoveSuperBounce, client);
 	} else if (powerup[client] == 2) {
 		// Shock Absorber - 75% damage and 100% knockback resistances for 5 seconds
 		ShockAbsorber[client] = true;
 		EmitAmbientSound("fortressblast/shockabsorber_use.mp3", vel, client);
-		CreateTimer(5.0, RemoveShockAbsorb, client);
+		ClearTimer(ShockAbsorberHandle[client]);
+		ShockAbsorberHandle[client] = CreateTimer(5.0, RemoveShockAbsorb, client);
 	} else if (powerup[client] == 3) {
 		// Super Speed - Increased speed, gradually wears off over 10 seconds
 		OldSpeed[client] = GetEntPropFloat(client, Prop_Send, "m_flMaxspeed");
@@ -363,7 +375,8 @@ UsePower(client) {
 	} else if (powerup[client] == 5) {
 		// Gyrocopter - 25% gravity for 5 seconds
 		SetEntityGravity(client, 0.25);
-		CreateTimer(5.0, RestoreGravity, client);
+		ClearTimer(GyrocopterHandle[client]);
+		GyrocopterHandle[client] = CreateTimer(5.0, RestoreGravity, client);
 		EmitAmbientSound("fortressblast/gyrocopter_use.mp3", vel, client);
 	} else if (powerup[client] == 6 ) {
 		// Time Travel - Increased speed and Bonk Atomic Punch effect for 5 seconds
@@ -375,33 +388,44 @@ UsePower(client) {
 				SetEntPropFloat(GetPlayerWeaponSlot(client, weapon), Prop_Send, "m_flNextSecondaryAttack", GetGameTime() + 5.0);
 			}
 		}
-		CreateTimer(5.0, RemoveTimeTravel, client);
+		ClearTimer(TimeTravelHandle[client]);
+		TimeTravelHandle[client] = CreateTimer(5.0, RemoveTimeTravel, client);
 		EmitAmbientSound("fortressblast/timetravel_use.mp3", vel, client);
 	}
 	powerup[client] = 0;
 }
 
 public Action RemoveTimeTravel(Handle timer, int client) {
+	TimeTravelHandle[client] = INVALID_HANDLE;
 	TimeTravel[client] = false;
 	TF2_StunPlayer(client, 0.0, 0.0, TF_STUNFLAG_SLOWDOWN);
 }
 
 public Action RestoreGravity(Handle timer, int client) {
+	GyrocopterHandle[client] = INVALID_HANDLE;
 	SetEntityGravity(client, 1.0);
 }
 
 public Action RemoveSuperBounce(Handle timer, int client) {
+	SuperBounceHandle[client] = INVALID_HANDLE;
 	SuperBounce[client] = false;
 }
 
 public Action RemoveShockAbsorb(Handle timer, int client) {
+	ShockAbsorberHandle[client] = INVALID_HANDLE;
 	ShockAbsorber[client] = false;
 }
 
 public Action RecalcSpeed(Handle timer, int client) {
 	if (SpeedRotationsLeft[client] > 1) {
-		SetEntPropFloat(client, Prop_Send, "m_flMaxspeed", OldSpeed[client] + (SpeedRotationsLeft[client] * 2));
-		CreateTimer(0.1, RecalcSpeed, client);
+		if(IsPlayerAlive(client)){
+			if(GetEntPropFloat(client, Prop_Send, "m_flMaxspeed") != SuperSpeed[client]){ // if tf2 changed the speed
+				OldSpeed[client] = GetEntPropFloat(client, Prop_Send, "m_flMaxspeed");
+			}
+			SuperSpeed[client] = OldSpeed[client] + (SpeedRotationsLeft[client] * 2);
+			SetEntPropFloat(client, Prop_Send, "m_flMaxspeed", SuperSpeed[client]);
+			CreateTimer(0.1, RecalcSpeed, client);
+		}
 	} else {
 		TF2_StunPlayer(client, 0.0, 0.0, TF_STUNFLAG_SLOWDOWN);
 	}
@@ -411,7 +435,7 @@ public Action RecalcSpeed(Handle timer, int client) {
 DoHudText(client) {
 	if (powerup[client] != 0) {
 		Handle text = CreateHudSynchronizer();
-  		SetHudTextParams(0.8, 0.1, 0.25, 255, 255, 0, 255); // Need to move so that it does not conflict with killfeed
+  		SetHudTextParams(0.9, 0.5, 0.25, 255, 255, 0, 255);
   		if (powerup[client] == 1) {
 			ShowSyncHudText(client, text, "Collected powerup:\nSuper Bounce");
 		} else if (powerup[client] == 2) {
@@ -431,7 +455,8 @@ DoHudText(client) {
 
 GetPowerupPlacements() {
 	if (!MapHasJsonFile) {
-		PrintToServer("[Fortress Blast] No .json file for this map! You can download pre-made files from https://github.com/Fortress-Blast/Fortress-Blast-Maps");
+		PrintToServer("[Fortress Blast] No .json file for this map! You can download pre-made files from our GitHub map repository:");
+		PrintToServer("https://github.com/Fortress-Blast/Fortress-Blast-Maps");
 		return;
 	}
 	char map[80];
@@ -577,9 +602,9 @@ DoMenu(int client, int menutype) {
 		menu.AddItem("", "time. It's great for dodging focused fire.", ITEMDRAW_DISABLED);
 		NewLine(menu, 5);
 		menu.AddItem("", "- Time Travel -", ITEMDRAW_DISABLED);
-		menu.AddItem("", "Using this powerup makes you invincible and fast, but prevents you from attacking.", ITEMDRAW_DISABLED);
+		menu.AddItem("", "Using this powerup makes you invisible and fast, but prevents you from attacking.", ITEMDRAW_DISABLED);
 		menu.AddItem("", "Use this to your advantage in order to get past sentries or difficult opponents.", ITEMDRAW_DISABLED);
-		NewLine(menu, 1);
+		NewLine(menu, 5);
 		SetMenuOptionFlags(menu, MENUFLAG_BUTTON_EXITBACK);
 		menu.Display(client, MENU_TIME_FOREVER);
 	} else if (menutype == 3) {
@@ -601,3 +626,13 @@ NewLine(Menu menu, int lines) {
 		menu.AddItem("", "", ITEMDRAW_NOTEXT);
 	}
 }
+
+
+stock ClearTimer(Handle Timer) // from sm forums
+{
+    if(Timer != INVALID_HANDLE)
+    {
+        CloseHandle(Timer);
+        Timer = INVALID_HANDLE;
+    }
+} 
