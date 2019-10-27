@@ -21,8 +21,8 @@ Features
 
 Fortress Blast comes with a few quality-of-life features:
 
-- A menu is available to in-game players which provides them with information on what powerups there are, what they do, and tips on how they can be used.
-- A server admin can allow players to drop Fortress Blast powerups on death with a command.
+- A menu is available to players which provides them with information on what powerups there are, what they do, and tips on how they can be used.
+- A server admin can allow players to drop Fortress Blast powerups on death with a ConVar.
 - Bots can pick up powerups and randomly use them based on a user-defined range of time.
 - By default, Mannpower powerups are replaced with Fortress Blast powerups.
 
@@ -30,16 +30,15 @@ Installation
 ------------
 
 1) Install [Rest in Pawn](https://github.com/ErikMinekus/sm-ripext/releases/tag/1.0.6) and extract the .zip file into your server.
-2) Install [More Colors](https://forums.alliedmods.net/showthread.php?t=185016) and extract the .inc file into *tf\addons\sourcemod\scripting*.
-3) Download the Fortress Blast .zip file from [the releases page](https://github.com/Fortress-Blast/Fortress-Blast/releases) and extract the contents of the *tf* folder into your server's *tf* folder.
-4) You can download extra pre-made .json files from the [maps repository](https://github.com/Fortress-Blast/Fortress-Blast-Maps) or create your own.
-5) It would greatly help this plugin thrive if you could add 'fortressblast' to the tags list of your server.
+2) Download the Fortress Blast .zip file from [the releases page](https://github.com/Fortress-Blast/Fortress-Blast/releases) and extract the contents of the *tf* folder into your server's *tf* folder.
+3) You can download extra pre-made .json files from the [maps repository](https://github.com/Fortress-Blast/Fortress-Blast-Maps) or create your own.
+4) It would greatly help this plugin thrive if you could add 'fortressblast' to the tags list of your server.
 
 Commands (in chat, replace *sm_* with *!*)
 --------
 
 - `sm_fortressblast` - Opens the Fortress Blast help menu.
-- `sm_setpowerup <player> <number>` - Sets a player's powerup by ID number. Only users with the Z flag can use this command.
+- `sm_setpowerup <player> <0-6>` - Sets a player's powerup by ID number. Only users with the Z flag can use this command.
 
 ConVars
 -------
@@ -58,4 +57,3 @@ Known bugs (v0.1)
 - Not all Mannpower powerups end up being replaced.
 - Powerups dropped by players do not disappear after a certain amount of time.
 - Shock Absorber sound plays twice on some clients.
-- Using Super Bounce while Super Bounce is active does not extend the time it is active, and a similar case for other powerups.
