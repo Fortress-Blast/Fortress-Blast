@@ -48,7 +48,7 @@ ConVars
 - `sm_fortressblast_bot_min <#>` - Minimum time for bots to use a powerup. Default 2.
 - `sm_fortressblast_bot_max <#>` - Minimum time for bots to use a powerup. Default 15.
 - `sm_fortressblast_drop_rate <0-100>` - Set the chance a player will drop a powerup on death out of 100. Default 0 (5 recommended).
-- `sm_fortressblast_drop_team <0-2>` - Set the teams that will drop powerups on death. 0 = Both (default), 1 = RED, 2 = BLU.
+- `sm_fortressblast_drop_team <1-3>` - Set the teams that will drop powerups on death. 1 = Both (default), 2 = RED, 3 = BLU.
 - `sm_fortressblast_mannpower <0-2>` - Set whether Mannpower powerups are replaced with Fortress Blast powerups. 0 = Don't replace, 1 = Replace only if there is no .json file, 2 = Always replace (default).
 
 Known bugs (v0.1)
