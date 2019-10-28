@@ -145,25 +145,29 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 				CreateTimer(3.0, PesterThisDude, client);
 			}
 		}
+		GetPowerupPlacements();
 	}
-	GetPowerupPlacements();
-	
 	for (int entity = 1; entity <= MAX_EDICTS ; entity++) {
 		if (IsValidEntity(entity)) {
 			if (FindEntityByClassname(0, "tf_logic_mannpower") != -1 && GetConVarInt(FindConVar("sm_fortressblast_mannpower")) != 0) {
 				char classname[60];
 				GetEntityClassname(entity, classname, sizeof(classname));
-				if (StrEqual(classname, "item_powerup_rune") && (!MapHasJsonFile || GetConVarInt(FindConVar("sm_fortressblast_mannpower")) == 2)) {
-					float coords[3] = 69.420;
-					GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
-					coords[2] -= 32;
-					// PrintToChatAll("Spawning a powerup at %f %f %f", coords[0], coords[1], coords[2]);
-					SpawnPower(coords, true);
-					RemoveEntity(entity);
+				if ((!MapHasJsonFile || GetConVarInt(FindConVar("sm_fortressblast_mannpower")) == 2)) {
+					if(StrEqual(classname, "item_powerup_rune") || StrEqual(classname, "item_powerup_crit") || StrEqual(classname, "item_powerup_uber") || StrEqual(classname, "info_powerup_spawn")){
+						if(StrEqual(classname, "info_powerup_spawn")){
+							float coords[3] = 69.420;
+							GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
+							coords[2] += 8;
+							// PrintToChatAll("Spawning a powerup at %f %f %f", coords[0], coords[1], coords[2]);
+							SpawnPower(coords, true);
+							}
+						RemoveEntity(entity);
+					}
 				}
 			}
 		}
 	}
+	
 }
 
 public Action PesterThisDude(Handle timer, int client) {
@@ -317,14 +321,14 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	float vel2[3];
 	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel2);
 	if (GetEntityFlags(client) & FL_ONGROUND) {
-		if (VerticalVelocity[client] != 0.0 && SuperBounce[client]) {
+		if (VerticalVelocity[client] != 0.0 && SuperBounce[client] && VerticalVelocity[client] < -250.0) {
 			vel2[2] = (VerticalVelocity[client] * -1);
 			TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vel2);
 			// PrintToChat(client, "setting velocity to %f", vel2[2]);
 		}
-		// PrintCenterText(client, "Current Z velocity %f, stored %f, on the ground", vel2[2], VerticalVelocity[client]);
+		PrintCenterText(client, "Current Z velocity %f, stored %f, on the ground", vel2[2], VerticalVelocity[client]);
 	} else {
-		// PrintCenterText(client, "Current Z velocity %f, stored %f, in the air", vel2[2], VerticalVelocity[client]);
+		PrintCenterText(client, "Current Z velocity %f, stored %f, in the air", vel2[2], VerticalVelocity[client]);
 	}
 	DoHudText(client);
 	VerticalVelocity[client] = vel2[2];
@@ -360,7 +364,9 @@ UsePower(client) {
 		ShockAbsorber[client] = true;
 		EmitAmbientSound("fortressblast/shockabsorber_use.mp3", vel, client);
 		ClearTimer(ShockAbsorberHandle[client]);
+		SetEntityRenderColor(client, 255, 0, 0, 255);
 		ShockAbsorberHandle[client] = CreateTimer(5.0, RemoveShockAbsorb, client);
+		PowerupParticle(client);
 	} else if (powerup[client] == 3) {
 		// Super Speed - Increased speed, gradually wears off over 10 seconds
 		OldSpeed[client] = GetEntPropFloat(client, Prop_Send, "m_flMaxspeed");
@@ -388,6 +394,9 @@ UsePower(client) {
 				SetEntPropFloat(GetPlayerWeaponSlot(client, weapon), Prop_Send, "m_flNextSecondaryAttack", GetGameTime() + 5.0);
 			}
 		}
+		if(GetEntPropEnt(client, Prop_Data, "m_hActiveWeapon") == GetPlayerWeaponSlot(client, 5)){
+			SwitchPrimary(client);
+		}
 		ClearTimer(TimeTravelHandle[client]);
 		TimeTravelHandle[client] = CreateTimer(5.0, RemoveTimeTravel, client);
 		EmitAmbientSound("fortressblast/timetravel_use.mp3", vel, client);
@@ -412,6 +421,7 @@ public Action RemoveSuperBounce(Handle timer, int client) {
 }
 
 public Action RemoveShockAbsorb(Handle timer, int client) {
+	SetEntityRenderColor(client, 255, 255, 255, 255);
 	ShockAbsorberHandle[client] = INVALID_HANDLE;
 	ShockAbsorber[client] = false;
 }
@@ -636,3 +646,26 @@ stock ClearTimer(Handle Timer) // from sm forums
         Timer = INVALID_HANDLE;
     }
 } 
+
+SwitchPrimary(int client){
+	int weapon = GetPlayerWeaponSlot(client, 0);
+	if (IsValidEdict(weapon))
+	{
+		char class[MAX_NAME_LENGTH * 2]; 
+		GetEdictClassname(weapon, class, sizeof(class));
+		FakeClientCommand(client, "use %s", class);
+		SetEntPropEnt(client, Prop_Data, "m_hActiveWeapon", weapon);
+	}
+}
+
+PowerupParticle(int client){
+	int particle = CreateEntityByName("info_particle_system");
+	DispatchKeyValue(particle, "effect_name", "teleporter_blue_charged_level3");
+	AcceptEntityInput(particle, "SetParent", client);
+	AcceptEntityInput(particle, "Start");
+	DispatchSpawn(particle);
+	ActivateEntity(particle);
+	float coords[3] = 69.420;
+	GetEntPropVector(client, Prop_Send, "m_vecOrigin", coords);
+	TeleportEntity(particle, coords, NULL_VECTOR, NULL_VECTOR);
+}
