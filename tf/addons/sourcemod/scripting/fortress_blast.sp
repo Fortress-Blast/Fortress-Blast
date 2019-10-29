@@ -373,13 +373,13 @@ UsePower(client) {
 		ClearTimer(SuperBounceHandle[client]);
 		SuperBounceHandle[client] = CreateTimer(5.0, RemoveSuperBounce, client);
 		//PowerupParticle(client, 5.0);
-		SetEntityRenderColor(client, 0, 0, 255, 255);
+		//SetEntityRenderColor(client, 0, 0, 255, 255);
 	} else if (powerup[client] == 2) {
 		// Shock Absorber - 75% damage and 100% knockback resistances for 5 seconds
 		ShockAbsorber[client] = true;
 		EmitAmbientSound("fortressblast/shockabsorber_use.mp3", vel, client);
 		ClearTimer(ShockAbsorberHandle[client]);
-		SetEntityRenderColor(client, 255, 0, 0, 255);
+		//SetEntityRenderColor(client, 255, 0, 0, 255);
 		ShockAbsorberHandle[client] = CreateTimer(5.0, RemoveShockAbsorb, client);
 	} else if (powerup[client] == 3) {
 		// Super Speed - Increased speed, gradually wears off over 10 seconds
@@ -430,13 +430,13 @@ public Action RestoreGravity(Handle timer, int client) {
 }
 
 public Action RemoveSuperBounce(Handle timer, int client) {
-	SetEntityRenderColor(client, 255, 255, 255, 255);
+	//SetEntityRenderColor(client, 255, 255, 255, 255);
 	SuperBounceHandle[client] = INVALID_HANDLE;
 	SuperBounce[client] = false;
 }
 
 public Action RemoveShockAbsorb(Handle timer, int client) {
-	SetEntityRenderColor(client, 255, 255, 255, 255);
+	//SetEntityRenderColor(client, 255, 255, 255, 255);
 	ShockAbsorberHandle[client] = INVALID_HANDLE;
 	ShockAbsorber[client] = false;
 }
