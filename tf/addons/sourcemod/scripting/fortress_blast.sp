@@ -33,7 +33,8 @@ Handle TimeTravelHandle[MAXPLAYERS + 1];
 3 - Super Speed
 4 - Super Jump
 5 - Gyrocopter
-6 - Time Travel */
+6 - Time Travel
+7 - Blast */
 
 public OnPluginStart() {
 	for (int client = 1; client <= MaxClients ; client++) {
@@ -58,24 +59,27 @@ public OnPluginStart() {
 }
 
 public OnMapStart() {
-	PrecacheSound("fortressblast/superbounce_use.mp3");
-	PrecacheSound("fortressblast/shockabsorber_use.mp3");
-	PrecacheSound("fortressblast/superspeed_use.mp3");
-	PrecacheSound("fortressblast/superjump_use.mp3");
-	PrecacheSound("fortressblast/gyrocopter_use.mp3");
-	PrecacheSound("fortressblast/timetravel_use.mp3");
-	AddFileToDownloadsTable("sound/fortressblast/superbounce_use.mp3");
-	AddFileToDownloadsTable("sound/fortressblast/shockabsorber_use.mp3");
-	AddFileToDownloadsTable("sound/fortressblast/superspeed_use.mp3");
-	AddFileToDownloadsTable("sound/fortressblast/superjump_use.mp3");
-	AddFileToDownloadsTable("sound/fortressblast/gyrocopter_use.mp3");
-	AddFileToDownloadsTable("sound/fortressblast/timetravel_use.mp3");
-	AddFileToDownloadsTable("sound/fortressblast/superbounce_pickup.wav");
-	AddFileToDownloadsTable("sound/fortressblast/shockabsorber_pickup.wav");
-	AddFileToDownloadsTable("sound/fortressblast/superspeed_pickup.wav");
-	AddFileToDownloadsTable("sound/fortressblast/superjump_pickup.wav");
-	AddFileToDownloadsTable("sound/fortressblast/gyrocopter_pickup.wav");
-	AddFileToDownloadsTable("sound/fortressblast/timetravel_pickup.wav");
+	PrecacheSound("fortressblast2/superbounce_use.mp3");
+	PrecacheSound("fortressblast2/shockabsorber_use.mp3");
+	PrecacheSound("fortressblast2/superspeed_use.mp3");
+	PrecacheSound("fortressblast2/superjump_use.mp3");
+	PrecacheSound("fortressblast2/gyrocopter_use.mp3");
+	PrecacheSound("fortressblast2/timetravel_use.mp3");
+	// PrecacheSound("fortressblast2/blast_use.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/superbounce_pickup.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/superbounce_use.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/shockabsorber_pickup.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/shockabsorber_use.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/superspeed_pickup.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/superspeed_use.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/superjump_pickup.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/superjump_use.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/gyrocopter_pickup.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/gyrocopter_use.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/timetravel_pickup.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/timetravel_use.mp3");
+	// AddFileToDownloadsTable("sound/fortressblast2/blast_pickup.mp3");
+	// AddFileToDownloadsTable("sound/fortressblast2/blast_use.mp3");
 	
 	char map[80];
 	GetCurrentMap(map, sizeof(map));
@@ -299,18 +303,20 @@ public Action SpawnPowerAfterDelay(Handle timer, any data) {
 
 PlayPowerupSound(int client) {
 	if (powerup[client] == 1) {
-		ClientCommand(client, "playgamesound fortressblast/superbounce_pickup.wav");
+		ClientCommand(client, "playgamesound fortressblast2/superbounce_pickup.mp3");
 	} else if (powerup[client] == 2) {
-		ClientCommand(client, "playgamesound fortressblast/shockabsorber_pickup.wav");
+		ClientCommand(client, "playgamesound fortressblast2/shockabsorber_pickup.mp3");
 	} else if (powerup[client] == 3) {
-		ClientCommand(client, "playgamesound fortressblast/superspeed_pickup.wav");
+		ClientCommand(client, "playgamesound fortressblast2/superspeed_pickup.mp3");
 	} else if (powerup[client] == 4) {
-		ClientCommand(client, "playgamesound fortressblast/superjump_pickup.wav");
+		ClientCommand(client, "playgamesound fortressblast2/superjump_pickup.mp3");
 	} else if (powerup[client] == 5) {
-		ClientCommand(client, "playgamesound fortressblast/gyrocopter_pickup.wav");
+		ClientCommand(client, "playgamesound fortressblast2/gyrocopter_pickup.mp3");
 	} else if (powerup[client] == 6) {
-		ClientCommand(client, "playgamesound fortressblast/timetravel_pickup.wav");
-	}
+		ClientCommand(client, "playgamesound fortressblast2/timetravel_pickup.mp3");
+	} /*  else if (powerup[client] == 7) {
+		ClientCommand(client, "playgamesound fortressblast2/blast_pickup.mp3");
+	} */
 }
 
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float ang[3], int &weapon) {
@@ -366,7 +372,7 @@ UsePower(client) {
 	if (powerup[client] == 1) {
 		// Super Bounce - Uncontrollable bunny hop for 5 seconds
 		// Needs way to block fall damage while bouncing (not when falling)
-		EmitAmbientSound("fortressblast/superbounce_use.mp3", vel, client);
+		EmitAmbientSound("fortressblast2/superbounce_use.mp3", vel, client);
 		VerticalVelocity[client] = 0.0; // Cancel previously stored vertical velocity
 		SuperBounce[client] = true;
 		ClearTimer(SuperBounceHandle[client]);
@@ -376,7 +382,7 @@ UsePower(client) {
 	} else if (powerup[client] == 2) {
 		// Shock Absorber - 75% damage and 100% knockback resistances for 5 seconds
 		ShockAbsorber[client] = true;
-		EmitAmbientSound("fortressblast/shockabsorber_use.mp3", vel, client);
+		EmitAmbientSound("fortressblast2/shockabsorber_use.mp3", vel, client);
 		ClearTimer(ShockAbsorberHandle[client]);
 		// SetEntityRenderColor(client, 255, 0, 0, 255);
 		ShockAbsorberHandle[client] = CreateTimer(5.0, RemoveShockAbsorb, client);
@@ -384,20 +390,20 @@ UsePower(client) {
 		// Super Speed - Increased speed, gradually wears off over 10 seconds
 		OldSpeed[client] = GetEntPropFloat(client, Prop_Send, "m_flMaxspeed");
 		SpeedRotationsLeft[client] = 80;
-		EmitAmbientSound("fortressblast/superspeed_use.mp3", vel, client);
+		EmitAmbientSound("fortressblast2/superspeed_use.mp3", vel, client);
 		CreateTimer(0.1, RecalcSpeed, client);
 	} else if (powerup[client] == 4) {
 		// Super Jump - Launch into air and resist initial fall damage
 		vel[2] = 800.0;
 		TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vel);
-		EmitAmbientSound("fortressblast/superjump_use.mp3", vel, client);
+		EmitAmbientSound("fortressblast2/superjump_use.mp3", vel, client);
 	} else if (powerup[client] == 5) {
 		// Gyrocopter - 25% gravity for 5 seconds
 		SetEntityGravity(client, 0.25);
 		ClearTimer(GyrocopterHandle[client]);
 		GyrocopterHandle[client] = CreateTimer(5.0, RestoreGravity, client);
-		EmitAmbientSound("fortressblast/gyrocopter_use.mp3", vel, client);
-	} else if (powerup[client] == 6 ) {
+		EmitAmbientSound("fortressblast2/gyrocopter_use.mp3", vel, client);
+	} else if (powerup[client] == 6) {
 		// Time Travel - Increased speed and Bonk Atomic Punch effect for 5 seconds
 		TimeTravel[client] = true;
 		TF2_AddCondition(client, TFCond_StealthedUserBuffFade, 5.0);
@@ -413,8 +419,10 @@ UsePower(client) {
 		}
 		ClearTimer(TimeTravelHandle[client]);
 		TimeTravelHandle[client] = CreateTimer(5.0, RemoveTimeTravel, client);
-		EmitAmbientSound("fortressblast/timetravel_use.mp3", vel, client);
-	}
+		EmitAmbientSound("fortressblast2/timetravel_use.mp3", vel, client);
+	} /* else if (powerup[client] == 7) {
+		EmitAmbientSound("fortressblast2/blast_use.mp3", vel, client);
+	} */
 	powerup[client] = 0;
 }
 
@@ -473,7 +481,9 @@ DoHudText(client) {
 			ShowSyncHudText(client, text, "Collected powerup:\nGyrocopter");
 		} else if (powerup[client] == 6) {
 			ShowSyncHudText(client, text, "Collected powerup:\nTime Travel");
-		}
+		} /* else if (powerup[client] == 7) {
+			ShowSyncHudText(client, text, "Collected powerup:\nBlast");
+		} */
 		CloseHandle(text);
 	}
 }
