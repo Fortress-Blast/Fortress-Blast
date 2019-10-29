@@ -56,5 +56,7 @@ Known bugs (v0.2)
 - Menus display all items with numbers despite them not being links.
 - Powerups dropped by players do not disappear after a certain amount of time.
 - Shock Absorber sound plays twice on some clients.
+- Powerups spawn multiple times on multi-stage maps.
+- No tint is visible when using Shock Absorber.
 
 See the pending changes to the latest work-in-progress build in the [changelog](https://github.com/Fortress-Blast/Fortress-Blast/blob/master/CHANGELOG.md).
