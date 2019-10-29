@@ -372,7 +372,7 @@ UsePower(client) {
 		SuperBounce[client] = true;
 		ClearTimer(SuperBounceHandle[client]);
 		SuperBounceHandle[client] = CreateTimer(5.0, RemoveSuperBounce, client);
-		//PowerupParticle(client, 5.0);
+		PowerupParticle(client, 5.0);
 		//SetEntityRenderColor(client, 0, 0, 255, 255);
 	} else if (powerup[client] == 2) {
 		// Shock Absorber - 75% damage and 100% knockback resistances for 5 seconds
