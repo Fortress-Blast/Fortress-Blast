@@ -49,7 +49,7 @@ public OnPluginStart() {
 	CreateConVar("sm_fortressblast_bot", "1", "Disable or enable bots using powerups.");
 	CreateConVar("sm_fortressblast_bot_min", "2", "Minimum time for bots to use a powerup.");
 	CreateConVar("sm_fortressblast_bot_max", "15", "Maximum time for bots to use a powerup.");
-	CreateConVar("sm_fortressblast_drop", "0", "How to handle dropping powerups on death");
+	CreateConVar("sm_fortressblast_drop", "1", "How to handle dropping powerups on death.");
 	CreateConVar("sm_fortressblast_drop_rate", "5", "Chance out of 100 for a powerup to drop on death.");
 	CreateConVar("sm_fortressblast_drop_teams", "1", "Set the teams that will drop powerups on death.");
 	CreateConVar("sm_fortressblast_mannpower", "2", "How to handle replacing Mannpower powerups.");
@@ -141,10 +141,10 @@ public Action SetPowerup(int client, int args) {
 
 public Action teamplay_round_start(Event event, const char[] name, bool dontBroadcast) {
 	VictoryTime = false;
-	if(!GameRules_GetProp("m_bInWaitingForPlayers")){
+	if (!GameRules_GetProp("m_bInWaitingForPlayers")) {
 		for (int client = 1; client <= MaxClients; client++) {
 			powerup[client] = 0;
-			if(IsClientInGame(client)){
+			if (IsClientInGame(client)) {
 				CreateTimer(3.0, PesterThisDude, client);
 			}
 		}
@@ -156,8 +156,8 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 				char classname[60];
 				GetEntityClassname(entity, classname, sizeof(classname));
 				if ((!MapHasJsonFile || GetConVarInt(FindConVar("sm_fortressblast_mannpower")) == 2)) {
-					if(StrEqual(classname, "item_powerup_rune") || StrEqual(classname, "item_powerup_crit") || StrEqual(classname, "item_powerup_uber") || StrEqual(classname, "info_powerup_spawn")){
-						if(StrEqual(classname, "info_powerup_spawn")){
+					if (StrEqual(classname, "item_powerup_rune") || StrEqual(classname, "item_powerup_crit") || StrEqual(classname, "item_powerup_uber") || StrEqual(classname, "info_powerup_spawn")) {
+						if (StrEqual(classname, "info_powerup_spawn")) {
 							float coords[3] = 69.420;
 							GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
 							coords[2] += 8;
@@ -174,7 +174,7 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 }
 
 public Action PesterThisDude(Handle timer, int client) {
-	if (IsClientInGame(client)) { // this is needed for two reasons, both because its not checked when the timer is made and because they could disconnect during the 3 seconds
+	if (IsClientInGame(client)) { // Required because player might disconnect before this fires
 		CPrintToChat(client, "{haunted}This server is running {yellow}Fortress Blast! {haunted}If you would like to know more or are unsure what a powerup does, type the command {orange}!fortressblast {haunted}into chat.");
 	}
 }
@@ -231,8 +231,7 @@ SpawnPower(float location[3], bool respawn) {
 		TeleportEntity(entity, location, NULL_VECTOR, NULL_VECTOR);
 		if (respawn) {
 			SDKHook(entity, SDKHook_StartTouch, OnStartTouchRespawn);
-		}
-		else{
+		} else {
 			SDKHook(entity, SDKHook_StartTouch, OnStartTouchDontRespawn);
 			// SetVariantString("OnUser1 !self:Kill::15:1");
 			// AcceptEntityInput(SOMEINDEX, "AddOutput");
@@ -261,7 +260,7 @@ public Action OnStartTouchDontRespawn(entity, other) {
 	DeletePowerup(entity, other);
 }
 
-DeletePowerup(int entity, other){
+DeletePowerup (int entity, other) {
 	RemoveEntity(entity);
 	// PrintToChatAll("%N has collected a powerup", other);
 	powerup[other] = powerupid[entity];
@@ -331,18 +330,18 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vel2);
 			// PrintToChat(client, "setting velocity to %f", vel2[2]);
 		}
-		//PrintCenterText(client, "Current Z velocity %f, stored %f, on the ground", vel2[2], VerticalVelocity[client]);
+		// PrintCenterText(client, "Current Z velocity %f, stored %f, on the ground", vel2[2], VerticalVelocity[client]);
 	} else {
-		//PrintCenterText(client, "Current Z velocity %f, stored %f, in the air", vel2[2], VerticalVelocity[client]);
+		// PrintCenterText(client, "Current Z velocity %f, stored %f, in the air", vel2[2], VerticalVelocity[client]);
 	}
 	DoHudText(client);
 	VerticalVelocity[client] = vel2[2];
 	
-	for (int partid = MAX_PARTICLES; partid > 0 ; partid--){
-		if(PlayerParticle[client][partid] == 0){
+	for (int partid = MAX_PARTICLES; partid > 0 ; partid--) {
+		if (PlayerParticle[client][partid] == 0) {
 			PlayerParticle[client][partid] = -1;
 		}
-		if(IsValidEntity(PlayerParticle[client][partid])){
+		if (IsValidEntity(PlayerParticle[client][partid])) {
 			TeleportEntity(PlayerParticle[client][partid], coords, NULL_VECTOR, NULL_VECTOR);
 		}
 	}
@@ -373,13 +372,13 @@ UsePower(client) {
 		ClearTimer(SuperBounceHandle[client]);
 		SuperBounceHandle[client] = CreateTimer(5.0, RemoveSuperBounce, client);
 		PowerupParticle(client, 5.0);
-		//SetEntityRenderColor(client, 0, 0, 255, 255);
+		// SetEntityRenderColor(client, 0, 0, 255, 255);
 	} else if (powerup[client] == 2) {
 		// Shock Absorber - 75% damage and 100% knockback resistances for 5 seconds
 		ShockAbsorber[client] = true;
 		EmitAmbientSound("fortressblast/shockabsorber_use.mp3", vel, client);
 		ClearTimer(ShockAbsorberHandle[client]);
-		//SetEntityRenderColor(client, 255, 0, 0, 255);
+		// SetEntityRenderColor(client, 255, 0, 0, 255);
 		ShockAbsorberHandle[client] = CreateTimer(5.0, RemoveShockAbsorb, client);
 	} else if (powerup[client] == 3) {
 		// Super Speed - Increased speed, gradually wears off over 10 seconds
@@ -402,13 +401,14 @@ UsePower(client) {
 		// Time Travel - Increased speed and Bonk Atomic Punch effect for 5 seconds
 		TimeTravel[client] = true;
 		TF2_AddCondition(client, TFCond_StealthedUserBuffFade, 5.0);
-		for (int weapon = 0; weapon <= 5 ; weapon++){
-			if(GetPlayerWeaponSlot(client, weapon) != -1){
+		for (int weapon = 0; weapon <= 5 ; weapon++) {
+			if (GetPlayerWeaponSlot(client, weapon) != -1) {
 				SetEntPropFloat(GetPlayerWeaponSlot(client, weapon), Prop_Send, "m_flNextPrimaryAttack", GetGameTime() + 5.0);
 				SetEntPropFloat(GetPlayerWeaponSlot(client, weapon), Prop_Send, "m_flNextSecondaryAttack", GetGameTime() + 5.0);
 			}
 		}
-		if(GetEntPropEnt(client, Prop_Data, "m_hActiveWeapon") == GetPlayerWeaponSlot(client, 5)){
+		// Cancel active grappling hook
+		if (GetEntPropEnt(client, Prop_Data, "m_hActiveWeapon") == GetPlayerWeaponSlot(client, 5)) {
 			SwitchPrimary(client);
 		}
 		ClearTimer(TimeTravelHandle[client]);
@@ -430,13 +430,13 @@ public Action RestoreGravity(Handle timer, int client) {
 }
 
 public Action RemoveSuperBounce(Handle timer, int client) {
-	//SetEntityRenderColor(client, 255, 255, 255, 255);
+	// SetEntityRenderColor(client, 255, 255, 255, 255);
 	SuperBounceHandle[client] = INVALID_HANDLE;
 	SuperBounce[client] = false;
 }
 
 public Action RemoveShockAbsorb(Handle timer, int client) {
-	//SetEntityRenderColor(client, 255, 255, 255, 255);
+	// SetEntityRenderColor(client, 255, 255, 255, 255);
 	ShockAbsorberHandle[client] = INVALID_HANDLE;
 	ShockAbsorber[client] = false;
 }
@@ -583,7 +583,7 @@ bool HandleHasKey(JSONObject handle, char key[80]) {
 DoMenu(int client, int menutype) {
 	if (menutype == 0) {
 		Menu menu = new Menu(MenuHandle);
-		menu.SetTitle("Fortress Blast (v0.2)\n==============\n ");
+		menu.SetTitle("Fortress Blast (v0.3)\n==============\n ");
 		menu.AddItem("info", "Introduction");
 		menu.AddItem("listpowerups", "Powerups");
 		menu.AddItem("credits", "Credits");
@@ -638,8 +638,7 @@ DoMenu(int client, int menutype) {
 		menu.AddItem("", "Programmers - Naleksuh, Jack5", ITEMDRAW_DISABLED);
 		menu.AddItem("", "Sound effects - GarageGames", ITEMDRAW_DISABLED);
 		NewLine(menu, 1);
-		menu.AddItem("", "Plugin available at:", ITEMDRAW_DISABLED);
-		menu.AddItem("", "https://github.com/Fortress-Blast/Fortress-Blast", ITEMDRAW_DISABLED);
+		menu.AddItem("", "Plugin available at https://github.com/Fortress-Blast/Fortress-Blast", ITEMDRAW_DISABLED);
 		NewLine(menu, 1);
 		SetMenuOptionFlags(menu, MENUFLAG_BUTTON_EXITBACK);
 		menu.Display(client, MENU_TIME_FOREVER);
@@ -652,20 +651,16 @@ NewLine(Menu menu, int lines) {
 	}
 }
 
-
-stock ClearTimer(Handle Timer) // from sm forums
-{
-    if(Timer != INVALID_HANDLE)
-    {
+stock ClearTimer(Handle Timer) { // From SourceMod forums
+    if (Timer != INVALID_HANDLE) {
         CloseHandle(Timer);
         Timer = INVALID_HANDLE;
     }
-} 
+}
 
-SwitchPrimary(int client){
+SwitchPrimary(int client) {
 	int weapon = GetPlayerWeaponSlot(client, 0);
-	if (IsValidEdict(weapon))
-	{
+	if (IsValidEdict(weapon)) {
 		char class[MAX_NAME_LENGTH * 2]; 
 		GetEdictClassname(weapon, class, sizeof(class));
 		FakeClientCommand(client, "use %s", class);
@@ -673,7 +668,7 @@ SwitchPrimary(int client){
 	}
 }
 
-PowerupParticle(int client, float time){
+PowerupParticle(int client, float time) {
 	int particle = CreateEntityByName("info_particle_system");
 	DispatchKeyValue(particle, "effect_name", "teleporter_blue_charged_level2");
 	AcceptEntityInput(particle, "SetParent", client);
@@ -685,11 +680,11 @@ PowerupParticle(int client, float time){
 	TeleportEntity(particle, coords, NULL_VECTOR, NULL_VECTOR);
 	int freeid = -5;
 	for (int partid = MAX_PARTICLES; partid > 0 ; partid--){
-		if(!IsValidEntity(PlayerParticle[client][partid])){
+		if (!IsValidEntity(PlayerParticle[client][partid])) {
 			freeid = partid;
 		}
 	}
-	if(freeid == -5){
+	if (freeid == -5) {
 		freeid = GetRandomInt(1, MAX_PARTICLES);
 		RemoveEntity(PlayerParticle[client][freeid]);
 		PrintToServer("[Fortress Blast] All of %N's particles were in use - freeing #%d", client, freeid);
@@ -701,11 +696,11 @@ PowerupParticle(int client, float time){
 	CreateTimer(time, RemoveParticle, partkv);
 }
 
-public Action RemoveParticle(Handle timer, any data){
+public Action RemoveParticle(Handle timer, any data) {
 	Handle partkv = data;
 	int client = KvGetNum(partkv, "client");
 	int id = KvGetNum(partkv, "id");
-	if(IsValidEntity(PlayerParticle[client][id])){
+	if (IsValidEntity(PlayerParticle[client][id])) {
 		RemoveEntity(PlayerParticle[client][id]);
 	}
 	PlayerParticle[client][id] = -1;
