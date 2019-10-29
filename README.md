@@ -54,6 +54,5 @@ ConVars
 Known bugs (v0.1)
 -----------------
 - Menus display all items with numbers despite them not being links.
-- Not all Mannpower powerups end up being replaced.
 - Powerups dropped by players do not disappear after a certain amount of time.
 - Shock Absorber sound plays twice on some clients.
