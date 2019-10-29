@@ -8,8 +8,11 @@
 #define	MAX_EDICT_BITS 11
 #define	MAX_EDICTS (1<<MAX_EDICT_BITS)
 
+#define MAX_PARTICLES 10 // if a player needs more than this number, a random one is deleted, but too many might cause memory problems...
+
 int powerupid[MAX_EDICTS];
 int powerup[MAXPLAYERS + 1] = 0;
+int PlayerParticle[MAXPLAYERS + 1][MAX_PARTICLES+1];
 int SpeedRotationsLeft[MAXPLAYERS + 1] = 80;
 bool VictoryTime = false;
 bool MapHasJsonFile = false;
@@ -312,6 +315,8 @@ PlayPowerupSound(int client) {
 }
 
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float ang[3], int &weapon) {
+	float coords[3] = 69.420;
+	GetEntPropVector(client, Prop_Send, "m_vecOrigin", coords);
 	if (TimeTravel[client]) {
 		SetEntPropFloat(client, Prop_Send, "m_flMaxspeed", 520.0);
 	}
@@ -326,13 +331,21 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vel2);
 			// PrintToChat(client, "setting velocity to %f", vel2[2]);
 		}
-		PrintCenterText(client, "Current Z velocity %f, stored %f, on the ground", vel2[2], VerticalVelocity[client]);
+		//PrintCenterText(client, "Current Z velocity %f, stored %f, on the ground", vel2[2], VerticalVelocity[client]);
 	} else {
-		PrintCenterText(client, "Current Z velocity %f, stored %f, in the air", vel2[2], VerticalVelocity[client]);
+		//PrintCenterText(client, "Current Z velocity %f, stored %f, in the air", vel2[2], VerticalVelocity[client]);
 	}
 	DoHudText(client);
 	VerticalVelocity[client] = vel2[2];
 	
+	for (int partid = MAX_PARTICLES; partid > 0 ; partid--){
+		if(PlayerParticle[client][partid] == 0){
+			PlayerParticle[client][partid] = -1;
+		}
+		if(IsValidEntity(PlayerParticle[client][partid])){
+			TeleportEntity(PlayerParticle[client][partid], coords, NULL_VECTOR, NULL_VECTOR);
+		}
+	}
 }
 
 public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3]) {
@@ -359,6 +372,8 @@ UsePower(client) {
 		SuperBounce[client] = true;
 		ClearTimer(SuperBounceHandle[client]);
 		SuperBounceHandle[client] = CreateTimer(5.0, RemoveSuperBounce, client);
+		//PowerupParticle(client, 5.0);
+		SetEntityRenderColor(client, 0, 0, 255, 255);
 	} else if (powerup[client] == 2) {
 		// Shock Absorber - 75% damage and 100% knockback resistances for 5 seconds
 		ShockAbsorber[client] = true;
@@ -366,7 +381,6 @@ UsePower(client) {
 		ClearTimer(ShockAbsorberHandle[client]);
 		SetEntityRenderColor(client, 255, 0, 0, 255);
 		ShockAbsorberHandle[client] = CreateTimer(5.0, RemoveShockAbsorb, client);
-		PowerupParticle(client);
 	} else if (powerup[client] == 3) {
 		// Super Speed - Increased speed, gradually wears off over 10 seconds
 		OldSpeed[client] = GetEntPropFloat(client, Prop_Send, "m_flMaxspeed");
@@ -416,6 +430,7 @@ public Action RestoreGravity(Handle timer, int client) {
 }
 
 public Action RemoveSuperBounce(Handle timer, int client) {
+	SetEntityRenderColor(client, 255, 255, 255, 255);
 	SuperBounceHandle[client] = INVALID_HANDLE;
 	SuperBounce[client] = false;
 }
@@ -658,9 +673,9 @@ SwitchPrimary(int client){
 	}
 }
 
-PowerupParticle(int client){
+PowerupParticle(int client, float time){
 	int particle = CreateEntityByName("info_particle_system");
-	DispatchKeyValue(particle, "effect_name", "teleporter_blue_charged_level3");
+	DispatchKeyValue(particle, "effect_name", "teleporter_blue_charged_level2");
 	AcceptEntityInput(particle, "SetParent", client);
 	AcceptEntityInput(particle, "Start");
 	DispatchSpawn(particle);
@@ -668,4 +683,30 @@ PowerupParticle(int client){
 	float coords[3] = 69.420;
 	GetEntPropVector(client, Prop_Send, "m_vecOrigin", coords);
 	TeleportEntity(particle, coords, NULL_VECTOR, NULL_VECTOR);
+	int freeid = -5;
+	for (int partid = MAX_PARTICLES; partid > 0 ; partid--){
+		if(!IsValidEntity(PlayerParticle[client][partid])){
+			freeid = partid;
+		}
+	}
+	if(freeid == -5){
+		freeid = GetRandomInt(1, MAX_PARTICLES);
+		RemoveEntity(PlayerParticle[client][freeid]);
+		PrintToServer("[Fortress Blast] All of %N's particles were in use - freeing #%d", client, freeid);
+	}
+	PlayerParticle[client][freeid] = particle;
+	Handle partkv = CreateKeyValues("partkv");
+	KvSetNum(partkv, "client", client);
+	KvSetNum(partkv, "id", freeid);
+	CreateTimer(time, RemoveParticle, partkv);
+}
+
+public Action RemoveParticle(Handle timer, any data){
+	Handle partkv = data;
+	int client = KvGetNum(partkv, "client");
+	int id = KvGetNum(partkv, "id");
+	if(IsValidEntity(PlayerParticle[client][id])){
+		RemoveEntity(PlayerParticle[client][id]);
+	}
+	PlayerParticle[client][id] = -1;
 }
