@@ -685,6 +685,10 @@ DoMenu(int client, int menutype) {
 		menu.AddItem("", "Using this powerup makes you invisible and fast, but prevents you from attacking.", ITEMDRAW_DISABLED);
 		menu.AddItem("", "Use this to your advantage in order to get past sentries or difficult opponents.", ITEMDRAW_DISABLED);
 		NewLine(menu, 5);
+		menu.AddItem("", "- Blast -", ITEMDRAW_DISABLED);
+		menu.AddItem("", "This powerup will cause an explosion damaging enemies near you upon use.", ITEMDRAW_DISABLED);
+		menu.AddItem("", "The closer they are to you, the more damage it will do.", ITEMDRAW_DISABLED);
+		menu.AddItem("", "Try using it to one-hit weak classes", ITEMDRAW_DISABLED);
 		SetMenuOptionFlags(menu, MENUFLAG_BUTTON_EXITBACK);
 		menu.Display(client, MENU_TIME_FOREVER);
 	} else if (menutype == 3) {
