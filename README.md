@@ -14,6 +14,7 @@ The following powerups exist in the base version of this server mod:
 - Super Jump - The user is launched into the air and will resist the initial fall damage. Using this powerup immediately after jumping results in a higher launch.
 - Gyrocopter - The user has 25% gravity for 5 seconds.
 - Time Travel - The user is invisible, has increased speed and cannot attack for 5 seconds. This allows for uncontested passage through or escape from challenging situations.
+- Blast - An explosion is emitted from the user, killing low-health enemies and harming others nearby. Most effective when paired with other sources of damage.
 
 Features
 --------
@@ -55,6 +56,5 @@ Known bugs (v0.2)
 
 - Menus display all items with numbers despite them not being links.
 - Powerups dropped by players do not disappear after a certain amount of time.
-- Shock Absorber sound plays twice on some clients.
 - Powerups spawn multiple times on multi-stage maps.
 - No tint is visible when using Shock Absorber.
