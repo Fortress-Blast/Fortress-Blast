@@ -45,7 +45,7 @@ public OnPluginStart() {
 	HookEvent("teamplay_round_start", teamplay_round_start);
 	HookEvent("teamplay_round_win", teamplay_round_win);
 	HookEvent("player_death", player_death);
-	RegAdminCmd("sm_setpowerup", SetPowerup, ADMFLAG_ROOT);
+	RegConsoleCmd("sm_setpowerup", SetPowerup);
 	RegConsoleCmd("sm_fortressblast", FBMenu);
 	CreateConVar("sm_fortressblast_bot", "1", "Disable or enable bots using powerups.");
 	CreateConVar("sm_fortressblast_bot_min", "2", "Minimum time for bots to use a powerup.");
@@ -54,6 +54,7 @@ public OnPluginStart() {
 	CreateConVar("sm_fortressblast_drop_rate", "5", "Chance out of 100 for a powerup to drop on death.");
 	CreateConVar("sm_fortressblast_drop_teams", "1", "Set the teams that will drop powerups on death.");
 	CreateConVar("sm_fortressblast_mannpower", "2", "How to handle replacing Mannpower powerups.");
+	CreateConVar("sm_fortressblast_debug", "0", "According to all known laws of aviation, there is no way that a bee should be able to fly. Its wings are");
 	PrecacheModel("models/props_halloween/pumpkin_loot.mdl");
 	LoadTranslations("common.phrases");
 }
@@ -65,7 +66,7 @@ public OnMapStart() {
 	PrecacheSound("fortressblast2/superjump_use.mp3");
 	PrecacheSound("fortressblast2/gyrocopter_use.mp3");
 	PrecacheSound("fortressblast2/timetravel_use.mp3");
-	// PrecacheSound("fortressblast2/blast_use.mp3");
+	PrecacheSound("fortressblast2/blast_use.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/superbounce_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/superbounce_use.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/shockabsorber_pickup.mp3");
@@ -78,8 +79,8 @@ public OnMapStart() {
 	AddFileToDownloadsTable("sound/fortressblast2/gyrocopter_use.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/timetravel_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/timetravel_use.mp3");
-	// AddFileToDownloadsTable("sound/fortressblast2/blast_pickup.mp3");
-	// AddFileToDownloadsTable("sound/fortressblast2/blast_use.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/blast_pickup.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/blast_use.mp3");
 	
 	char map[80];
 	GetCurrentMap(map, sizeof(map));
@@ -120,11 +121,39 @@ public int MenuHandle(Menu menu, MenuAction action, int param1, int param2) {
 }
 
 public Action SetPowerup(int client, int args) {
+	if(!CheckCommandAccess(client, "", ADMFLAG_ROOT) && GetConVarFloat(FindConVar("sm_fortressblast_debug")) < 0.1){
+		PrintToChat(client, "That command can only be used by admins or when the server is in debug mode");
+		return;
+	}
 	char arg[MAX_NAME_LENGTH + 1];
 	char arg2[3]; // Need to have a check if there's only one argument, apply to command user
 	GetCmdArg(1, arg, sizeof(arg));
 	GetCmdArg(2, arg2, sizeof(arg2));
-	int player = FindTarget(client, arg);
+	if(StrEqual(arg, "@all")){
+		for (int client2 = 1; client2 <= MaxClients; client2++) {
+			if(IsClientInGame(client2)){
+				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2)); // the approach of this is deliberate, to be as if they typed like normal
+			}
+		}
+		return;
+	}
+	if(StrEqual(arg, "@red")){
+		for (int client2 = 1; client2 <= MaxClients; client2++) {
+			if(IsClientInGame(client2) && GetClientTeam(client2) == 2){
+				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2)); // the approach of this is deliberate, to be as if they typed like normal
+			}
+		}
+		return;
+	}
+	if(StrEqual(arg, "@blue")){
+		for (int client2 = 1; client2 <= MaxClients; client2++) {
+			if(IsClientInGame(client2) && GetClientTeam(client2) == 3){
+				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2)); // the approach of this is deliberate, to be as if they typed like normal
+			}
+		}
+		return;
+	}
+	int player = FindTarget(client, arg, false, false);
 	powerup[player] = StringToInt(arg2);
 	PlayPowerupSound(player);
 	// If player is a bot and bot support is enabled
@@ -141,6 +170,7 @@ public Action SetPowerup(int client, int args) {
 		// Get bot to use powerup within the random period
 		CreateTimer(GetRandomFloat(convar1, convar2), BotUsePowerup, player);
 	}
+	DebugText("%N has force-set %N's powerup to 7", client, player, StringToInt(arg2));
 }
 
 public Action teamplay_round_start(Event event, const char[] name, bool dontBroadcast) {
@@ -165,7 +195,7 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 							float coords[3] = 69.420;
 							GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
 							coords[2] += 8;
-							// PrintToChatAll("Spawning a powerup at %f %f %f", coords[0], coords[1], coords[2]);
+							DebugText("Spawning a powerup at %f %f %f", coords[0], coords[1], coords[2]);
 							SpawnPower(coords, true);
 							}
 						RemoveEntity(entity);
@@ -210,10 +240,10 @@ public OnClientPutInServer(int client) {
 
 SpawnPower(float location[3], bool respawn) {
 	int entity = CreateEntityByName("tf_halloween_pickup");
-	// PrintToChatAll("Spawning powerup with ID %d at %f, %f, %f", entity, location[0], location[1], location[2]);
+	DebugText("Spawning powerup with ID %d at %f, %f, %f", entity, location[0], location[1], location[2]);
 	if (IsValidEdict(entity)) {
 		SetEntityModel(entity, "models/props_halloween/pumpkin_loot.mdl");
-		powerupid[entity] = GetRandomInt(1, 6);
+		powerupid[entity] = GetRandomInt(1, 7);
 		if (powerupid[entity] == 1) {
 			SetEntityRenderColor(entity, 100, 100, 255, 255);
 		} else if (powerupid[entity] == 2) {
@@ -226,6 +256,8 @@ SpawnPower(float location[3], bool respawn) {
 			SetEntityRenderColor(entity, 255, 177, 255, 255);
 		} else if (powerupid[entity] == 6) {
 			SetEntityRenderColor(entity, 100, 255, 255, 255);
+		} else if (powerupid[entity] == 7) {
+			SetEntityRenderColor(entity, 50, 177, 177, 255);
 		}
 		DispatchKeyValue(entity, "pickup_sound", "GetOutOfTheConsoleYouSnoop");
 		DispatchKeyValue(entity, "pickup_particle", "GetOutOfTheConsoleYouSnoop");
@@ -266,9 +298,8 @@ public Action OnStartTouchDontRespawn(entity, other) {
 
 DeletePowerup (int entity, other) {
 	RemoveEntity(entity);
-	// PrintToChatAll("%N has collected a powerup", other);
+	DebugText("%N has collected a powerup", other);
 	powerup[other] = powerupid[entity];
-	// PrintToChat(other, "You have received the powerup with ID %d", powerupid[entity]);
 	PlayPowerupSound(other);
 	// If player is a bot and bot support is enabled
 	if (IsFakeClient(other) && GetConVarFloat(FindConVar("sm_fortressblast_bot")) >= 1) { // Replace with GetConVarBool
@@ -287,12 +318,12 @@ DeletePowerup (int entity, other) {
 }
 
 public Action BotUsePowerup(Handle timer, int client){
-	// PrintToChatAll("Making %N use powerup ID %d", client, powerup[client]);
+	DebugText("Making %N use powerup ID %d", client, powerup[client]);
 	UsePower(client);
 }
 
 public Action SpawnPowerAfterDelay(Handle timer, any data) {
-	// PrintToChatAll("A replacement duck has been spawned");
+	DebugText("A replacement duck has been spawned");
 	float coords[3];
 	Handle coordskv = data;
 	coords[0] = KvGetFloat(coordskv, "0");
@@ -314,9 +345,9 @@ PlayPowerupSound(int client) {
 		ClientCommand(client, "playgamesound fortressblast2/gyrocopter_pickup.mp3");
 	} else if (powerup[client] == 6) {
 		ClientCommand(client, "playgamesound fortressblast2/timetravel_pickup.mp3");
-	} /*  else if (powerup[client] == 7) {
+	} else if (powerup[client] == 7) {
 		ClientCommand(client, "playgamesound fortressblast2/blast_pickup.mp3");
-	} */
+	} 
 }
 
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float ang[3], int &weapon) {
@@ -334,11 +365,8 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		if (VerticalVelocity[client] != 0.0 && SuperBounce[client] && VerticalVelocity[client] < -250.0) {
 			vel2[2] = (VerticalVelocity[client] * -1);
 			TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vel2);
-			// PrintToChat(client, "setting velocity to %f", vel2[2]);
+			DebugText("setting %N's velocity to %f", client, vel2[2]);
 		}
-		// PrintCenterText(client, "Current Z velocity %f, stored %f, on the ground", vel2[2], VerticalVelocity[client]);
-	} else {
-		// PrintCenterText(client, "Current Z velocity %f, stored %f, in the air", vel2[2], VerticalVelocity[client]);
 	}
 	DoHudText(client);
 	VerticalVelocity[client] = vel2[2];
@@ -377,14 +405,14 @@ UsePower(client) {
 		SuperBounce[client] = true;
 		ClearTimer(SuperBounceHandle[client]);
 		SuperBounceHandle[client] = CreateTimer(5.0, RemoveSuperBounce, client);
-		PowerupParticle(client, 5.0);
+		PowerupParticle(client, 1, 5.0);
 		// SetEntityRenderColor(client, 0, 0, 255, 255);
 	} else if (powerup[client] == 2) {
 		// Shock Absorber - 75% damage and 100% knockback resistances for 5 seconds
 		ShockAbsorber[client] = true;
 		EmitAmbientSound("fortressblast2/shockabsorber_use.mp3", vel, client);
 		ClearTimer(ShockAbsorberHandle[client]);
-		// SetEntityRenderColor(client, 255, 0, 0, 255);
+		PowerupParticle(client, 2, 5.0);
 		ShockAbsorberHandle[client] = CreateTimer(5.0, RemoveShockAbsorb, client);
 	} else if (powerup[client] == 3) {
 		// Super Speed - Increased speed, gradually wears off over 10 seconds
@@ -420,21 +448,38 @@ UsePower(client) {
 		ClearTimer(TimeTravelHandle[client]);
 		TimeTravelHandle[client] = CreateTimer(5.0, RemoveTimeTravel, client);
 		EmitAmbientSound("fortressblast2/timetravel_use.mp3", vel, client);
-	} /* else if (powerup[client] == 7) {
+	}	else if (powerup[client] == 7) {
+		PowerupParticle(client, 7, 1.0);
 		EmitAmbientSound("fortressblast2/blast_use.mp3", vel, client);
-	} */
+		float pos1[3];
+		GetClientAbsOrigin(client, pos1);
+		float pos2[3];
+		for(int client2 = 1 ; client2 <= MaxClients ; client2++ ){
+			if(IsClientInGame(client2)){
+				GetClientAbsOrigin(client2, pos2);
+				if(GetVectorDistance(pos1, pos2) <= 250.0 && GetClientTeam(client) != GetClientTeam(client2)){
+					SDKHooks_TakeDamage(client2, 0, client, (150.0 - (GetVectorDistance(pos1, pos2) * 0.4)), 0, 348);
+				}
+			}
+		}
+		TF2_RemovePlayerDisguise(client);
+	}
 	powerup[client] = 0;
 }
 
 public Action RemoveTimeTravel(Handle timer, int client) {
 	TimeTravelHandle[client] = INVALID_HANDLE;
 	TimeTravel[client] = false;
-	TF2_StunPlayer(client, 0.0, 0.0, TF_STUNFLAG_SLOWDOWN);
+	if(IsClientInGame(client)){
+		TF2_StunPlayer(client, 0.0, 0.0, TF_STUNFLAG_SLOWDOWN);
+	}
 }
 
 public Action RestoreGravity(Handle timer, int client) {
 	GyrocopterHandle[client] = INVALID_HANDLE;
-	SetEntityGravity(client, 1.0);
+	if(IsClientInGame(client)){
+		SetEntityGravity(client, 1.0);
+	}
 }
 
 public Action RemoveSuperBounce(Handle timer, int client) {
@@ -481,9 +526,9 @@ DoHudText(client) {
 			ShowSyncHudText(client, text, "Collected powerup:\nGyrocopter");
 		} else if (powerup[client] == 6) {
 			ShowSyncHudText(client, text, "Collected powerup:\nTime Travel");
-		} /* else if (powerup[client] == 7) {
+		} else if (powerup[client] == 7) {
 			ShowSyncHudText(client, text, "Collected powerup:\nBlast");
-		} */
+		} 
 		CloseHandle(text);
 	}
 }
@@ -548,33 +593,33 @@ GetPowerupPlacements() {
 				spcontinue = false;
 			}
 		} 
-		// PrintToChatAll("Created powerup at %f, %f, %f", coords[0], coords[1], coords[2]);
+		DebugText("Created powerup at %f, %f, %f", coords[0], coords[1], coords[2]);
 		if (coords[0] != 0.001) {
 			SpawnPower(coords, true);
 			if (flipx && flipy) {
 				if (coords[0] != centerx || coords[1] != centery) {
 					coords[0] = coords[0] - ((coords[0] - centerx) * 2);
 					coords[1] = coords[1] - ((coords[1] - centery) * 2);
-					// PrintToChatAll("Flipping both axes, new powerup created at %f %f %f", coords[0], coords[1], coords[2]);
+					DebugText("Flipping both axes, new powerup created at %f %f %f", coords[0], coords[1], coords[2]);
 					SpawnPower(coords, true);
 				} else {
-					// PrintToChatAll("Powerup is at the center and will not be flipped");
+					DebugText("Powerup is at the center and will not be flipped");
    	 			}
 			} else if (flipx) {
 				if (coords[0] != centerx) {
 					coords[0] = coords[0] - ((coords[0] - centerx) * 2);
-					// PrintToChatAll("Flipping X axis, new powerup created at %f, %f, %f", coords[0], coords[1], coords[2]);
+					DebugText("Flipping X axis, new powerup created at %f, %f, %f", coords[0], coords[1], coords[2]);
 					SpawnPower(coords, true);
 				} else {
-					// PrintToChatAll("Powerup is at the X axis center and will not be flipped");
+					DebugText("Powerup is at the X axis center and will not be flipped");
     			}
 			} else if (flipy) {
 				if (coords[1] != centery) {
 					coords[1] = coords[1] - ((coords[1] - centery) * 2);
-					// PrintToChatAll("Flipping Y axis, new powerup created at %f, %f, %f", coords[0], coords[1], coords[2]);
+					DebugText("Flipping Y axis, new powerup created at %f, %f, %f", coords[0], coords[1], coords[2]);
 					SpawnPower(coords, true);
 				} else {
-					// PrintToChatAll("Powerup is at the Y axis center and will not be flipped");
+					DebugText("Powerup is at the Y axis center and will not be flipped");
 				}
 			}
 			itemloop++;
@@ -678,9 +723,17 @@ SwitchPrimary(int client) {
 	}
 }
 
-PowerupParticle(int client, float time) {
+PowerupParticle(int client, int id, float time) {
 	int particle = CreateEntityByName("info_particle_system");
-	DispatchKeyValue(particle, "effect_name", "teleporter_blue_charged_level2");
+	if(id == 1){
+		DispatchKeyValue(particle, "effect_name", "teleporter_blue_charged_level2");
+	}
+	if(id == 2){
+		DispatchKeyValue(particle, "effect_name", "teleporter_red_charged_level2");
+	}
+	if(id == 7){
+		DispatchKeyValue(particle, "effect_name", "rd_robot_explosion");
+	}
 	AcceptEntityInput(particle, "SetParent", client);
 	AcceptEntityInput(particle, "Start");
 	DispatchSpawn(particle);
@@ -714,4 +767,12 @@ public Action RemoveParticle(Handle timer, any data) {
 		RemoveEntity(PlayerParticle[client][id]);
 	}
 	PlayerParticle[client][id] = -1;
+}
+DebugText(const char[] text, any ...){
+	if(GetConVarFloat(FindConVar("sm_fortressblast_debug")) > 0.0){
+		int len = strlen(text) + 255;
+		char[] format = new char[len];
+		VFormat(format, len, text, 2);
+		CPrintToChatAll("{strange}[Fortress Blast]{default} %s", format);
+	}
 }
