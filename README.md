@@ -46,6 +46,7 @@ ConVars
 - `sm_fortressblast_bot <0-1>` - Disable or enable bots using powerups within a random amount of time. Default 1.
 - `sm_fortressblast_bot_min <#>` - Minimum time for bots to use a powerup. Default 2.
 - `sm_fortressblast_bot_max <#>` - Maximum time for bots to use a powerup. Default 15.
+- `sm_fortressblast_debug <0-1>` - Disable or enable debug mode, which displays messages in chat and lets all players set powerups. Default off.
 - `sm_fortressblast_drop <0-2>` - How to handle dropping powerups on death. 0 = Never drop, 1 = Only drop on maps with no .json file (default), 2 = Always drop.
 - `sm_fortressblast_drop_rate <0-100>` - Set the chance a player will drop a powerup on death out of 100. Default 5.
 - `sm_fortressblast_drop_team <1-3>` - Set the teams that will drop powerups on death. 1 = Both (default), 2 = RED, 3 = BLU.
