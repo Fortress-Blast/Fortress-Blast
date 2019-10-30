@@ -57,4 +57,4 @@ Known bugs (v0.2)
 - Menus display all items with numbers despite them not being links.
 - Powerups dropped by players do not disappear after a certain amount of time.
 - Powerups spawn multiple times on multi-stage maps.
-- No tint is visible when using Shock Absorber.
+- Using a powerup just before round start may let the player keep their used powerup.
