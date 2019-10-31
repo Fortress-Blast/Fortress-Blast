@@ -38,7 +38,7 @@ Installation
 Commands (in chat, replace *sm_* with *!*)
 --------
 
-- `sm_fortressblast` - Opens the Fortress Blast help menu.
+- `sm_fortressblast` - Opens the Fortress Blast MOTD manual.
 - `sm_setpowerup <player> <0-6>` - Sets a player's powerup by ID number. Also works with the tags @all, @red, @blue and @me. Only users with the Z flag can use this command.
 
 ConVars
@@ -53,10 +53,8 @@ ConVars
 - `sm_fortressblast_drop_team <1-3>` - Set the teams that will drop powerups on death. 1 = Both (default), 2 = RED, 3 = BLU.
 - `sm_fortressblast_mannpower <0-2>` - Set whether Mannpower powerups are replaced with Fortress Blast powerups. 0 = Don't replace, 1 = Replace only if there is no .json file, 2 = Always replace (default).
 
-Known bugs (v0.2)
+Known bugs (v0.3)
 -----------------
 
-- Menus display all items with numbers despite them not being links.
 - Powerups dropped by players do not disappear after a certain amount of time.
-- Powerups spawn multiple times on multi-stage maps.
 - Using a powerup just before round start may let the player keep their used powerup.
