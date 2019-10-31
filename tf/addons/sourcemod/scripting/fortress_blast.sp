@@ -5,10 +5,10 @@
 #include <morecolors>
 #include <tf2>
 #include <advanced_motd>
+
 #define	MAX_EDICT_BITS 11
 #define	MAX_EDICTS (1<<MAX_EDICT_BITS)
-
-#define MAX_PARTICLES 10 // if a player needs more than this number, a random one is deleted, but too many might cause memory problems...
+#define MAX_PARTICLES 10 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
 
 int powerupid[MAX_EDICTS];
 int powerup[MAXPLAYERS + 1] = 0;
@@ -50,11 +50,11 @@ public OnPluginStart() {
 	CreateConVar("sm_fortressblast_bot", "1", "Disable or enable bots using powerups.");
 	CreateConVar("sm_fortressblast_bot_min", "2", "Minimum time for bots to use a powerup.");
 	CreateConVar("sm_fortressblast_bot_max", "15", "Maximum time for bots to use a powerup.");
+	CreateConVar("sm_fortressblast_debug", "0", "Disable or enable debug messages in chat.");
 	CreateConVar("sm_fortressblast_drop", "1", "How to handle dropping powerups on death.");
 	CreateConVar("sm_fortressblast_drop_rate", "5", "Chance out of 100 for a powerup to drop on death.");
 	CreateConVar("sm_fortressblast_drop_teams", "1", "Set the teams that will drop powerups on death.");
 	CreateConVar("sm_fortressblast_mannpower", "2", "How to handle replacing Mannpower powerups.");
-	CreateConVar("sm_fortressblast_debug", "0", "According to all known laws of aviation, there is no way that a bee should be able to fly. Its wings are");
 	PrecacheModel("models/props_halloween/pumpkin_loot.mdl");
 	LoadTranslations("common.phrases");
 }
@@ -97,40 +97,39 @@ public TF2_OnConditionAdded(int client, TFCond condition) {
 
 public Action FBMenu(int client, int args) {
 	AdvMOTD_ShowMOTDPanel(client, "How are you reading this?", "http://fortress-blast.github.io/0.3", MOTDPANEL_TYPE_URL, true, true, true, INVALID_FUNCTION);
-	PrintToChat(client, "Opening Fortress Blast webpage (if nothing happens, you may need to enable HTML MOTDs)");
-
+	CPrintToChat(client, "{orange}[Fortress Blast] {haunted}Opening Fortress Blast manual... If nothing happens, {yellow}check that 'Disable HTML MOTDs' is not checked in Advanced Options {haunted}and reconnect to the server.");
 }
 
-
 public Action SetPowerup(int client, int args) {
-	if(!CheckCommandAccess(client, "", ADMFLAG_ROOT) && GetConVarFloat(FindConVar("sm_fortressblast_debug")) < 0.1){
-		PrintToChat(client, "That command can only be used by admins or when the server is in debug mode");
+	if (!CheckCommandAccess(client, "", ADMFLAG_ROOT) && GetConVarFloat(FindConVar("sm_fortressblast_debug")) < 1) {
+		CPrintToChat(client, "{orange}[Fortress Blast] {red}You do not have permission to use this command.");
 		return;
 	}
 	char arg[MAX_NAME_LENGTH + 1];
 	char arg2[3]; // Need to have a check if there's only one argument, apply to command user
 	GetCmdArg(1, arg, sizeof(arg));
 	GetCmdArg(2, arg2, sizeof(arg2));
-	if(StrEqual(arg, "@all")){
+	// The approach of this is deliberate, to be as if they typed like normal
+	if (StrEqual(arg, "@all")) {
 		for (int client2 = 1; client2 <= MaxClients; client2++) {
-			if(IsClientInGame(client2)){
-				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2)); // the approach of this is deliberate, to be as if they typed like normal
+			if (IsClientInGame(client2)) {
+				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
 			}
 		}
 		return;
 	}
-	if(StrEqual(arg, "@red")){
+	if (StrEqual(arg, "@red")) {
 		for (int client2 = 1; client2 <= MaxClients; client2++) {
-			if(IsClientInGame(client2) && GetClientTeam(client2) == 2){
-				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2)); // the approach of this is deliberate, to be as if they typed like normal
+			if (IsClientInGame(client2) && GetClientTeam(client2) == 2) {
+				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
 			}
 		}
 		return;
 	}
-	if(StrEqual(arg, "@blue")){
+	if (StrEqual(arg, "@blue")) {
 		for (int client2 = 1; client2 <= MaxClients; client2++) {
-			if(IsClientInGame(client2) && GetClientTeam(client2) == 3){
-				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2)); // the approach of this is deliberate, to be as if they typed like normal
+			if (IsClientInGame(client2) && GetClientTeam(client2) == 3) {
+				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
 			}
 		}
 		return;
@@ -152,7 +151,7 @@ public Action SetPowerup(int client, int args) {
 		// Get bot to use powerup within the random period
 		CreateTimer(GetRandomFloat(convar1, convar2), BotUsePowerup, player);
 	}
-	DebugText("%N has force-set %N's powerup to %d", client, player, StringToInt(arg2));
+	DebugText("%N has force-set %N's powerup to ID %d", client, player, StringToInt(arg2));
 }
 
 public Action teamplay_round_start(Event event, const char[] name, bool dontBroadcast) {
@@ -183,8 +182,8 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 					}
 				}
 			}
-			if(StrEqual(classname, "tf_halloween_pickup")){
-				DebugText("Removing entity %d because it was a duck", entity);
+			if (StrEqual(classname, "tf_halloween_pickup")) {
+				DebugText("Removing duplicate halloween pickup entity %d", entity);
 				RemoveEntity(entity);
 			}
 		}
@@ -194,7 +193,7 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 
 public Action PesterThisDude(Handle timer, int client) {
 	if (IsClientInGame(client)) { // Required because player might disconnect before this fires
-		CPrintToChat(client, "{haunted}This server is running {yellow}Fortress Blast! {haunted}If you would like to know more or are unsure what a powerup does, type the command {orange}!fortressblast {haunted}into chat.");
+		CPrintToChat(client, "{orange}[Fortress Blast] {haunted}This server is running {yellow}Fortress Blast v0.3! {haunted}If you would like to know more or are unsure what a powerup does, type the command {yellow}!fortressblast {haunted}into chat.");
 	}
 }
 
@@ -209,7 +208,7 @@ public Action player_death(Event event, const char[] name, bool dontBroadcast) {
 		// Get chance a powerup will be dropped
 		float convar = GetConVarFloat(FindConVar("sm_fortressblast_drop_rate"));
 		int randomNumber = GetRandomInt(0, 99);
-		if (convar > randomNumber && (GetConVarFloat(FindConVar("sm_fortressblast_drop_teams")) == GetClientTeam(GetClientOfUserId(event.GetInt("userid")))|| GetConVarFloat(FindConVar("sm_fortressblast_drop_teams")) == 1)) {
+		if (convar > randomNumber && (GetConVarFloat(FindConVar("sm_fortressblast_drop_teams")) == GetClientTeam(GetClientOfUserId(event.GetInt("userid"))) || GetConVarFloat(FindConVar("sm_fortressblast_drop_teams")) == 1)) {
 			float coords[3];
 			GetEntPropVector(GetClientOfUserId(event.GetInt("userid")), Prop_Send, "m_vecOrigin", coords);
 			SpawnPower(coords, false);
@@ -225,7 +224,7 @@ public OnClientPutInServer(int client) {
 
 SpawnPower(float location[3], bool respawn) {
 	int entity = CreateEntityByName("tf_halloween_pickup");
-	DebugText("Spawning powerup with ID %d at %f, %f, %f", entity, location[0], location[1], location[2]);
+	DebugText("Spawning powerup entity %d at %f, %f, %f", entity, location[0], location[1], location[2]);
 	if (IsValidEdict(entity)) {
 		SetEntityModel(entity, "models/props_halloween/pumpkin_loot.mdl");
 		powerupid[entity] = GetRandomInt(1, 7);
@@ -244,8 +243,8 @@ SpawnPower(float location[3], bool respawn) {
 		} else if (powerupid[entity] == 7) {
 			SetEntityRenderColor(entity, 50, 177, 177, 255);
 		}
-		DispatchKeyValue(entity, "pickup_sound", "GetOutOfTheConsoleYouSnoop");
-		DispatchKeyValue(entity, "pickup_particle", "GetOutOfTheConsoleYouSnoop");
+		DispatchKeyValue(entity, "pickup_sound", "get_out_of_the_console_snoop");
+		DispatchKeyValue(entity, "pickup_particle", "get_out_of_the_console_snoop");
 		AcceptEntityInput(entity, "EnableCollision");
 		DispatchSpawn(entity);
 		ActivateEntity(entity);
@@ -254,8 +253,6 @@ SpawnPower(float location[3], bool respawn) {
 			SDKHook(entity, SDKHook_StartTouch, OnStartTouchRespawn);
 		} else {
 			SDKHook(entity, SDKHook_StartTouch, OnStartTouchDontRespawn);
-			// SetVariantString("OnUser1 !self:Kill::15:1");
-			// AcceptEntityInput(SOMEINDEX, "AddOutput");
 		}
 	}
 }
@@ -284,7 +281,7 @@ public Action OnStartTouchDontRespawn(entity, other) {
 DeletePowerup (int entity, other) {
 	RemoveEntity(entity);
 	powerup[other] = powerupid[entity];
-	DebugText("%N has collected powerup #%d", powerup[other]);
+	DebugText("%N has collected powerup ID #%d", powerup[other]);
 	PlayPowerupSound(other);
 	// If player is a bot and bot support is enabled
 	if (IsFakeClient(other) && GetConVarFloat(FindConVar("sm_fortressblast_bot")) >= 1) { // Replace with GetConVarBool
@@ -302,18 +299,18 @@ DeletePowerup (int entity, other) {
 	}
 }
 
-public Action BotUsePowerup(Handle timer, int client){
-	DebugText("Making %N use powerup ID %d", client, powerup[client]);
+public Action BotUsePowerup(Handle timer, int client) {
+	DebugText("Forcing bot %N to use powerup ID %d", client, powerup[client]);
 	UsePower(client);
 }
 
 public Action SpawnPowerAfterDelay(Handle timer, any data) {
-	DebugText("A replacement duck has been spawned");
 	float coords[3];
 	Handle coordskv = data;
 	coords[0] = KvGetFloat(coordskv, "0");
 	coords[1] = KvGetFloat(coordskv, "1");
 	coords[2] = KvGetFloat(coordskv, "2");
+	DebugText("Respawning powerup at %f, %f, %f", coords[0], coords[1], coords[2]);
 	SpawnPower(coords, true);
 }
 
@@ -350,7 +347,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		if (VerticalVelocity[client] != 0.0 && SuperBounce[client] && VerticalVelocity[client] < -250.0) {
 			vel2[2] = (VerticalVelocity[client] * -1);
 			TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vel2);
-			DebugText("setting %N's velocity to %f", client, vel2[2]);
+			DebugText("Setting %N's vertical velocity to %f", client, vel2[2]);
 		}
 	}
 	DoHudText(client);
@@ -383,15 +380,13 @@ UsePower(client) {
 	float vel[3];
 	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel);
 	if (powerup[client] == 1) {
-		// Super Bounce - Uncontrollable bunny hop for 5 seconds
-		// Needs way to block fall damage while bouncing (not when falling)
+		// Super Bounce - Uncontrollable bunny hop and fall damage resistance for 5 seconds
 		EmitAmbientSound("fortressblast2/superbounce_use.mp3", vel, client);
 		VerticalVelocity[client] = 0.0; // Cancel previously stored vertical velocity
 		SuperBounce[client] = true;
 		ClearTimer(SuperBounceHandle[client]);
 		SuperBounceHandle[client] = CreateTimer(5.0, RemoveSuperBounce, client);
 		PowerupParticle(client, 1, 5.0);
-		// SetEntityRenderColor(client, 0, 0, 255, 255);
 	} else if (powerup[client] == 2) {
 		// Shock Absorber - 75% damage and 100% knockback resistances for 5 seconds
 		ShockAbsorber[client] = true;
@@ -406,7 +401,7 @@ UsePower(client) {
 		EmitAmbientSound("fortressblast2/superspeed_use.mp3", vel, client);
 		CreateTimer(0.1, RecalcSpeed, client);
 	} else if (powerup[client] == 4) {
-		// Super Jump - Launch into air and resist initial fall damage
+		// Super Jump - Launch user into air
 		vel[2] = 800.0;
 		TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vel);
 		EmitAmbientSound("fortressblast2/superjump_use.mp3", vel, client);
@@ -417,7 +412,7 @@ UsePower(client) {
 		GyrocopterHandle[client] = CreateTimer(5.0, RestoreGravity, client);
 		EmitAmbientSound("fortressblast2/gyrocopter_use.mp3", vel, client);
 	} else if (powerup[client] == 6) {
-		// Time Travel - Increased speed and Bonk Atomic Punch effect for 5 seconds
+		// Time Travel - Increased speed, invisibility and can't attack for 5 seconds
 		TimeTravel[client] = true;
 		TF2_AddCondition(client, TFCond_StealthedUserBuffFade, 5.0);
 		for (int weapon = 0; weapon <= 5 ; weapon++) {
@@ -433,16 +428,17 @@ UsePower(client) {
 		ClearTimer(TimeTravelHandle[client]);
 		TimeTravelHandle[client] = CreateTimer(5.0, RemoveTimeTravel, client);
 		EmitAmbientSound("fortressblast2/timetravel_use.mp3", vel, client);
-	}	else if (powerup[client] == 7) {
+	} else if (powerup[client] == 7) {
+		// Blast - Create explosion at user
 		PowerupParticle(client, 7, 1.0);
 		EmitAmbientSound("fortressblast2/blast_use.mp3", vel, client);
 		float pos1[3];
 		GetClientAbsOrigin(client, pos1);
 		float pos2[3];
-		for(int client2 = 1 ; client2 <= MaxClients ; client2++ ){
-			if(IsClientInGame(client2)){
+		for (int client2 = 1 ; client2 <= MaxClients ; client2++ ) {
+			if (IsClientInGame(client2)) {
 				GetClientAbsOrigin(client2, pos2);
-				if(GetVectorDistance(pos1, pos2) <= 250.0 && GetClientTeam(client) != GetClientTeam(client2)){
+				if (GetVectorDistance(pos1, pos2) <= 250.0 && GetClientTeam(client) != GetClientTeam(client2)) {
 					SDKHooks_TakeDamage(client2, 0, client, (150.0 - (GetVectorDistance(pos1, pos2) * 0.4)), 0, 348);
 				}
 			}
@@ -455,34 +451,32 @@ UsePower(client) {
 public Action RemoveTimeTravel(Handle timer, int client) {
 	TimeTravelHandle[client] = INVALID_HANDLE;
 	TimeTravel[client] = false;
-	if(IsClientInGame(client)){
+	if (IsClientInGame(client)) {
 		TF2_StunPlayer(client, 0.0, 0.0, TF_STUNFLAG_SLOWDOWN);
 	}
 }
 
 public Action RestoreGravity(Handle timer, int client) {
 	GyrocopterHandle[client] = INVALID_HANDLE;
-	if(IsClientInGame(client)){
+	if (IsClientInGame(client)) {
 		SetEntityGravity(client, 1.0);
 	}
 }
 
 public Action RemoveSuperBounce(Handle timer, int client) {
-	// SetEntityRenderColor(client, 255, 255, 255, 255);
 	SuperBounceHandle[client] = INVALID_HANDLE;
 	SuperBounce[client] = false;
 }
 
 public Action RemoveShockAbsorb(Handle timer, int client) {
-	// SetEntityRenderColor(client, 255, 255, 255, 255);
 	ShockAbsorberHandle[client] = INVALID_HANDLE;
 	ShockAbsorber[client] = false;
 }
 
 public Action RecalcSpeed(Handle timer, int client) {
 	if (SpeedRotationsLeft[client] > 1) {
-		if(IsPlayerAlive(client)){
-			if(GetEntPropFloat(client, Prop_Send, "m_flMaxspeed") != SuperSpeed[client]){ // if tf2 changed the speed
+		if (IsPlayerAlive(client)) {
+			if (GetEntPropFloat(client, Prop_Send, "m_flMaxspeed") != SuperSpeed[client]) { // If TF2 changed the speed
 				OldSpeed[client] = GetEntPropFloat(client, Prop_Send, "m_flMaxspeed");
 			}
 			SuperSpeed[client] = OldSpeed[client] + (SpeedRotationsLeft[client] * 2);
@@ -639,13 +633,13 @@ SwitchPrimary(int client) {
 
 PowerupParticle(int client, int id, float time) {
 	int particle = CreateEntityByName("info_particle_system");
-	if(id == 1){
+	if (id == 1) {
 		DispatchKeyValue(particle, "effect_name", "teleporter_blue_charged_level2");
 	}
-	if(id == 2){
+	if (id == 2) {
 		DispatchKeyValue(particle, "effect_name", "teleporter_red_charged_level2");
 	}
-	if(id == 7){
+	if (id == 7) {
 		DispatchKeyValue(particle, "effect_name", "rd_robot_explosion");
 	}
 	AcceptEntityInput(particle, "SetParent", client);
@@ -664,7 +658,7 @@ PowerupParticle(int client, int id, float time) {
 	if (freeid == -5) {
 		freeid = GetRandomInt(1, MAX_PARTICLES);
 		RemoveEntity(PlayerParticle[client][freeid]);
-		PrintToServer("[Fortress Blast] All of %N's particles were in use - freeing #%d", client, freeid);
+		PrintToServer("[Fortress Blast] All of %N's particles were in use, freeing #%d", client, freeid);
 	}
 	PlayerParticle[client][freeid] = particle;
 	Handle partkv = CreateKeyValues("partkv");
@@ -682,11 +676,12 @@ public Action RemoveParticle(Handle timer, any data) {
 	}
 	PlayerParticle[client][id] = -1;
 }
-DebugText(const char[] text, any ...){
-	if(GetConVarFloat(FindConVar("sm_fortressblast_debug")) > 0.0){
+
+DebugText(const char[] text, any ...) {
+	if (GetConVarFloat(FindConVar("sm_fortressblast_debug")) >= 1) {
 		int len = strlen(text) + 255;
 		char[] format = new char[len];
 		VFormat(format, len, text, 2);
-		CPrintToChatAll("{strange}[Fortress Blast]{default} %s", format);
+		CPrintToChatAll("{orange}[Fortress Blast] {default}%s", format);
 	}
 }
