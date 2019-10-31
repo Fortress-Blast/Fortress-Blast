@@ -56,6 +56,7 @@ ConVars
 Known bugs (v0.3)
 -----------------
 
+- Player can use Blast while using Time Travel.
 - Powerups dropped by players do not disappear after a certain amount of time.
 - Using a powerup just before round start may let the player keep their used powerup.
 - Using a powerup before round start allows the effect to persist into the next round, especially Time Travel.
