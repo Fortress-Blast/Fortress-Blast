@@ -164,13 +164,12 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 				CreateTimer(3.0, PesterThisDude, client);
 			}
 		}
-		GetPowerupPlacements();
 	}
 	for (int entity = 1; entity <= MAX_EDICTS ; entity++) {
 		if (IsValidEntity(entity)) {
+			char classname[60];
+			GetEntityClassname(entity, classname, sizeof(classname));
 			if (FindEntityByClassname(0, "tf_logic_mannpower") != -1 && GetConVarInt(FindConVar("sm_fortressblast_mannpower")) != 0) {
-				char classname[60];
-				GetEntityClassname(entity, classname, sizeof(classname));
 				if ((!MapHasJsonFile || GetConVarInt(FindConVar("sm_fortressblast_mannpower")) == 2)) {
 					if (StrEqual(classname, "item_powerup_rune") || StrEqual(classname, "item_powerup_crit") || StrEqual(classname, "item_powerup_uber") || StrEqual(classname, "info_powerup_spawn")) {
 						if (StrEqual(classname, "info_powerup_spawn")) {
@@ -184,9 +183,13 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 					}
 				}
 			}
+			if(StrEqual(classname, "tf_halloween_pickup")){
+				DebugText("Removing entity %d because it was a duck", entity);
+				RemoveEntity(entity);
+			}
 		}
 	}
-	
+	GetPowerupPlacements();
 }
 
 public Action PesterThisDude(Handle timer, int client) {
