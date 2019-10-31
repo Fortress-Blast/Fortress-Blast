@@ -4,7 +4,7 @@
 #include <ripext/json>
 #include <morecolors>
 #include <tf2>
-
+#include <advanced_motd>
 #define	MAX_EDICT_BITS 11
 #define	MAX_EDICTS (1<<MAX_EDICT_BITS)
 
@@ -96,29 +96,11 @@ public TF2_OnConditionAdded(int client, TFCond condition) {
 }
 
 public Action FBMenu(int client, int args) {
-	DoMenu(client, 0);
+	AdvMOTD_ShowMOTDPanel(client, "How are you reading this?", "http://fortress-blast.github.io/0.3", MOTDPANEL_TYPE_URL, true, true, true, INVALID_FUNCTION);
+	PrintToChat(client, "Opening Fortress Blast webpage (if nothing happens, you may need to enable HTML MOTDs)");
+
 }
 
-public int MenuHandle(Menu menu, MenuAction action, int param1, int param2) {
-	if (action == MenuAction_Select) {
-		char choice[32];
-		menu.GetItem(param2, choice, sizeof(choice));
-		if (StrEqual(choice, "info")) {
-			DoMenu(param1, 1);
-		} else if (StrEqual(choice, "listpowerups")) {
-			DoMenu(param1, 2);
-		} else if (StrEqual(choice, "credits")) {
-			DoMenu(param1, 3);
-		}
-	}
-	if (action == MenuAction_Cancel) {
-		if (param2 == MenuCancel_ExitBack) {
-			DoMenu(param1, 0);
-		}
-	} else if (action == MenuAction_End) {
-		delete menu;
-	}
-}
 
 public Action SetPowerup(int client, int args) {
 	if(!CheckCommandAccess(client, "", ADMFLAG_ROOT) && GetConVarFloat(FindConVar("sm_fortressblast_debug")) < 0.1){
@@ -170,7 +152,7 @@ public Action SetPowerup(int client, int args) {
 		// Get bot to use powerup within the random period
 		CreateTimer(GetRandomFloat(convar1, convar2), BotUsePowerup, player);
 	}
-	DebugText("%N has force-set %N's powerup to 7", client, player, StringToInt(arg2));
+	DebugText("%N has force-set %N's powerup to %d", client, player, StringToInt(arg2));
 }
 
 public Action teamplay_round_start(Event event, const char[] name, bool dontBroadcast) {
@@ -298,8 +280,8 @@ public Action OnStartTouchDontRespawn(entity, other) {
 
 DeletePowerup (int entity, other) {
 	RemoveEntity(entity);
-	DebugText("%N has collected a powerup", other);
 	powerup[other] = powerupid[entity];
+	DebugText("%N has collected powerup #%d", powerup[other]);
 	PlayPowerupSound(other);
 	// If player is a bot and bot support is enabled
 	if (IsFakeClient(other) && GetConVarFloat(FindConVar("sm_fortressblast_bot")) >= 1) { // Replace with GetConVarBool
@@ -633,81 +615,6 @@ bool HandleHasKey(JSONObject handle, char key[80]) {
 	char acctest[10000];
 	handle.ToString(acctest, sizeof(acctest));
 	return (StrContains(acctest, key, true) != -1);
-}
-
-DoMenu(int client, int menutype) {
-	if (menutype == 0) {
-		Menu menu = new Menu(MenuHandle);
-		menu.SetTitle("Fortress Blast (v0.3)\n==============\n ");
-		menu.AddItem("info", "Introduction");
-		menu.AddItem("listpowerups", "Powerups");
-		menu.AddItem("credits", "Credits");
-		menu.Display(client, MENU_TIME_FOREVER);
-	} else if (menutype == 1) {
-		Menu menu = new Menu(MenuHandle);
-		menu.SetTitle("Introduction\n ");
-		menu.AddItem("", "Fortress Blast adds collectable powerups to a map that give special abilities for a", ITEMDRAW_DISABLED);
-		menu.AddItem("", "short amount of time. If you have a powerup, you will be able to see what it is in", ITEMDRAW_DISABLED);
-		menu.AddItem("", "the top-right corner of your screen.", ITEMDRAW_DISABLED);
-		menu.AddItem("", "Press your 'Special attack' key to use a powerup. You can set this in TF2's Options.", ITEMDRAW_DISABLED);
-		menu.AddItem("", "Check out the Powerups submenu for information on each collectible.", ITEMDRAW_DISABLED);
-		NewLine(menu, 1);
-		SetMenuOptionFlags(menu, MENUFLAG_BUTTON_EXITBACK);
-		menu.Display(client, MENU_TIME_FOREVER);
-	} else if (menutype == 2) {
-		Menu menu = new Menu(MenuHandle);
-		// I want each pwoerup to be on a different page, could you work this out for me?
-		menu.SetTitle("Powerups\n ");
-		// ------------
-		// You need to make sure each page has 8 lines, both content and filler
-		menu.AddItem("", "- Gyrocopter -", ITEMDRAW_DISABLED);
-		menu.AddItem("", "The Gyrocopter powerup lowers your gravity to 25%. This powerup can be used to clear", ITEMDRAW_DISABLED);
-		menu.AddItem("", "large gaps or reach new heights, if you are decent at parkour.", ITEMDRAW_DISABLED);
-		NewLine(menu, 5);
-		menu.AddItem("", "- Shock Absorber -", ITEMDRAW_DISABLED);
-		menu.AddItem("", "Shock Absorber allows you to resist 75% of all damage and not take knockback. Use", ITEMDRAW_DISABLED);
-		menu.AddItem("", "this when trying take down a player with a high push force.", ITEMDRAW_DISABLED);
-		NewLine(menu, 5);
-		menu.AddItem("", "- Super Bounce -", ITEMDRAW_DISABLED);
-		menu.AddItem("", "While this powerup is active, you are forced to uncontrollably bunny hop. This is", ITEMDRAW_DISABLED);
-		menu.AddItem("", "mainly used to clear gaps by bouncing but you can also trick players with your", ITEMDRAW_DISABLED);
-		menu.AddItem("", "unpredictable movement.", ITEMDRAW_DISABLED);
-		NewLine(menu, 4);
-		menu.AddItem("", "- Super Jump -", ITEMDRAW_DISABLED);
-		menu.AddItem("", "Plain and simple, Super Jump launches you into the air. If you jump before using", ITEMDRAW_DISABLED);
-		menu.AddItem("", "this powerup, you will travel even higher, just watch out for fall damage.", ITEMDRAW_DISABLED);
-		NewLine(menu, 5);
-		menu.AddItem("", "- Super Speed -", ITEMDRAW_DISABLED);
-		menu.AddItem("", "The Super Speed powerup drastically speeds up your movement, but wears off over", ITEMDRAW_DISABLED);
-		menu.AddItem("", "time. It's great for dodging focused fire.", ITEMDRAW_DISABLED);
-		NewLine(menu, 5);
-		menu.AddItem("", "- Time Travel -", ITEMDRAW_DISABLED);
-		menu.AddItem("", "Using this powerup makes you invisible and fast, but prevents you from attacking.", ITEMDRAW_DISABLED);
-		menu.AddItem("", "Use this to your advantage in order to get past sentries or difficult opponents.", ITEMDRAW_DISABLED);
-		NewLine(menu, 5);
-		menu.AddItem("", "- Blast -", ITEMDRAW_DISABLED);
-		menu.AddItem("", "This powerup will cause an explosion damaging enemies near you upon use.", ITEMDRAW_DISABLED);
-		menu.AddItem("", "The closer they are to you, the more damage it will do.", ITEMDRAW_DISABLED);
-		menu.AddItem("", "Try using it to one-hit weak classes", ITEMDRAW_DISABLED);
-		SetMenuOptionFlags(menu, MENUFLAG_BUTTON_EXITBACK);
-		menu.Display(client, MENU_TIME_FOREVER);
-	} else if (menutype == 3) {
-		Menu menu = new Menu(MenuHandle);
-		menu.SetTitle("Credits\n ");
-		menu.AddItem("", "Programmers - Naleksuh, Jack5", ITEMDRAW_DISABLED);
-		menu.AddItem("", "Sound effects - GarageGames", ITEMDRAW_DISABLED);
-		NewLine(menu, 1);
-		menu.AddItem("", "Plugin available at https://github.com/Fortress-Blast/Fortress-Blast", ITEMDRAW_DISABLED);
-		NewLine(menu, 1);
-		SetMenuOptionFlags(menu, MENUFLAG_BUTTON_EXITBACK);
-		menu.Display(client, MENU_TIME_FOREVER);
-	}
-}
-
-NewLine(Menu menu, int lines) {
-	for (int draw = 1; draw <= lines ; draw++) {
-		menu.AddItem("", "", ITEMDRAW_NOTEXT);
-	}
 }
 
 stock ClearTimer(Handle Timer) { // From SourceMod forums
