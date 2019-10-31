@@ -97,7 +97,7 @@ public TF2_OnConditionAdded(int client, TFCond condition) {
 
 public Action FBMenu(int client, int args) {
 	AdvMOTD_ShowMOTDPanel(client, "How are you reading this?", "http://fortress-blast.github.io/0.3", MOTDPANEL_TYPE_URL, true, true, true, INVALID_FUNCTION);
-	CPrintToChat(client, "{orange}[Fortress Blast] {haunted}Opening Fortress Blast manual... If nothing happens, {yellow}check that 'Disable HTML MOTDs' is not checked in Advanced Options {haunted}and reconnect to the server.");
+	CPrintToChat(client, "{orange}[Fortress Blast] {haunted}Opening Fortress Blast manual... If nothing happens, {yellow}try setting cl_disablehtmlmotd to 0 in the console");
 }
 
 public Action SetPowerup(int client, int args) {
