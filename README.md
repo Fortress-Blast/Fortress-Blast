@@ -56,8 +56,9 @@ Known bugs (v0.3)
 -----------------
 
 - Player can use Blast while using Time Travel.
+- Powerups can randomly spawn duplicates on resource-intensive community servers, a failsafe is needed.
 - Powerups dropped by players do not disappear after a certain amount of time.
 - Super Speed does not work when holding PASS Time jack.
 - The Special attack key is the same as the call key in PASS Time, and can potentially result in disconnect for console spam of 'voicemenu 1 8'.
 - Using a powerup just before round start may let the player keep their used powerup.
-- Using a powerup before round start allows the effect to persist into the next round, especially Time Travel.
+- Using a powerup before round start allows the effect to persist into the next round, especially speed-related powerups.
