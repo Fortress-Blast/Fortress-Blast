@@ -55,6 +55,7 @@ ConVars
 Known bugs (v0.3)
 -----------------
 
+- Admin flag is hardcoded and thus impossible to use without editing the source code.
 - Player can use Blast while using Time Travel.
 - Powerups can randomly spawn duplicates on resource-intensive community servers, a failsafe is needed.
 - Powerups dropped by players do not disappear after a certain amount of time.
