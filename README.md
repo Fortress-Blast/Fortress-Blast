@@ -50,6 +50,7 @@ ConVars
 - `sm_fortressblast_drop <0-2>` - How to handle dropping powerups on death. 0 = Never drop, 1 = Only drop on maps with no .json file (default), 2 = Always drop.
 - `sm_fortressblast_drop_rate <0-100>` - Set the chance a player will drop a powerup on death out of 100. Default 5.
 - `sm_fortressblast_drop_team <1-3>` - Set the teams that will drop powerups on death. 1 = Both (default), 2 = RED, 3 = BLU.
+- `sm_fortressblast_key <string>` - Set the player input that will constitute using a powerup. `attack3` is default, but `reload` is recommended for PASS Time. Players are warned if they press `attack3` but it is not the set key.
 - `sm_fortressblast_mannpower <0-2>` - Set whether Mannpower powerups are replaced with Fortress Blast powerups. 0 = Don't replace, 1 = Replace only if there is no .json file, 2 = Always replace (default).
 
 Known bugs (v0.3)
@@ -60,6 +61,5 @@ Known bugs (v0.3)
 - Powerups can randomly spawn duplicates on resource-intensive community servers, a failsafe is needed.
 - Powerups dropped by players do not disappear after a certain amount of time.
 - Super Speed does not work when holding PASS Time jack.
-- The Special attack key is the same as the call key in PASS Time, and can potentially result in disconnect for console spam of 'voicemenu 1 8'.
 - Using a powerup just before round start may let the player keep their used powerup.
 - Using a powerup before round start allows the effect to persist into the next round, especially speed-related powerups.
