@@ -14,6 +14,8 @@ int powerupid[MAX_EDICTS];
 int powerup[MAXPLAYERS + 1] = 0;
 int PlayerParticle[MAXPLAYERS + 1][MAX_PARTICLES+1];
 int SpeedRotationsLeft[MAXPLAYERS + 1] = 80;
+int MegaMannRotation[MAXPLAYERS + 1] = 0;
+bool PreviousAttack3[MAXPLAYERS + 1] = false;
 bool VictoryTime = false;
 bool MapHasJsonFile = false;
 bool SuperBounce[MAXPLAYERS + 1] = false;
@@ -22,10 +24,12 @@ bool TimeTravel[MAXPLAYERS + 1] = true;
 float OldSpeed[MAXPLAYERS + 1] = 0.0;
 float SuperSpeed[MAXPLAYERS + 1] = 0.0;
 float VerticalVelocity[MAXPLAYERS + 1];
+float MegaMannCoords[MAXPLAYERS+1][1000][3];
 Handle SuperBounceHandle[MAXPLAYERS + 1];
 Handle ShockAbsorberHandle[MAXPLAYERS + 1];
 Handle GyrocopterHandle[MAXPLAYERS + 1];
 Handle TimeTravelHandle[MAXPLAYERS + 1];
+Handle MegaMannHandle[MAXPLAYERS + 1];
 
 /* Powerup IDs
 1 - Super Bounce
@@ -55,11 +59,20 @@ public OnPluginStart() {
 	CreateConVar("sm_fortressblast_drop_rate", "5", "Chance out of 100 for a powerup to drop on death.");
 	CreateConVar("sm_fortressblast_drop_teams", "1", "Set the teams that will drop powerups on death.");
 	CreateConVar("sm_fortressblast_mannpower", "2", "How to handle replacing Mannpower powerups.");
+	CreateConVar("sm_fortressblast_powerup_button", "attack3", "Button that activates powerups");
 	PrecacheModel("models/props_halloween/pumpkin_loot.mdl");
 	LoadTranslations("common.phrases");
 }
 
 public OnMapStart() {
+	PrecacheSound("fortressblast2/superbounce_pickup.mp3");
+	PrecacheSound("fortressblast2/shockabsorber_pickup.mp3");
+	PrecacheSound("fortressblast2/superspeed_pickup.mp3");
+	PrecacheSound("fortressblast2/superjump_pickup.mp3");
+	PrecacheSound("fortressblast2/gyrocopter_pickup.mp3");
+	PrecacheSound("fortressblast2/timetravel_pickup.mp3");
+	PrecacheSound("fortressblast2/blast_pickup.mp3");
+	PrecacheSound("fortressblast2/megamann_pickup.mp3");
 	PrecacheSound("fortressblast2/superbounce_use.mp3");
 	PrecacheSound("fortressblast2/shockabsorber_use.mp3");
 	PrecacheSound("fortressblast2/superspeed_use.mp3");
@@ -67,6 +80,7 @@ public OnMapStart() {
 	PrecacheSound("fortressblast2/gyrocopter_use.mp3");
 	PrecacheSound("fortressblast2/timetravel_use.mp3");
 	PrecacheSound("fortressblast2/blast_use.mp3");
+	PrecacheSound("fortressblast2/megamann_use.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/superbounce_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/superbounce_use.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/shockabsorber_pickup.mp3");
@@ -81,6 +95,8 @@ public OnMapStart() {
 	AddFileToDownloadsTable("sound/fortressblast2/timetravel_use.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/blast_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/blast_use.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/megamann_pickup.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/megamann_use.mp3");
 	
 	char map[80];
 	GetCurrentMap(map, sizeof(map));
@@ -227,7 +243,7 @@ SpawnPower(float location[3], bool respawn) {
 	DebugText("Spawning powerup entity %d at %f, %f, %f", entity, location[0], location[1], location[2]);
 	if (IsValidEdict(entity)) {
 		SetEntityModel(entity, "models/props_halloween/pumpkin_loot.mdl");
-		powerupid[entity] = GetRandomInt(1, 7);
+		powerupid[entity] = GetRandomInt(1, 8);
 		if (powerupid[entity] == 1) {
 			SetEntityRenderColor(entity, 100, 100, 255, 255);
 		} else if (powerupid[entity] == 2) {
@@ -242,6 +258,8 @@ SpawnPower(float location[3], bool respawn) {
 			SetEntityRenderColor(entity, 100, 255, 255, 255);
 		} else if (powerupid[entity] == 7) {
 			SetEntityRenderColor(entity, 50, 177, 177, 255);
+		} else if (powerupid[entity] == 8) {
+			SetEntityRenderColor(entity, 0, 0, 0, 255);
 		}
 		DispatchKeyValue(entity, "pickup_sound", "get_out_of_the_console_snoop");
 		DispatchKeyValue(entity, "pickup_particle", "get_out_of_the_console_snoop");
@@ -281,7 +299,7 @@ public Action OnStartTouchDontRespawn(entity, other) {
 DeletePowerup (int entity, other) {
 	RemoveEntity(entity);
 	powerup[other] = powerupid[entity];
-	DebugText("%N has collected powerup ID #%d", powerup[other]);
+	DebugText("%N has collected powerup ID #%d", other, powerup[other]);
 	PlayPowerupSound(other);
 	// If player is a bot and bot support is enabled
 	if (IsFakeClient(other) && GetConVarFloat(FindConVar("sm_fortressblast_bot")) >= 1) { // Replace with GetConVarBool
@@ -315,30 +333,47 @@ public Action SpawnPowerAfterDelay(Handle timer, any data) {
 }
 
 PlayPowerupSound(int client) {
+	float vel[3];
+	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel);
 	if (powerup[client] == 1) {
-		ClientCommand(client, "playgamesound fortressblast2/superbounce_pickup.mp3");
+		EmitSoundToClient(client, "fortressblast2/superbounce_pickup.mp3", client);
 	} else if (powerup[client] == 2) {
-		ClientCommand(client, "playgamesound fortressblast2/shockabsorber_pickup.mp3");
+		EmitSoundToClient(client, "fortressblast2/shockabsorber_pickup.mp3", client);
 	} else if (powerup[client] == 3) {
-		ClientCommand(client, "playgamesound fortressblast2/superspeed_pickup.mp3");
+		EmitSoundToClient(client, "fortressblast2/superspeed_pickup.mp3", client);
 	} else if (powerup[client] == 4) {
-		ClientCommand(client, "playgamesound fortressblast2/superjump_pickup.mp3");
+		EmitSoundToClient(client, "fortressblast2/superjump_pickup.mp3", client);
 	} else if (powerup[client] == 5) {
-		ClientCommand(client, "playgamesound fortressblast2/gyrocopter_pickup.mp3");
+		EmitSoundToClient(client, "fortressblast2/gyrocopter_pickup.mp3", client);
 	} else if (powerup[client] == 6) {
-		ClientCommand(client, "playgamesound fortressblast2/timetravel_pickup.mp3");
+		EmitSoundToClient(client, "fortressblast2/timetravel_pickup.mp3", client);
 	} else if (powerup[client] == 7) {
-		ClientCommand(client, "playgamesound fortressblast2/blast_pickup.mp3");
-	} 
+		EmitSoundToClient(client, "fortressblast2/blast_pickup.mp3", client);
+	} else if (powerup[client] == 8) {
+		EmitSoundToClient(client, "fortressblast2/megamann_pickup.mp3", client);
+	}
 }
 
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float ang[3], int &weapon) {
+	if (GetConVarFloat(FindConVar("sm_fortressblast_debug")) >= 1) {
+		if(GetEntityFlags(client) & FL_ONGROUND){
+			PrintCenterText(client, "Ground");
+		}
+		else{
+			PrintCenterText(client, "Air");
+		}
+	}
 	float coords[3] = 69.420;
 	GetEntPropVector(client, Prop_Send, "m_vecOrigin", coords);
 	if (TimeTravel[client]) {
 		SetEntPropFloat(client, Prop_Send, "m_flMaxspeed", 520.0);
 	}
-	if (buttons & IN_ATTACK3 && IsPlayerAlive(client)) {
+	if(buttons & 33554432 && (!PreviousAttack3[client]) && StringButtonInt() != 33554432){
+		char button[40];
+		GetConVarString(FindConVar("sm_fortressblast_powerup_button"), button, sizeof(button));
+		CPrintToChat(client, "{orange}[Fortress Blast] {default}On this server, the Powerup Button has moved to %s", button);
+	}
+	if (buttons & StringButtonInt() && IsPlayerAlive(client)) {
 		UsePower(client);
 	}
 	float vel2[3];
@@ -360,6 +395,25 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		if (IsValidEntity(PlayerParticle[client][partid])) {
 			TeleportEntity(PlayerParticle[client][partid], coords, NULL_VECTOR, NULL_VECTOR);
 		}
+	}
+	PreviousAttack3[client] = (buttons > 33554431);
+	if(MegaMannRotation[client] > 0){
+		DebugText("%N rotation is %d", client, MegaMannRotation[client]);
+		MegaMannCoords[client][MegaMannRotation[client]][0] = coords[0];
+		MegaMannCoords[client][MegaMannRotation[client]][1] = coords[1];
+		MegaMannCoords[client][MegaMannRotation[client]][2] = coords[2];
+		if(MegaMannRotation[client] > 101){
+			if(MegaMannCoords[client][MegaMannRotation[client]][0] == MegaMannCoords[client][MegaMannRotation[client] - 100][0]){
+				if(MegaMannCoords[client][MegaMannRotation[client]][1] == MegaMannCoords[client][MegaMannRotation[client] - 100][1]){
+					if(MegaMannCoords[client][MegaMannRotation[client]][2] == MegaMannCoords[client][MegaMannRotation[client] - 100][2]){
+						TF2_RespawnPlayer(client);
+						MegaMannRotation[client] = -5;
+						CPrintToChat(client, "{orange}[Fortress Blast]{default} Since you have not moved in a while, we have respawned you to avoid being stuck");
+					}
+				}
+			}
+		}
+		MegaMannRotation[client]++;
 	}
 }
 
@@ -444,10 +498,25 @@ UsePower(client) {
 			}
 		}
 		TF2_RemovePlayerDisguise(client);
+	} else if(powerup[client] == 8) {
+		SetVariantString("1.75 0");
+		AcceptEntityInput(client, "SetModelScale");
+		SetEntityHealth(client, (GetClientHealth(client) * 4));
+		ClearTimer(MegaMannHandle[client]);
+		MegaMannRotation[client] = 1;
+		MegaMannHandle[client] = CreateTimer(10.0, RemoveMegaMann, client);
 	}
 	powerup[client] = 0;
 }
-
+public Action RemoveMegaMann(Handle timer, int client) {
+	MegaMannRotation[client] = 0;
+	MegaMannHandle[client] = INVALID_HANDLE;
+	SetVariantString("1 0");
+	AcceptEntityInput(client, "SetModelScale");
+	if(GetClientHealth(client) > TF2_GetPlayerMaxHealth(client)){
+		SetEntityHealth(client, TF2_GetPlayerMaxHealth(client));
+	}
+}
 public Action RemoveTimeTravel(Handle timer, int client) {
 	TimeTravelHandle[client] = INVALID_HANDLE;
 	TimeTravel[client] = false;
@@ -507,7 +576,9 @@ DoHudText(client) {
 			ShowSyncHudText(client, text, "Collected powerup:\nTime Travel");
 		} else if (powerup[client] == 7) {
 			ShowSyncHudText(client, text, "Collected powerup:\nBlast");
-		} 
+		} else if (powerup[client] == 8) {
+			ShowSyncHudText(client, text, "Collected powerup:\nMega Mann");
+		}		
 		CloseHandle(text);
 	}
 }
@@ -684,4 +755,89 @@ DebugText(const char[] text, any ...) {
 		VFormat(format, len, text, 2);
 		CPrintToChatAll("{orange}[Fortress Blast] {default}%s", format);
 	}
+}
+
+int StringButtonInt() {
+	char button[40];
+	GetConVarString(FindConVar("sm_fortressblast_powerup_button"), button, sizeof(button));
+	if (StrEqual(button, "attack")) {
+			return 1;
+	}
+	if (StrEqual(button, "jump")) {
+		return 2;
+	}
+	if (StrEqual(button, "duck")) {
+		return 4;
+	}
+	if (StrEqual(button, "forward")) {	
+		return 8;
+	}
+	if (StrEqual(button, "back")) {
+		return 16;
+	}
+	if (StrEqual(button, "use")) {
+		return 32;
+	}
+	if (StrEqual(button, "cancel")) {
+		return 64;
+	}
+	if (StrEqual(button, "left")) {
+		return 128;
+	}
+	if (StrEqual(button, "right")) {
+		return 256;
+	}
+	if (StrEqual(button, "moveleft")) {
+		return 512;
+	}
+	if (StrEqual(button, "moveright")) {
+		return 1024;
+	}
+	if (StrEqual(button, "attack2")) {
+		return 2048;
+	}
+	if (StrEqual(button, "run")) {
+		return 4096;
+	}
+	if (StrEqual(button, "reload")) {
+		return 8192;
+	}
+	if (StrEqual(button, "alt1")) {
+		return 16384;
+	}
+	if (StrEqual(button, "alt2")) {
+		return 32768;
+	}
+	if (StrEqual(button, "score")) {
+		return 65536;
+	}
+	if (StrEqual(button, "speed")) {
+		return 131072;
+	}
+	if (StrEqual(button, "walk")) {
+		return 262144;
+	}
+	if (StrEqual(button, "zoom")) {
+		return 524288;
+	}
+	if (StrEqual(button, "weapon1")) {
+		return 1048576;
+	}
+	if (StrEqual(button, "weapon2")) {
+		return 2097152;
+	}
+	if (StrEqual(button, "bullrush")) {
+		return 4194304;
+	}
+	if (StrEqual(button, "grenade1")) {
+		return 8388608;
+	}
+	if (StrEqual(button, "grenade2")) {
+		return 16777216;
+	}
+	return 33554432;
+}
+
+stock int TF2_GetPlayerMaxHealth(int client) {
+	return GetEntProp(GetPlayerResourceEntity(), Prop_Send, "m_iMaxHealth", _, client);
 }
