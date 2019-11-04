@@ -20,8 +20,8 @@ bool VictoryTime = false;
 bool MapHasJsonFile = false;
 bool SuperBounce[MAXPLAYERS + 1] = false;
 bool ShockAbsorber[MAXPLAYERS + 1] = false;
-bool TimeTravel[MAXPLAYERS + 1] = true;
-bool JackOff[MAXPLAYERS + 1] = false;
+bool TimeTravel[MAXPLAYERS + 1] = true; // Pretty sure this should be set to false
+bool CarryingJack[MAXPLAYERS + 1] = false;
 float OldSpeed[MAXPLAYERS + 1] = 0.0;
 float SuperSpeed[MAXPLAYERS + 1] = 0.0;
 float VerticalVelocity[MAXPLAYERS + 1];
@@ -39,7 +39,8 @@ Handle MegaMannHandle[MAXPLAYERS + 1];
 4 - Super Jump
 5 - Gyrocopter
 6 - Time Travel
-7 - Blast */
+7 - Blast
+8 - Mega Mann */
 
 public OnPluginStart() {
 	for (int client = 1; client <= MaxClients ; client++) {
@@ -59,7 +60,7 @@ public OnPluginStart() {
 	CreateConVar("sm_fortressblast_bot_max", "15", "Maximum time for bots to use a powerup.");
 	CreateConVar("sm_fortressblast_debug", "0", "Disable or enable command permission overrides and debug messages in chat.");
 	CreateConVar("sm_fortressblast_drop", "1", "How to handle dropping powerups on death.");
-	CreateConVar("sm_fortressblast_drop_rate", "5", "Chance out of 100 for a powerup to drop on death.");
+	CreateConVar("sm_fortressblast_drop_rate", "10", "Chance out of 100 for a powerup to drop on death.");
 	CreateConVar("sm_fortressblast_drop_teams", "1", "Set the teams that will drop powerups on death.");
 	CreateConVar("sm_fortressblast_mannpower", "2", "How to handle replacing Mannpower powerups.");
 	PrecacheModel("models/props_halloween/pumpkin_loot.mdl");
@@ -236,11 +237,11 @@ public Action teamplay_flag_event(Event event, const char[] name, bool dontBroad
 	if(FindEntityByClassname(0, "passtime_logic") != -1){
 		if(event.GetInt("eventtype") == 1){
 			DebugText("%N picked up the jack (off)", GetClientOfUserId(event.GetInt("carrier")));
-			JackOff[GetClientOfUserId(event.GetInt("carrier"))] = true;
+			CarryingJack[GetClientOfUserId(event.GetInt("carrier"))] = true;
 		}
 		else{
 			DebugText("%N dropped the jack (five)", GetClientOfUserId(event.GetInt("carrier")));
-			JackOff[GetClientOfUserId(event.GetInt("carrier"))] = false;
+			CarryingJack[GetClientOfUserId(event.GetInt("carrier"))] = false;
 		}
 	}
 }
@@ -251,6 +252,7 @@ public OnClientPutInServer(int client) {
 }
 
 SpawnPower(float location[3], bool respawn) {
+	// First check if there is a powerup already here, in the case that a duplicate has spawned
 	int entity = CreateEntityByName("tf_halloween_pickup");
 	DebugText("Spawning powerup entity %d at %f, %f, %f", entity, location[0], location[1], location[2]);
 	if (IsValidEdict(entity)) {
@@ -383,16 +385,16 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		char button[40];
 		GetConVarString(FindConVar("sm_fortressblast_action_use"), button, sizeof(button));
 		CPrintToChat(client, "{orange}[Fortress Blast] {red}Special attack is currerntly disabled on this server. You are required to {yellow}perform the '%s' action to use a powerup.", button);
-	}
-	if (buttons & StringButtonInt() && IsPlayerAlive(client)) {
-		if(!JackOff[client]){
+	} else if (buttons & StringButtonInt() && IsPlayerAlive(client)) {
+		UsePower(client);
+		// Only Super Speed should be blocked when carrying the PASS Time Jack
+		/* if (!CarryingJack[client]) {
 			UsePower(client);
-		}
-		else{
-			if(!PreviousAttack3[client]){
-				CPrintToChat(client, "{orange}[Fortress Blast] {red}You cannot use powerups while carrying the PASS Time Jack");
+		} else {
+			if (!PreviousAttack3[client]) {
+				CPrintToChat(client, "{orange}[Fortress Blast] {red}You cannot use powerups while carrying the PASS Time Jack.");
 			}
-		}
+		} */
 	}
 	float vel2[3];
 	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel2);
@@ -516,12 +518,15 @@ UsePower(client) {
 			}
 		}
 		TF2_RemovePlayerDisguise(client);
-	} else if(powerup[client] == 8) {
+		TimeTravelHandle[client] = CreateTimer(0.0, RemoveTimeTravel, client); // Remove Time Travel instantly
+	} else if (powerup[client] == 8) {
+		// Mega Mann - Giant and 4x health for 10 seconds
 		SetVariantString("1.75 0");
 		AcceptEntityInput(client, "SetModelScale");
-		SetEntityHealth(client, (GetClientHealth(client) * 4));
-		if(GetClientHealth(client) > TF2_GetPlayerMaxHealth(client)){
-			SetEntityHealth(client, TF2_GetPlayerMaxHealth(client));
+		SetEntityHealth(client, (GetClientHealth(client) * 4)); // 4x current health
+		// Cap at 4x maximum health
+		if (GetClientHealth(client) > (TF2_GetPlayerMaxHealth(client) * 4)) {
+			SetEntityHealth(client, TF2_GetPlayerMaxHealth(client) * 4);
 		}
 		ClearTimer(MegaMannHandle[client]);
 		MegaMannRotation[client] = 1; // Activate Mega Mann stuck-checking loop
@@ -535,6 +540,7 @@ public Action RemoveMegaMann(Handle timer, int client) {
 	MegaMannHandle[client] = INVALID_HANDLE;
 	SetVariantString("1 0");
 	AcceptEntityInput(client, "SetModelScale");
+	// Cap at maximum health
 	if (GetClientHealth(client) > TF2_GetPlayerMaxHealth(client)) {
 		SetEntityHealth(client, TF2_GetPlayerMaxHealth(client));
 	}
