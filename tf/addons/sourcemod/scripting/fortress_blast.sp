@@ -51,7 +51,6 @@ public OnPluginStart() {
 	HookEvent("teamplay_round_start", teamplay_round_start);
 	HookEvent("teamplay_round_win", teamplay_round_win);
 	HookEvent("player_death", player_death);
-	HookEvent("teamplay_flag_event", teamplay_flag_event);
 	RegConsoleCmd("sm_setpowerup", SetPowerup);
 	RegConsoleCmd("sm_fortressblast", FBMenu);
 	CreateConVar("sm_fortressblast_action_use", "attack3", "Which action to watch for in order to use powerups.");
