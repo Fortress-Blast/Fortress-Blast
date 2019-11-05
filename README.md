@@ -12,15 +12,16 @@ The following powerups exist in the base version of this server mod:
 - Super Speed - The user's speed is drastically increased, but gradually wears off.
 - Super Jump - The user is launched into the air and will resist the initial fall damage. Using this powerup immediately after jumping results in a higher launch.
 - Gyrocopter - The user has 25% gravity for 5 seconds.
-- Time Travel - The user is invisible, has increased speed and cannot attack for 5 seconds. This allows for uncontested passage through or escape from challenging situations.
+- Time Travel - The user is invisible, has increased speed and cannot attack for 3 seconds. This allows for uncontested passage through or escape from challenging situations.
 - Blast - An explosion is emitted from the user, killing low-health enemies and harming others nearby. Most effective when paired with other sources of damage.
+- Mega Mann - The user becomes 75% larger and is overhealed to 4 times their current health for 10 seconds. Overheal is capped at 4 times the user's maximmum health.
 
 Features
 --------
 
 Fortress Blast comes with a few quality-of-life features:
 
-- A menu is available to players which provides them with information on what powerups there are, what they do, and tips on how they can be used.
+- A MOTD is available to players which provides them with information on what powerups there are, what they do, and tips on how they can be used.
 - A server admin can allow players to drop Fortress Blast powerups on death with a ConVar.
 - Bots can pick up powerups and randomly use them based on a user-defined range of time.
 - By default, Mannpower powerups are replaced with Fortress Blast powerups.
@@ -38,7 +39,7 @@ Commands (in chat, replace *sm_* with *!*)
 --------
 
 - `sm_fortressblast` - Opens the Fortress Blast MOTD manual.
-- `sm_setpowerup <player> <0-6>` - Sets a player's powerup by ID number. Also works with the tags @all, @red, @blue and @me. Only users with the Z flag can use this command.
+- `sm_setpowerup <player> <#>` - Sets a player's powerup by ID number. Also works with the tags @all, @red, @blue and @me. Only users with the Z flag can use this command.
 
 ConVars
 -------
@@ -53,10 +54,8 @@ ConVars
 - `sm_fortressblast_drop_team <1-3>` - Set the teams that will drop powerups on death. 1 = Both (default), 2 = RED, 3 = BLU.
 - `sm_fortressblast_mannpower <0-2>` - Set whether Mannpower powerups are replaced with Fortress Blast powerups. 0 = Don't replace, 1 = Replace only if there is no .json file, 2 = Always replace (default).
 
-Known bugs (v0.3)
+Known bugs (v0.4)
 -----------------
 
 - Powerups can randomly spawn duplicates on resource-intensive community servers, a failsafe is needed.
-- Powerups dropped by players do not disappear after a certain amount of time.
 - Super Speed should be denied when holding PASS Time jack, as it does not work.
-- Using a powerup before round start allows the effect to persist into the next round, especially speed-related powerups.
