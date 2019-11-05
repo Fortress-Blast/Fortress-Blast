@@ -179,7 +179,6 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 			powerup[client] = 0;
 			if (IsClientInGame(client)) {
 				CreateTimer(3.0, PesterThisDude, client);
-				// Remove powerup effects on round start
 				SetEntityGravity(client, 1.0);
 				SuperBounce[client] = false;
 				ShockAbsorber[client] = false;
@@ -215,13 +214,11 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 	}
 	GetPowerupPlacements();
 }
-
-public OnEntityDestroyed(int entity) {
-	if (IsValidEntity(entity) && entity > 0) {
-		ClearTimer(DestroyPowerupHandle[entity]); // This causes about half a second of lag when a new round starts. not having it causes problems
+public OnEntityDestroyed(int entity){
+	if(IsValidEntity(entity) && entity > 0){
+		ClearTimer(DestroyPowerupHandle[entity]); // this causes about a half-second of lag when a new round starts. but not having it causes big problems
 	}
 }
-
 public Action PesterThisDude(Handle timer, int client) {
 	if (IsClientInGame(client)) { // Required because player might disconnect before this fires
 		CPrintToChat(client, "{orange}[Fortress Blast] {haunted}This server is running {yellow}Fortress Blast v0.4! {haunted}If you would like to know more or are unsure what a powerup does, type the command {yellow}!fortressblast {haunted}into chat.");
@@ -237,24 +234,37 @@ public Action player_death(Event event, const char[] name, bool dontBroadcast) {
 	// Is dropping powerups enabled
 	if (GetConVarFloat(FindConVar("sm_fortressblast_drop")) == 2 || (GetConVarFloat(FindConVar("sm_fortressblast_drop")) && !MapHasJsonFile)) { // Replace with GetConVarBool
 		// Get chance a powerup will be dropped
+		DebugText("Drops are enabled!!");
 		float convar = GetConVarFloat(FindConVar("sm_fortressblast_drop_rate"));
 		int randomNumber = GetRandomInt(0, 99);
 		if (convar > randomNumber && (GetConVarInt(FindConVar("sm_fortressblast_drop_teams")) == GetClientTeam(GetClientOfUserId(event.GetInt("userid"))) || GetConVarInt(FindConVar("sm_fortressblast_drop_teams")) == 1)) {
-			DebugText("Dropping powerup due to player death");
+			DebugText("attempting to drop powerup");
 			float coords[3];
 			GetEntPropVector(GetClientOfUserId(event.GetInt("userid")), Prop_Send, "m_vecOrigin", coords);
 			int entity = SpawnPower(coords, false);
 			ClearTimer(DestroyPowerupHandle[entity]);
 			DestroyPowerupHandle[entity] = CreateTimer(15.0, DestroyPowerupTime, entity);
+			DebugText("finished dropping powerup");
 		}
 	}
 }
-
-public Action DestroyPowerupTime(Handle timer, int entity) {
+public Action DestroyPowerupTime(Handle timer, int entity){
 	DestroyPowerupHandle[entity] = INVALID_HANDLE;
 	RemoveEntity(entity);
 }
-
+public Action teamplay_flag_event(Event event, const char[] name, bool dontBroadcast) {
+	DebugText("FLAG EVENT!");
+	if(FindEntityByClassname(0, "passtime_logic") != -1){
+		if(event.GetInt("eventtype") == 1){
+			DebugText("%N picked up the jack (off)", GetClientOfUserId(event.GetInt("carrier")));
+			CarryingJack[GetClientOfUserId(event.GetInt("carrier"))] = true;
+		}
+		else{
+			DebugText("%N dropped the jack (five)", GetClientOfUserId(event.GetInt("carrier")));
+			CarryingJack[GetClientOfUserId(event.GetInt("carrier"))] = false;
+		}
+	}
+}
 public OnClientPutInServer(int client) {
 	powerup[client] = 0;
 	SDKHook(client, SDKHook_OnTakeDamageAlive, OnTakeDamage);
@@ -429,7 +439,6 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	}
 	PreviousAttack3[client] = (buttons > 33554431);
 	// Mega Mann stuck-checking loop
-	// Rotation is no longer needed, replace with a one second timer
 	if (MegaMannRotation[client] > 0) {
 		if (MegaMannRotation[client] == 1) { // Store co-ordinates on powerup use
 			MegaMannCoords[client][0] = coords[0];
@@ -443,9 +452,9 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 				MegaMannHandle[client] = CreateTimer(0.0, RemoveMegaMann, client);
 				TF2_RespawnPlayer(client);
 				MegaMannRotation[client] = -5;
-				CPrintToChat(client, "{orange}[Fortress Blast] {red}You were respawned to avoid being stuck. Be sure to {yellow}use Mega Mann in open areas {red}and {yellow}move once it is active.");
+				CPrintToChat(client, "{orange}[Fortress Blast] {red}You are respawned to avoid being stuck. Be sure to {yellow}use Mega Mann in open areas {red}and {yellow}move once it is active.");
 			}
-		}
+		} // todo: now that it only checks from the start this whole "rotation" thing is not needed anymore--just put one timer at half a second or something
 		MegaMannRotation[client]++;
 	}
 }
@@ -526,7 +535,7 @@ UsePower(client) {
 			if (IsClientInGame(client2)) {
 				GetClientAbsOrigin(client2, pos2);
 				if (GetVectorDistance(pos1, pos2) <= 250.0 && GetClientTeam(client) != GetClientTeam(client2)) {
-					SDKHooks_TakeDamage(client2, 0, client, (150.0 - (GetVectorDistance(pos1, pos2) * 0.4)), 0, 348);
+					SDKHooks_TakeDamage(client2, 0, client, (150.0 - (GetVectorDistance(pos1, pos2) * 0.4)), 0, -1);
 				}
 			}
 		}
