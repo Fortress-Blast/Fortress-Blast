@@ -58,5 +58,5 @@ Known bugs (v0.4)
 -----------------
 
 - Mega Mann stuck check does not always fire, failsafe checks needed.
-- Powerups can randomly spawn duplicates on resource-intensive community servers, a failsafe is needed.
+- Duplicate powerups can spawn across rounds, failsafe needed when spawning powerups.
 - Super Speed should be denied when holding PASS Time jack, as it does not work.
