@@ -20,17 +20,18 @@ bool VictoryTime = false;
 bool MapHasJsonFile = false;
 bool SuperBounce[MAXPLAYERS + 1] = false;
 bool ShockAbsorber[MAXPLAYERS + 1] = false;
-bool TimeTravel[MAXPLAYERS + 1] = true; // Pretty sure this should be set to false
+bool TimeTravel[MAXPLAYERS + 1] = false;
 bool CarryingJack[MAXPLAYERS + 1] = false;
 float OldSpeed[MAXPLAYERS + 1] = 0.0;
 float SuperSpeed[MAXPLAYERS + 1] = 0.0;
 float VerticalVelocity[MAXPLAYERS + 1];
 float MegaMannCoords[MAXPLAYERS + 1][3];
-Handle SuperBounceHandle[MAXPLAYERS + 1];
-Handle ShockAbsorberHandle[MAXPLAYERS + 1];
-Handle GyrocopterHandle[MAXPLAYERS + 1];
-Handle TimeTravelHandle[MAXPLAYERS + 1];
-Handle MegaMannHandle[MAXPLAYERS + 1];
+Handle SuperBounceHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
+Handle ShockAbsorberHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
+Handle GyrocopterHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
+Handle TimeTravelHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
+Handle MegaMannHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
+Handle DestroyPowerupHandle[MAX_EDICTS + 1] = INVALID_HANDLE;
 
 /* Powerup IDs
 1 - Super Bounce
@@ -79,7 +80,7 @@ public OnMapStart() {
 	PrecacheSound("fortressblast2/gyrocopter_pickup.mp3");
 	PrecacheSound("fortressblast2/gyrocopter_use.mp3");
 	PrecacheSound("fortressblast2/timetravel_pickup.mp3");
-	PrecacheSound("fortressblast2/timetravel_use.mp3");
+	PrecacheSound("fortressblast2/timetravel_use_3sec.mp3");
 	PrecacheSound("fortressblast2/blast_pickup.mp3");
 	PrecacheSound("fortressblast2/blast_use.mp3");
 	PrecacheSound("fortressblast2/megamann_pickup.mp3");
@@ -95,7 +96,7 @@ public OnMapStart() {
 	AddFileToDownloadsTable("sound/fortressblast2/gyrocopter_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/gyrocopter_use.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/timetravel_pickup.mp3");
-	AddFileToDownloadsTable("sound/fortressblast2/timetravel_use.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/timetravel_use_3sec.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/blast_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/blast_use.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/megamann_pickup.mp3");
@@ -178,6 +179,12 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 			powerup[client] = 0;
 			if (IsClientInGame(client)) {
 				CreateTimer(3.0, PesterThisDude, client);
+				SetEntityGravity(client, 1.0);
+				SuperBounce[client] = false;
+				ShockAbsorber[client] = false;
+				TimeTravel[client] = false;
+				SpeedRotationsLeft[client] = 0;
+				SetEntPropFloat(client, Prop_Send, "m_flMaxspeed", 0.1);
 			}
 		}
 	}
@@ -207,7 +214,11 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 	}
 	GetPowerupPlacements();
 }
-
+public OnEntityDestroyed(int entity){
+	if(IsValidEntity(entity) && entity > 0){
+		ClearTimer(DestroyPowerupHandle[entity]); // this causes about a half-second of lag when a new round starts. but not having it causes big problems
+	}
+}
 public Action PesterThisDude(Handle timer, int client) {
 	if (IsClientInGame(client)) { // Required because player might disconnect before this fires
 		CPrintToChat(client, "{orange}[Fortress Blast] {haunted}This server is running {yellow}Fortress Blast v0.4! {haunted}If you would like to know more or are unsure what a powerup does, type the command {yellow}!fortressblast {haunted}into chat.");
@@ -223,14 +234,23 @@ public Action player_death(Event event, const char[] name, bool dontBroadcast) {
 	// Is dropping powerups enabled
 	if (GetConVarFloat(FindConVar("sm_fortressblast_drop")) == 2 || (GetConVarFloat(FindConVar("sm_fortressblast_drop")) && !MapHasJsonFile)) { // Replace with GetConVarBool
 		// Get chance a powerup will be dropped
+		DebugText("Drops are enabled!!");
 		float convar = GetConVarFloat(FindConVar("sm_fortressblast_drop_rate"));
 		int randomNumber = GetRandomInt(0, 99);
-		if (convar > randomNumber && (GetConVarFloat(FindConVar("sm_fortressblast_drop_teams")) == GetClientTeam(GetClientOfUserId(event.GetInt("userid"))) || GetConVarFloat(FindConVar("sm_fortressblast_drop_teams")) == 1)) {
+		if (convar > randomNumber && (GetConVarInt(FindConVar("sm_fortressblast_drop_teams")) == GetClientTeam(GetClientOfUserId(event.GetInt("userid"))) || GetConVarInt(FindConVar("sm_fortressblast_drop_teams")) == 1)) {
+			DebugText("attempting to drop powerup");
 			float coords[3];
 			GetEntPropVector(GetClientOfUserId(event.GetInt("userid")), Prop_Send, "m_vecOrigin", coords);
-			SpawnPower(coords, false);
+			int entity = SpawnPower(coords, false);
+			ClearTimer(DestroyPowerupHandle[entity]);
+			DestroyPowerupHandle[entity] = CreateTimer(15.0, DestroyPowerupTime, entity);
+			DebugText("finished dropping powerup");
 		}
 	}
+}
+public Action DestroyPowerupTime(Handle timer, int entity){
+	DestroyPowerupHandle[entity] = INVALID_HANDLE;
+	RemoveEntity(entity);
 }
 public Action teamplay_flag_event(Event event, const char[] name, bool dontBroadcast) {
 	DebugText("FLAG EVENT!");
@@ -251,7 +271,7 @@ public OnClientPutInServer(int client) {
 	CreateTimer(3.0, PesterThisDude, client);
 }
 
-SpawnPower(float location[3], bool respawn) {
+int SpawnPower(float location[3], bool respawn) {
 	// First check if there is a powerup already here, in the case that a duplicate has spawned
 	int entity = CreateEntityByName("tf_halloween_pickup");
 	DebugText("Spawning powerup entity %d at %f, %f, %f", entity, location[0], location[1], location[2]);
@@ -287,6 +307,7 @@ SpawnPower(float location[3], bool respawn) {
 			SDKHook(entity, SDKHook_StartTouch, OnStartTouchDontRespawn);
 		}
 	}
+	return entity;
 }
 
 public Action OnStartTouchRespawn(entity, other) {
@@ -429,10 +450,11 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 				// Force respawn the player
 				ClearTimer(MegaMannHandle[client]);
 				MegaMannHandle[client] = CreateTimer(0.0, RemoveMegaMann, client);
+				TF2_RespawnPlayer(client);
 				MegaMannRotation[client] = -5;
-				CPrintToChat(client, "{orange}[Fortress Blast] {red}Your Mega Mann was removed since you may have been stuck. Be sure to {yellow}use Mega Mann in open areas {red}and {yellow}move once it is active.");
+				CPrintToChat(client, "{orange}[Fortress Blast] {red}You are respawned to avoid being stuck. Be sure to {yellow}use Mega Mann in open areas {red}and {yellow}move once it is active.");
 			}
-		}
+		} // todo: now that it only checks from the start this whole "rotation" thing is not needed anymore--just put one timer at half a second or something
 		MegaMannRotation[client]++;
 	}
 }
@@ -488,11 +510,11 @@ UsePower(client) {
 	} else if (powerup[client] == 6) {
 		// Time Travel - Increased speed, invisibility and can't attack for 5 seconds
 		TimeTravel[client] = true;
-		TF2_AddCondition(client, TFCond_StealthedUserBuffFade, 5.0);
+		TF2_AddCondition(client, TFCond_StealthedUserBuffFade, 3.0);
 		for (int weapon = 0; weapon <= 5 ; weapon++) {
 			if (GetPlayerWeaponSlot(client, weapon) != -1) {
-				SetEntPropFloat(GetPlayerWeaponSlot(client, weapon), Prop_Send, "m_flNextPrimaryAttack", GetGameTime() + 5.0);
-				SetEntPropFloat(GetPlayerWeaponSlot(client, weapon), Prop_Send, "m_flNextSecondaryAttack", GetGameTime() + 5.0);
+				SetEntPropFloat(GetPlayerWeaponSlot(client, weapon), Prop_Send, "m_flNextPrimaryAttack", GetGameTime() + 3.0);
+				SetEntPropFloat(GetPlayerWeaponSlot(client, weapon), Prop_Send, "m_flNextSecondaryAttack", GetGameTime() + 3.0);
 			}
 		}
 		// Cancel active grappling hook
@@ -500,8 +522,8 @@ UsePower(client) {
 			SwitchPrimary(client);
 		}
 		ClearTimer(TimeTravelHandle[client]);
-		TimeTravelHandle[client] = CreateTimer(5.0, RemoveTimeTravel, client);
-		EmitAmbientSound("fortressblast2/timetravel_use.mp3", vel, client);
+		TimeTravelHandle[client] = CreateTimer(3.0, RemoveTimeTravel, client);
+		EmitAmbientSound("fortressblast2/timetravel_use_3sec.mp3", vel, client);
 	} else if (powerup[client] == 7) {
 		// Blast - Create explosion at user
 		PowerupParticle(client, 7, 1.0);
@@ -517,10 +539,13 @@ UsePower(client) {
 				}
 			}
 		}
+		TF2_RemoveCondition(client, TFCond_StealthedUserBuffFade);
+		TF2_RemoveCondition(client, TFCond_Cloaked);
 		TF2_RemovePlayerDisguise(client);
 		TimeTravelHandle[client] = CreateTimer(0.0, RemoveTimeTravel, client); // Remove Time Travel instantly
 	} else if (powerup[client] == 8) {
 		// Mega Mann - Giant and 4x health for 10 seconds
+		EmitAmbientSound("fortressblast2/megamann_use.mp3", vel, client);
 		SetVariantString("1.75 0");
 		AcceptEntityInput(client, "SetModelScale");
 		SetEntityHealth(client, (GetClientHealth(client) * 4)); // 4x current health
