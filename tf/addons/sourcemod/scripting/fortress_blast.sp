@@ -14,7 +14,6 @@ int powerupid[MAX_EDICTS];
 int powerup[MAXPLAYERS + 1] = 0;
 int PlayerParticle[MAXPLAYERS + 1][MAX_PARTICLES + 1];
 int SpeedRotationsLeft[MAXPLAYERS + 1] = 80;
-int MegaMannRotation[MAXPLAYERS + 1] = 0;
 bool PreviousAttack3[MAXPLAYERS + 1] = false;
 bool VictoryTime = false;
 bool MapHasJsonFile = false;
@@ -29,6 +28,7 @@ Handle SuperBounceHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle ShockAbsorberHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle GyrocopterHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle TimeTravelHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
+Handle MegaMannPreHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle MegaMannHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle DestroyPowerupHandle[MAX_EDICTS + 1] = INVALID_HANDLE;
 
@@ -300,7 +300,7 @@ int SpawnPower(float location[3], bool respawn) {
 
 public Action OnStartTouchRespawn(entity, other) {
 	if (other > 0 && other <= MaxClients) {
-		if (!VictoryTime) {
+		if (!VictoryTime && !GameRules_GetProp("m_bInWaitingForPlayers")) {
 			float coords[3];
 			GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
 			Handle coordskv = CreateKeyValues("coordskv");
@@ -412,26 +412,6 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		}
 	}
 	PreviousAttack3[client] = (buttons > 33554431);
-	// Mega Mann stuck-checking loop
-	// Rotation is no longer needed, replace with a one second timer
-	if (MegaMannRotation[client] > 0) {
-		if (MegaMannRotation[client] == 1) { // Store co-ordinates on powerup use
-			MegaMannCoords[client][0] = coords[0];
-			MegaMannCoords[client][1] = coords[1];
-			MegaMannCoords[client][2] = coords[2];
-		} else if (MegaMannRotation[client] == 102) {
-			// Are co-ordinates the same since powerup use?
-			if (MegaMannCoords[client][0] == coords[0] && MegaMannCoords[client][1] == coords[1] && MegaMannCoords[client][2] == coords[2]) {
-				// Force respawn the player
-				ClearTimer(MegaMannHandle[client]);
-				MegaMannHandle[client] = CreateTimer(0.0, RemoveMegaMann, client);
-				TF2_RespawnPlayer(client);
-				MegaMannRotation[client] = -5;
-				CPrintToChat(client, "{orange}[Fortress Blast] {red}You were respawned to avoid being stuck. Be sure to {yellow}use Mega Mann in open areas {red}and {yellow}move once it is active.");
-			}
-		}
-		MegaMannRotation[client]++;
-	}
 }
 
 public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3]) {
@@ -529,14 +509,29 @@ UsePower(client) {
 			SetEntityHealth(client, TF2_GetPlayerMaxHealth(client) * 4);
 		}
 		ClearTimer(MegaMannHandle[client]);
-		MegaMannRotation[client] = 1; // Activate Mega Mann stuck-checking loop
+		ClearTimer(MegaMannPreHandle[client]);
+		MegaMannPreHandle[client] = CreateTimer(1.0, MegaMannStuckCheck, client);
 		MegaMannHandle[client] = CreateTimer(10.0, RemoveMegaMann, client);
+		float coords[3] = 69.420;
+		GetEntPropVector(client, Prop_Send, "m_vecOrigin", coords);
+		coords[2] += 16.0;
+		TeleportEntity(client, coords, NULL_VECTOR, NULL_VECTOR);
+		MegaMannCoords[client][0] = coords[0];
+		MegaMannCoords[client][1] = coords[1];
+		MegaMannCoords[client][2] = coords[2];
 	}
 	powerup[client] = 0;
 }
-
+public Action MegaMannStuckCheck(Handle timer, int client) {
+	MegaMannPreHandle[client] = INVALID_HANDLE;
+	float coords[3] = 69.420;
+	GetEntPropVector(client, Prop_Send, "m_vecOrigin", coords);
+	if(MegaMannCoords[client][0] == coords[0] && MegaMannCoords[client][1] == coords[1] && MegaMannCoords[client][2] == coords[2]){
+		TF2_RespawnPlayer(client);
+		CPrintToChat(client, "{orange}[Fortress Blast] {default}You are respawned because you might have been stuck. No refunds!");
+	}
+}
 public Action RemoveMegaMann(Handle timer, int client) {
-	MegaMannRotation[client] = 0;
 	MegaMannHandle[client] = INVALID_HANDLE;
 	SetVariantString("1 0");
 	AcceptEntityInput(client, "SetModelScale");
@@ -782,7 +777,7 @@ DebugText(const char[] text, any ...) {
 		int len = strlen(text) + 255;
 		char[] format = new char[len];
 		VFormat(format, len, text, 2);
-		CPrintToChatAll("{orange}[Fortress Blast] {default}%s", format);
+		CPrintToChatAll("{haunted}[FB Debug] {default}%s", format);
 	}
 }
 
