@@ -54,10 +54,7 @@ ConVars
 - `sm_fortressblast_drop_team <1-3>` - Set the teams that will drop powerups on death. 1 = Both (default), 2 = RED, 3 = BLU.
 - `sm_fortressblast_mannpower <0-2>` - Set whether Mannpower powerups are replaced with Fortress Blast powerups. 0 = Don't replace, 1 = Replace only if there is no .json file, 2 = Always replace (default).
 
-Known bugs (v0.4)
+Known bugs (v0.4.1)
 -----------------
 
-- It is very easy to get stuck with Mega Mann, try increasing player Z position before resizing.
-- Mega Mann stuck check does not always fire, failsafe checks needed.
-- Duplicate powerups can spawn across rounds, failsafe needed when spawning powerups.
 - Super Speed should be denied when holding PASS Time jack, as it does not work.
