@@ -222,7 +222,7 @@ public OnEntityDestroyed(int entity) {
 
 public Action PesterThisDude(Handle timer, int client) {
 	if (IsClientInGame(client)) { // Required because player might disconnect before this fires
-		CPrintToChat(client, "{orange}[Fortress Blast] {haunted}This server is running {yellow}Fortress Blast v0.4! {haunted}If you would like to know more or are unsure what a powerup does, type the command {yellow}!fortressblast {haunted}into chat.");
+		CPrintToChat(client, "{orange}[Fortress Blast] {haunted}This server is running {yellow}Fortress Blast v0.4.1! {haunted}If you would like to know more or are unsure what a powerup does, type the command {yellow}!fortressblast {haunted}into chat.");
 	}
 }
 
@@ -522,15 +522,17 @@ UsePower(client) {
 	}
 	powerup[client] = 0;
 }
+
 public Action MegaMannStuckCheck(Handle timer, int client) {
 	MegaMannPreHandle[client] = INVALID_HANDLE;
 	float coords[3] = 69.420;
 	GetEntPropVector(client, Prop_Send, "m_vecOrigin", coords);
-	if(MegaMannCoords[client][0] == coords[0] && MegaMannCoords[client][1] == coords[1] && MegaMannCoords[client][2] == coords[2]){
+	if (MegaMannCoords[client][0] == coords[0] && MegaMannCoords[client][1] == coords[1] && MegaMannCoords[client][2] == coords[2]) {
 		TF2_RespawnPlayer(client);
-		CPrintToChat(client, "{orange}[Fortress Blast] {default}You are respawned because you might have been stuck. No refunds!");
+		CPrintToChat(client, "{orange}[Fortress Blast] {red}You were respawned as you might have been stuck. Be sure to {yellow}use Mega Mann in open areas {red}and {yellow}move once it is active.");
 	}
 }
+
 public Action RemoveMegaMann(Handle timer, int client) {
 	MegaMannHandle[client] = INVALID_HANDLE;
 	SetVariantString("1 0");
@@ -777,7 +779,7 @@ DebugText(const char[] text, any ...) {
 		int len = strlen(text) + 255;
 		char[] format = new char[len];
 		VFormat(format, len, text, 2);
-		CPrintToChatAll("{haunted}[FB Debug] {default}%s", format);
+		CPrintToChatAll("{orange}[FB Debug] {default}%s", format);
 	}
 }
 
