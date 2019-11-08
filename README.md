@@ -57,4 +57,6 @@ ConVars
 Known bugs (v0.4.1)
 -----------------
 
+- It is possible to break the PASS Time jack with the Mega Mann powerup somehow. Involves throwing it.
+- Model precaching is in the wrong place according to Rushy, should be moved to OnMapStart.
 - Super Speed should be denied when holding PASS Time jack, as it does not work.
