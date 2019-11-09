@@ -58,5 +58,4 @@ ConVars
 Known bugs (v0.4.1)
 -----------------
 
-- It is possible to break the PASS Time jack with the Mega Mann powerup somehow. Involves throwing it.
 - Super Speed should be denied when holding PASS Time jack, as it does not work.
