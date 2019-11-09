@@ -15,6 +15,7 @@ The following powerups exist in the base version of this server mod:
 - Time Travel - The user is invisible, has increased speed and cannot attack for 3 seconds. This allows for uncontested passage through or escape from challenging situations.
 - Blast - An explosion is emitted from the user, killing low-health enemies and harming others nearby. Most effective when paired with other sources of damage.
 - Mega Mann - The user becomes 75% larger and is overhealed to 4 times their current health for 10 seconds. Overheal is capped at 4 times the user's maximmum health.
+- Frost Touch - For 8 seconds, when the user touches an enemy, they turn into an ice statue for 3 seconds.
 
 Features
 --------
