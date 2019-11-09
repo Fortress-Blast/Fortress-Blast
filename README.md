@@ -58,4 +58,4 @@ ConVars
 Known bugs (v0.4.1)
 -----------------
 
-- Super Speed should be denied when holding PASS Time jack, as it does not work.
+All known bugs have been taken care of for the next version at this time.
