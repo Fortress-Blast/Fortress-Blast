@@ -4,6 +4,7 @@
 #include <ripext/json>
 #include <morecolors>
 #include <tf2>
+#include <tf2_stocks>
 #include <advanced_motd>
 
 #define	MAX_EDICT_BITS 11
@@ -20,6 +21,8 @@ bool MapHasJsonFile = false;
 bool SuperBounce[MAXPLAYERS + 1] = false;
 bool ShockAbsorber[MAXPLAYERS + 1] = false;
 bool TimeTravel[MAXPLAYERS + 1] = false;
+bool FrostTouch[MAXPLAYERS + 1] = false;
+bool FrostTouchFrozen[MAXPLAYERS + 1] = true;
 float OldSpeed[MAXPLAYERS + 1] = 0.0;
 float SuperSpeed[MAXPLAYERS + 1] = 0.0;
 float VerticalVelocity[MAXPLAYERS + 1];
@@ -30,6 +33,8 @@ Handle GyrocopterHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle TimeTravelHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle MegaMannPreHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle MegaMannHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
+Handle FrostTouchHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
+Handle FrostTouchUnfreezeHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle DestroyPowerupHandle[MAX_EDICTS + 1] = INVALID_HANDLE;
 
 /* Powerup IDs
@@ -40,12 +45,14 @@ Handle DestroyPowerupHandle[MAX_EDICTS + 1] = INVALID_HANDLE;
 5 - Gyrocopter
 6 - Time Travel
 7 - Blast
-8 - Mega Mann */
+8 - Mega Mann
+9 - Frost Touch*/
 
 public OnPluginStart() {
 	for (int client = 1; client <= MaxClients ; client++) {
 		if (IsClientInGame(client)) {
 			SDKHook(client, SDKHook_OnTakeDamageAlive, OnTakeDamage); // In case the plugin is reloaded mid-round
+			SDKHook(client, SDKHook_StartTouch, OnStartTouchFrozen);
 		}
 	}
 	HookEvent("teamplay_round_start", teamplay_round_start);
@@ -62,7 +69,6 @@ public OnPluginStart() {
 	CreateConVar("sm_fortressblast_drop_rate", "10", "Chance out of 100 for a powerup to drop on death.");
 	CreateConVar("sm_fortressblast_drop_teams", "1", "Set the teams that will drop powerups on death.");
 	CreateConVar("sm_fortressblast_mannpower", "2", "How to handle replacing Mannpower powerups.");
-	PrecacheModel("models/props_halloween/pumpkin_loot.mdl");
 	LoadTranslations("common.phrases");
 }
 
@@ -83,6 +89,10 @@ public OnMapStart() {
 	PrecacheSound("fortressblast2/blast_use.mp3");
 	PrecacheSound("fortressblast2/megamann_pickup.mp3");
 	PrecacheSound("fortressblast2/megamann_use.mp3");
+	PrecacheSound("fortressblast2/frosttouch_pickup.mp3");
+	PrecacheSound("fortressblast2/frosttouch_use.mp3");
+	PrecacheSound("fortressblast2/frosttouch_freeze.mp3");
+	PrecacheSound("fortressblast2/frosttouch_unfreeze.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/superbounce_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/superbounce_use.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/shockabsorber_pickup.mp3");
@@ -99,6 +109,10 @@ public OnMapStart() {
 	AddFileToDownloadsTable("sound/fortressblast2/blast_use.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/megamann_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/megamann_use.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/frosttouch_pickup.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/frosttouch_use.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/frosttouch_freeze.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/frosttouch_unfreeze.mp3");
 	
 	char map[80];
 	GetCurrentMap(map, sizeof(map));
@@ -256,6 +270,7 @@ public Action DestroyPowerupTime(Handle timer, int entity){
 public OnClientPutInServer(int client) {
 	powerup[client] = 0;
 	SDKHook(client, SDKHook_OnTakeDamageAlive, OnTakeDamage);
+	SDKHook(client, SDKHook_StartTouch, OnStartTouchFrozen);
 	CreateTimer(3.0, PesterThisDude, client);
 }
 
@@ -264,8 +279,7 @@ int SpawnPower(float location[3], bool respawn) {
 	int entity = CreateEntityByName("tf_halloween_pickup");
 	DebugText("Spawning powerup entity %d at %f, %f, %f", entity, location[0], location[1], location[2]);
 	if (IsValidEdict(entity)) {
-		SetEntityModel(entity, "models/props_halloween/pumpkin_loot.mdl");
-		powerupid[entity] = GetRandomInt(1, 8);
+		powerupid[entity] = GetRandomInt(1, 9);
 		if (powerupid[entity] == 1) {
 			SetEntityRenderColor(entity, 100, 100, 255, 255);
 		} else if (powerupid[entity] == 2) {
@@ -282,6 +296,8 @@ int SpawnPower(float location[3], bool respawn) {
 			SetEntityRenderColor(entity, 50, 177, 177, 255);
 		} else if (powerupid[entity] == 8) {
 			SetEntityRenderColor(entity, 100, 50, 50, 255);
+		} else if (powerupid[entity] == 9) {
+			SetEntityRenderColor(entity, 0, 0, 0, 255);
 		}
 		DispatchKeyValue(entity, "pickup_sound", "get_out_of_the_console_snoop");
 		DispatchKeyValue(entity, "pickup_particle", "get_out_of_the_console_snoop");
@@ -297,7 +313,41 @@ int SpawnPower(float location[3], bool respawn) {
 	}
 	return entity;
 }
-
+public Action OnStartTouchFrozen(entity, other) {
+	// everyone: javascript is a bad language
+	// sourcepawn:
+	if(entity > 0 && entity <= MaxClients && other > 0 && other <= MaxClients && IsClientInGame(entity) && IsClientInGame(other)){
+		if(FrostTouch[entity] && !FrostTouchFrozen[other]){
+			float vel[3];
+			GetEntPropVector(other, Prop_Data, "m_vecVelocity", vel);
+			EmitAmbientSound("fortressblast2/frosttouch_freeze.mp3", vel, other);
+			SetEntityMoveType(other, MOVETYPE_NONE);
+			ColorizePlayer(other, {255, 255, 255, 0});
+			
+			int iRagDoll = CreateRagdoll(other);
+			if(iRagDoll > MaxClients && IsValidEntity(iRagDoll))
+			{
+				SetClientViewEntity(other, iRagDoll);
+				SetThirdPerson(other, true);
+			}
+			ClearTimer(FrostTouchUnfreezeHandle[other]);
+			FrostTouchUnfreezeHandle[other] = CreateTimer(3.0, FrostTouchUnfreeze, other);
+			FrostTouchFrozen[other] = true;
+			BlockAttacking(other, 3.0);
+		}
+	}
+}
+public Action FrostTouchUnfreeze(Handle timer, int client){
+	FrostTouchUnfreezeHandle[client] = INVALID_HANDLE;
+	float vel[3];
+	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel);
+	EmitAmbientSound("fortressblast2/frosttouch_unfreeze.mp3", vel, client);
+	SetClientViewEntity(client, client);
+	SetEntityMoveType(client, MOVETYPE_WALK);
+	ColorizePlayer(client, {255, 255, 255, 255});
+	SetThirdPerson(client, false);
+	FrostTouchFrozen[client] = false;
+}
 public Action OnStartTouchRespawn(entity, other) {
 	if (other > 0 && other <= MaxClients) {
 		if (!VictoryTime && !GameRules_GetProp("m_bInWaitingForPlayers")) {
@@ -374,6 +424,8 @@ PlayPowerupSound(int client) {
 		EmitSoundToClient(client, "fortressblast2/blast_pickup.mp3", client);
 	} else if (powerup[client] == 8) {
 		EmitSoundToClient(client, "fortressblast2/megamann_pickup.mp3", client);
+	} else if (powerup[client] == 9) {
+		EmitSoundToClient(client, "fortressblast2/frosttouch_pickup.mp3", client);
 	}
 }
 
@@ -466,16 +518,7 @@ UsePower(client) {
 		// Time Travel - Increased speed, invisibility and can't attack for 5 seconds
 		TimeTravel[client] = true;
 		TF2_AddCondition(client, TFCond_StealthedUserBuffFade, 3.0);
-		for (int weapon = 0; weapon <= 5 ; weapon++) {
-			if (GetPlayerWeaponSlot(client, weapon) != -1) {
-				SetEntPropFloat(GetPlayerWeaponSlot(client, weapon), Prop_Send, "m_flNextPrimaryAttack", GetGameTime() + 3.0);
-				SetEntPropFloat(GetPlayerWeaponSlot(client, weapon), Prop_Send, "m_flNextSecondaryAttack", GetGameTime() + 3.0);
-			}
-		}
-		// Cancel active grappling hook
-		if (GetEntPropEnt(client, Prop_Data, "m_hActiveWeapon") == GetPlayerWeaponSlot(client, 5)) {
-			SwitchPrimary(client);
-		}
+		BlockAttacking(client, 3.0);
 		ClearTimer(TimeTravelHandle[client]);
 		TimeTravelHandle[client] = CreateTimer(3.0, RemoveTimeTravel, client);
 		EmitAmbientSound("fortressblast2/timetravel_use_3sec.mp3", vel, client);
@@ -519,10 +562,18 @@ UsePower(client) {
 		MegaMannCoords[client][0] = coords[0];
 		MegaMannCoords[client][1] = coords[1];
 		MegaMannCoords[client][2] = coords[2];
+	} else if (powerup[client] == 9) {
+		EmitAmbientSound("fortressblast2/frosttouch_use.mp3", vel, client);
+		ClearTimer(FrostTouchHandle[client]);
+		FrostTouchHandle[client] = CreateTimer(10.0, RemoveFrostTouch, client);
+		FrostTouch[client] = true;
 	}
 	powerup[client] = 0;
 }
-
+public Action RemoveFrostTouch(Handle timer, int client) {
+	FrostTouchHandle[client] = INVALID_HANDLE;
+	FrostTouch[client] = false;
+}
 public Action MegaMannStuckCheck(Handle timer, int client) {
 	MegaMannPreHandle[client] = INVALID_HANDLE;
 	float coords[3] = 69.420;
@@ -535,11 +586,13 @@ public Action MegaMannStuckCheck(Handle timer, int client) {
 
 public Action RemoveMegaMann(Handle timer, int client) {
 	MegaMannHandle[client] = INVALID_HANDLE;
-	SetVariantString("1 0");
-	AcceptEntityInput(client, "SetModelScale");
-	// Cap at maximum health
-	if (GetClientHealth(client) > TF2_GetPlayerMaxHealth(client)) {
-		SetEntityHealth(client, TF2_GetPlayerMaxHealth(client));
+	if(IsClientInGame(client)){
+		SetVariantString("1 0");
+		AcceptEntityInput(client, "SetModelScale");
+		// remove any excess overheal, but careful to leave injuries if they're under normal max
+		if (GetClientHealth(client) > TF2_GetPlayerMaxHealth(client)) {
+			SetEntityHealth(client, TF2_GetPlayerMaxHealth(client));
+		}
 	}
 }
 
@@ -604,6 +657,8 @@ DoHudText(client) {
 			ShowSyncHudText(client, text, "Collected powerup:\nBlast");
 		} else if (powerup[client] == 8) {
 			ShowSyncHudText(client, text, "Collected powerup:\nMega Mann");
+		} else if (powerup[client] == 9) {
+			ShowSyncHudText(client, text, "Collected powerup:\nFrost Touch");
 		}		
 		CloseHandle(text);
 	}
@@ -843,4 +898,100 @@ int StringButtonInt() {
 
 stock int TF2_GetPlayerMaxHealth(int client) {
 	return GetEntProp(GetPlayerResourceEntity(), Prop_Send, "m_iMaxHealth", _, client);
+}
+stock ColorizePlayer(client, iColor[4]) // from rtd, updated to new syntax
+{
+	
+	SetEntityColor(client, iColor);
+	
+	for(new i=0; i<3; i++)
+	{
+		int iWeapon = GetPlayerWeaponSlot(client, i);
+		if(iWeapon > MaxClients && IsValidEntity(iWeapon))
+		{
+			SetEntityColor(iWeapon, iColor);
+		}
+	}
+	
+	char strClass[20];
+	for(new i=MaxClients+1; i<GetMaxEntities(); i++)
+	{
+		if(IsValidEntity(i))
+		{
+			GetEdictClassname(i, strClass, sizeof(strClass));
+			if((strncmp(strClass, "tf_wearable", 11) == 0 || strncmp(strClass, "tf_powerup", 10) == 0) && GetEntPropEnt(i, Prop_Send, "m_hOwnerEntity") == client)
+			{
+				SetEntityColor(i, iColor);
+			}
+		}
+	}
+
+	int iWeapon = GetEntPropEnt(client, Prop_Send, "m_hDisguiseWeapon");
+	if(iWeapon > MaxClients && IsValidEntity(iWeapon))
+	{
+		SetEntityColor(iWeapon, iColor);
+	}
+	TF2_RemoveCondition(client, TFCond_DemoBuff);
+}
+CreateRagdoll(client)
+{
+	int iRag = CreateEntityByName("tf_ragdoll");
+	if(iRag > MaxClients && IsValidEntity(iRag))
+	{
+		float flPos[3];
+		float flAng[3];
+		float flVel[3];
+		GetClientAbsOrigin(client, flPos);
+		GetClientAbsAngles(client, flAng);
+		
+		TeleportEntity(iRag, flPos, flAng, flVel);
+		
+		SetEntProp(iRag, Prop_Send, "m_iPlayerIndex", client);
+		SetEntProp(iRag, Prop_Send, "m_bIceRagdoll", 1);
+		SetEntProp(iRag, Prop_Send, "m_iTeam", GetClientTeam(client));
+		SetEntProp(iRag, Prop_Send, "m_iClass", _:TF2_GetPlayerClass(client));
+		SetEntProp(iRag, Prop_Send, "m_bOnGround", 1);
+		
+		SetEntityMoveType(iRag, MOVETYPE_NONE);
+		
+		DispatchSpawn(iRag);
+		ActivateEntity(iRag);
+		
+		return iRag;
+	}
+	
+	return 0;
+}
+
+SetThirdPerson(client, bool bEnabled)
+{
+	if(bEnabled)
+	{
+		SetVariantInt(1);
+	}else{
+		SetVariantInt(0);
+	}
+	
+	AcceptEntityInput(client, "SetForcedTauntCam");
+}
+
+
+stock SetEntityColor(iEntity, iColor[4])
+{
+	SetEntityRenderMode(iEntity, RENDER_TRANSCOLOR);
+	SetEntityRenderColor(iEntity, iColor[0], iColor[1], iColor[2], iColor[3]);
+}
+
+
+BlockAttacking(int client, float time){
+	for (int weapon = 0; weapon <= 5 ; weapon++) {
+		if (GetPlayerWeaponSlot(client, weapon) != -1) {
+			SetEntPropFloat(GetPlayerWeaponSlot(client, weapon), Prop_Send, "m_flNextPrimaryAttack", GetGameTime() + time);
+			SetEntPropFloat(GetPlayerWeaponSlot(client, weapon), Prop_Send, "m_flNextSecondaryAttack", GetGameTime() + time);
+		}
+	}
+	// Cancel active grappling hook
+	if (GetEntPropEnt(client, Prop_Data, "m_hActiveWeapon") == GetPlayerWeaponSlot(client, 5)) {
+		SwitchPrimary(client);
+	}
 }
