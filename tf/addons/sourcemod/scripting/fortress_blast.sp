@@ -507,10 +507,9 @@ UsePower(client) {
 		CreateTimer(0.1, RecalcSpeed, client);
 	} else if (powerup[client] == 4) {
 		// Super Jump - Launch user into air
-		if(MegaMann[client]){
+		if (MegaMann[client]) {
 			vel[2] = 400.0;
-		}
-		else{
+		} else {
 			vel[2] = 800.0;
 		}
 		TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vel);
