@@ -21,6 +21,7 @@ bool MapHasJsonFile = false;
 bool SuperBounce[MAXPLAYERS + 1] = false;
 bool ShockAbsorber[MAXPLAYERS + 1] = false;
 bool TimeTravel[MAXPLAYERS + 1] = false;
+bool MegaMann[MAXPLAYERS + 1] = false;
 bool FrostTouch[MAXPLAYERS + 1] = false;
 bool FrostTouchFrozen[MAXPLAYERS + 1] = true;
 float OldSpeed[MAXPLAYERS + 1] = 0.0;
@@ -506,7 +507,12 @@ UsePower(client) {
 		CreateTimer(0.1, RecalcSpeed, client);
 	} else if (powerup[client] == 4) {
 		// Super Jump - Launch user into air
-		vel[2] = 800.0;
+		if(MegaMann[client]){
+			vel[2] = 400.0;
+		}
+		else{
+			vel[2] = 800.0;
+		}
 		TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vel);
 		EmitAmbientSound("fortressblast2/superjump_use.mp3", vel, client);
 	} else if (powerup[client] == 5) {
@@ -564,6 +570,7 @@ UsePower(client) {
 		MegaMannCoords[client][0] = coords[0];
 		MegaMannCoords[client][1] = coords[1];
 		MegaMannCoords[client][2] = coords[2];
+		MegaMann[client] = true;
 	} else if (powerup[client] == 9) {
 		// Frost Touch - Freeze touched players for 3 seconds within 8 seconds
 		EmitAmbientSound("fortressblast2/frosttouch_use.mp3", vel, client);
@@ -591,6 +598,7 @@ public Action MegaMannStuckCheck(Handle timer, int client) {
 
 public Action RemoveMegaMann(Handle timer, int client) {
 	MegaMannHandle[client] = INVALID_HANDLE;
+	MegaMann[client] = false;
 	if (IsClientInGame(client)) {
 		SetVariantString("1 0");
 		AcceptEntityInput(client, "SetModelScale");
