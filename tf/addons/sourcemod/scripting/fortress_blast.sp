@@ -322,7 +322,7 @@ public Action OnStartTouchFrozen(entity, other) {
 			GetEntPropVector(other, Prop_Data, "m_vecVelocity", vel);
 			EmitAmbientSound("fortressblast2/frosttouch_freeze.mp3", vel, other);
 			SetEntityMoveType(other, MOVETYPE_NONE);
-			ColorizePlayer(other, {230, 230, 255, 0});
+			ColorizePlayer(other, {255, 255, 255, 0});
 			
 			int iRagDoll = CreateRagdoll(other);
 			if (iRagDoll > MaxClients && IsValidEntity(iRagDoll)) {
