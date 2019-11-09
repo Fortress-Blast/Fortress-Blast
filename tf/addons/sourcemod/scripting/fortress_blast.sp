@@ -46,7 +46,7 @@ Handle DestroyPowerupHandle[MAX_EDICTS + 1] = INVALID_HANDLE;
 6 - Time Travel
 7 - Blast
 8 - Mega Mann
-9 - Frost Touch*/
+9 - Frost Touch */
 
 public OnPluginStart() {
 	for (int client = 1; client <= MaxClients ; client++) {
@@ -128,7 +128,7 @@ public TF2_OnConditionAdded(int client, TFCond condition) {
 }
 
 public Action FBMenu(int client, int args) {
-	AdvMOTD_ShowMOTDPanel(client, "How are you reading this?", "http://fortress-blast.github.io/0.4", MOTDPANEL_TYPE_URL, true, true, true, INVALID_FUNCTION);
+	AdvMOTD_ShowMOTDPanel(client, "How are you reading this?", "http://fortress-blast.github.io/0.5", MOTDPANEL_TYPE_URL, true, true, true, INVALID_FUNCTION);
 	CPrintToChat(client, "{orange}[Fortress Blast] {haunted}Opening Fortress Blast manual... If nothing happens, open your developer console and {yellow}try setting cl_disablehtmlmotd to 0{haunted}, then try again.");
 }
 
@@ -236,7 +236,7 @@ public OnEntityDestroyed(int entity) {
 
 public Action PesterThisDude(Handle timer, int client) {
 	if (IsClientInGame(client)) { // Required because player might disconnect before this fires
-		CPrintToChat(client, "{orange}[Fortress Blast] {haunted}This server is running {yellow}Fortress Blast v0.4.1! {haunted}If you would like to know more or are unsure what a powerup does, type the command {yellow}!fortressblast {haunted}into chat.");
+		CPrintToChat(client, "{orange}[Fortress Blast] {haunted}This server is running {yellow}Fortress Blast v0.5! {haunted}If you would like to know more or are unsure what a powerup does, type the command {yellow}!fortressblast {haunted}into chat.");
 	}
 }
 
@@ -297,7 +297,7 @@ int SpawnPower(float location[3], bool respawn) {
 		} else if (powerupid[entity] == 8) {
 			SetEntityRenderColor(entity, 100, 50, 50, 255);
 		} else if (powerupid[entity] == 9) {
-			SetEntityRenderColor(entity, 0, 0, 0, 255);
+			SetEntityRenderColor(entity, 50, 50, 100, 255);
 		}
 		DispatchKeyValue(entity, "pickup_sound", "get_out_of_the_console_snoop");
 		DispatchKeyValue(entity, "pickup_particle", "get_out_of_the_console_snoop");
@@ -313,20 +313,19 @@ int SpawnPower(float location[3], bool respawn) {
 	}
 	return entity;
 }
+
 public Action OnStartTouchFrozen(entity, other) {
-	// everyone: javascript is a bad language
-	// sourcepawn:
-	if(entity > 0 && entity <= MaxClients && other > 0 && other <= MaxClients && IsClientInGame(entity) && IsClientInGame(other)){
-		if(FrostTouch[entity] && !FrostTouchFrozen[other]){
+	// Test that using player and touched player are both valid targets
+	if (entity > 0 && entity <= MaxClients && other > 0 && other <= MaxClients && IsClientInGame(entity) && IsClientInGame(other)) {
+		if (FrostTouch[entity] && !FrostTouchFrozen[other]) {
 			float vel[3];
 			GetEntPropVector(other, Prop_Data, "m_vecVelocity", vel);
 			EmitAmbientSound("fortressblast2/frosttouch_freeze.mp3", vel, other);
 			SetEntityMoveType(other, MOVETYPE_NONE);
-			ColorizePlayer(other, {255, 255, 255, 0});
+			ColorizePlayer(other, {230, 230, 255, 0});
 			
 			int iRagDoll = CreateRagdoll(other);
-			if(iRagDoll > MaxClients && IsValidEntity(iRagDoll))
-			{
+			if (iRagDoll > MaxClients && IsValidEntity(iRagDoll)) {
 				SetClientViewEntity(other, iRagDoll);
 				SetThirdPerson(other, true);
 			}
@@ -337,6 +336,7 @@ public Action OnStartTouchFrozen(entity, other) {
 		}
 	}
 }
+
 public Action FrostTouchUnfreeze(Handle timer, int client){
 	FrostTouchUnfreezeHandle[client] = INVALID_HANDLE;
 	float vel[3];
@@ -348,6 +348,7 @@ public Action FrostTouchUnfreeze(Handle timer, int client){
 	SetThirdPerson(client, false);
 	FrostTouchFrozen[client] = false;
 }
+
 public Action OnStartTouchRespawn(entity, other) {
 	if (other > 0 && other <= MaxClients) {
 		if (!VictoryTime && !GameRules_GetProp("m_bInWaitingForPlayers")) {
@@ -517,6 +518,7 @@ UsePower(client) {
 	} else if (powerup[client] == 6) {
 		// Time Travel - Increased speed, invisibility and can't attack for 5 seconds
 		TimeTravel[client] = true;
+		SetThirdPerson(client, true);
 		TF2_AddCondition(client, TFCond_StealthedUserBuffFade, 3.0);
 		BlockAttacking(client, 3.0);
 		ClearTimer(TimeTravelHandle[client]);
@@ -563,17 +565,20 @@ UsePower(client) {
 		MegaMannCoords[client][1] = coords[1];
 		MegaMannCoords[client][2] = coords[2];
 	} else if (powerup[client] == 9) {
+		// Frost Touch - Freeze touched players for 3 seconds within 8 seconds
 		EmitAmbientSound("fortressblast2/frosttouch_use.mp3", vel, client);
 		ClearTimer(FrostTouchHandle[client]);
-		FrostTouchHandle[client] = CreateTimer(10.0, RemoveFrostTouch, client);
+		FrostTouchHandle[client] = CreateTimer(8.0, RemoveFrostTouch, client);
 		FrostTouch[client] = true;
 	}
 	powerup[client] = 0;
 }
+
 public Action RemoveFrostTouch(Handle timer, int client) {
 	FrostTouchHandle[client] = INVALID_HANDLE;
 	FrostTouch[client] = false;
 }
+
 public Action MegaMannStuckCheck(Handle timer, int client) {
 	MegaMannPreHandle[client] = INVALID_HANDLE;
 	float coords[3] = 69.420;
@@ -586,10 +591,10 @@ public Action MegaMannStuckCheck(Handle timer, int client) {
 
 public Action RemoveMegaMann(Handle timer, int client) {
 	MegaMannHandle[client] = INVALID_HANDLE;
-	if(IsClientInGame(client)){
+	if (IsClientInGame(client)) {
 		SetVariantString("1 0");
 		AcceptEntityInput(client, "SetModelScale");
-		// remove any excess overheal, but careful to leave injuries if they're under normal max
+		// Remove excess overheal, but leave injuries
 		if (GetClientHealth(client) > TF2_GetPlayerMaxHealth(client)) {
 			SetEntityHealth(client, TF2_GetPlayerMaxHealth(client));
 		}
@@ -599,6 +604,7 @@ public Action RemoveMegaMann(Handle timer, int client) {
 public Action RemoveTimeTravel(Handle timer, int client) {
 	TimeTravelHandle[client] = INVALID_HANDLE;
 	TimeTravel[client] = false;
+	SetThirdPerson(client, false);
 	if (IsClientInGame(client)) {
 		TF2_StunPlayer(client, 0.0, 0.0, TF_STUNFLAG_SLOWDOWN);
 	}
@@ -899,91 +905,68 @@ int StringButtonInt() {
 stock int TF2_GetPlayerMaxHealth(int client) {
 	return GetEntProp(GetPlayerResourceEntity(), Prop_Send, "m_iMaxHealth", _, client);
 }
-stock ColorizePlayer(client, iColor[4]) // from rtd, updated to new syntax
-{
-	
+
+stock ColorizePlayer(client, iColor[4]) { // Roll the Dice function with new syntax
 	SetEntityColor(client, iColor);
-	
-	for(new i=0; i<3; i++)
-	{
+	for (new i=0; i<3; i++) {
 		int iWeapon = GetPlayerWeaponSlot(client, i);
-		if(iWeapon > MaxClients && IsValidEntity(iWeapon))
-		{
+		if (iWeapon > MaxClients && IsValidEntity(iWeapon)) {
 			SetEntityColor(iWeapon, iColor);
 		}
 	}
-	
 	char strClass[20];
-	for(new i=MaxClients+1; i<GetMaxEntities(); i++)
-	{
-		if(IsValidEntity(i))
-		{
+	for (new i=MaxClients+1; i<GetMaxEntities(); i++) {
+		if (IsValidEntity(i)) {
 			GetEdictClassname(i, strClass, sizeof(strClass));
-			if((strncmp(strClass, "tf_wearable", 11) == 0 || strncmp(strClass, "tf_powerup", 10) == 0) && GetEntPropEnt(i, Prop_Send, "m_hOwnerEntity") == client)
-			{
+			if ((strncmp(strClass, "tf_wearable", 11) == 0 || strncmp(strClass, "tf_powerup", 10) == 0) && GetEntPropEnt(i, Prop_Send, "m_hOwnerEntity") == client) {
 				SetEntityColor(i, iColor);
 			}
 		}
 	}
-
 	int iWeapon = GetEntPropEnt(client, Prop_Send, "m_hDisguiseWeapon");
-	if(iWeapon > MaxClients && IsValidEntity(iWeapon))
-	{
+	if (iWeapon > MaxClients && IsValidEntity(iWeapon)) {
 		SetEntityColor(iWeapon, iColor);
 	}
 	TF2_RemoveCondition(client, TFCond_DemoBuff);
 }
-CreateRagdoll(client)
-{
+
+CreateRagdoll(client) { // Roll the Dice function with new syntax
 	int iRag = CreateEntityByName("tf_ragdoll");
-	if(iRag > MaxClients && IsValidEntity(iRag))
-	{
+	if (iRag > MaxClients && IsValidEntity(iRag)) {
 		float flPos[3];
 		float flAng[3];
 		float flVel[3];
 		GetClientAbsOrigin(client, flPos);
 		GetClientAbsAngles(client, flAng);
-		
 		TeleportEntity(iRag, flPos, flAng, flVel);
-		
 		SetEntProp(iRag, Prop_Send, "m_iPlayerIndex", client);
 		SetEntProp(iRag, Prop_Send, "m_bIceRagdoll", 1);
 		SetEntProp(iRag, Prop_Send, "m_iTeam", GetClientTeam(client));
 		SetEntProp(iRag, Prop_Send, "m_iClass", _:TF2_GetPlayerClass(client));
 		SetEntProp(iRag, Prop_Send, "m_bOnGround", 1);
-		
 		SetEntityMoveType(iRag, MOVETYPE_NONE);
-		
 		DispatchSpawn(iRag);
 		ActivateEntity(iRag);
-		
 		return iRag;
 	}
-	
 	return 0;
 }
 
-SetThirdPerson(client, bool bEnabled)
-{
-	if(bEnabled)
-	{
+SetThirdPerson(client, bool bEnabled) { // Roll the Dice function with new syntax
+	if (bEnabled) {
 		SetVariantInt(1);
-	}else{
+	} else {
 		SetVariantInt(0);
 	}
-	
 	AcceptEntityInput(client, "SetForcedTauntCam");
 }
 
-
-stock SetEntityColor(iEntity, iColor[4])
-{
+stock SetEntityColor(iEntity, iColor[4]) { // Roll the Dice function with new syntax
 	SetEntityRenderMode(iEntity, RENDER_TRANSCOLOR);
 	SetEntityRenderColor(iEntity, iColor[0], iColor[1], iColor[2], iColor[3]);
 }
 
-
-BlockAttacking(int client, float time){
+BlockAttacking(int client, float time) { // Roll the Dice function with new syntax
 	for (int weapon = 0; weapon <= 5 ; weapon++) {
 		if (GetPlayerWeaponSlot(client, weapon) != -1) {
 			SetEntPropFloat(GetPlayerWeaponSlot(client, weapon), Prop_Send, "m_flNextPrimaryAttack", GetGameTime() + time);
