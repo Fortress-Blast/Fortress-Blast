@@ -324,7 +324,7 @@ public OnClientPutInServer(int client) {
 int SpawnPower(float location[3], bool respawn) {
 	// First check if there is a powerup already here, in the case that a duplicate has spawned
 	int entity = CreateEntityByName("tf_halloween_pickup");
-	DispatchKeyValue(entity, "powerup_model", "models/pickups/fb_pickup.mdl");
+	DispatchKeyValue(entity, "powerup_model", "models/fortressblast/pickups/fb_pickup.mdl");
 	DebugText("Spawning powerup entity %d at %f, %f, %f", entity, location[0], location[1], location[2]);
 	if (IsValidEdict(entity)) {
 		powerupid[entity] = GetRandomInt(1, numberofpowerups);
@@ -559,9 +559,9 @@ UsePower(client) {
 	} else if (powerup[client] == 4) {
 		// Super Jump - Launch user into air
 		if (MegaMann[client]) {
-			vel[2] = 400.0;
+			vel[2] += 400.0;
 		} else {
-			vel[2] = 800.0;
+			vel[2] += 800.0;
 		}
 		TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vel);
 		EmitAmbientSound("fortressblast2/superjump_use.mp3", vel, client);
