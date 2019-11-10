@@ -9,11 +9,11 @@ Powerups
 
 The lifeblood of Fortress Blast is its powerups, and *here are just a few examples:*
 
-- Blast - An explosion is emitted from the user, killing low-health enemies and harming others nearby.
-- Frost Touch - For 8 seconds, when the user touches an enemy, they turn into an ice statue for 3 seconds.
-- Mega Mann - The user becomes 75% larger and is overhealed to 4 times their current health for 10 seconds.
-- Super Bounce - The user is forced to uncontrollably bunny hop for 5 seconds.
-- Time Travel - The user is invisible, has increased speed and cannot attack for 3 seconds.
+- **Blast** - An explosion is emitted from the user, killing low-health enemies and harming others nearby.
+- **Frost Touch** - For 8 seconds, when the user touches an enemy, they turn into an ice statue for 3 seconds.
+- **Mega Mann** - The user becomes 75% larger and is overhealed to 4 times their current health for 10 seconds.
+- **Super Bounce** - The user is forced to uncontrollably bunny hop for 5 seconds.
+- **Time Travel** - The user is invisible, has increased speed and cannot attack for 3 seconds.
 
 Features
 --------
@@ -26,19 +26,12 @@ Fortress Blast comes with several quality-of-life features, *such as:*
 - By default, Mannpower powerups are replaced with Fortress Blast powerups.
 - Debug mode can be turned on to test functions of the server mod without having to look at the console.
 
-Installation
+Contributors
 ------------
 
-1) Install [Rest in Pawn](https://github.com/ErikMinekus/sm-ripext/releases/tag/1.0.6) and extract the .zip file into your server.
-2) Download the Fortress Blast .zip file from [the releases page](https://github.com/Fortress-Blast/Fortress-Blast/releases) and extract the contents of the *tf* folder into your server's *tf* folder.
-3) You can download extra pre-made .json files from the [maps repository](https://github.com/Fortress-Blast/Fortress-Blast-Maps) or create your own.
-4) It would greatly help this plugin thrive if you could add 'fortressblast' to the tags list of your server.
-
-Commands (in chat, replace *sm_* with *!*)
---------
-
-- `sm_fortressblast` - Opens the Fortress Blast MOTD manual.
-- `sm_setpowerup <player> <#>` - Sets a player's powerup by ID number. Also works with the tags @all, @red, @blue and @me. Only users with the Z flag can use this command.
+- [Naleksuh](https://www.youtube.com/channel/UC9g4LTIBTdBB0P0QNcOHnGQ) - Mod programming
+- [Jack5](https://www.youtube.com/user/jack5vlogging) - Concept, design and graphics
+- [ChargingTurnip](https://tf2maps.net/members/true-lemon.31187) - Custom powerup model
 
 ConVars
 -------
