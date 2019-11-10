@@ -76,7 +76,6 @@ public OnPluginStart() {
 }
 
 public OnMapStart() {
-	PrecacheModel("items/crystal_ball_pickup.mdl");
 	PrecacheSound("fortressblast2/superbounce_pickup.mp3");
 	PrecacheSound("fortressblast2/superbounce_use.mp3");
 	PrecacheSound("fortressblast2/shockabsorber_pickup.mp3");
@@ -175,6 +174,20 @@ public Action SetPowerup(int client, int args) {
 	} else if (StrEqual(arg, "@blue")) {
 		for (int client2 = 1; client2 <= MaxClients; client2++) {
 			if (IsClientInGame(client2) && GetClientTeam(client2) == 3) {
+				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
+			}
+		}
+		return;
+	} else if (StrEqual(arg, "@bots")) {
+		for (int client2 = 1; client2 <= MaxClients; client2++) {
+			if (IsClientInGame(client2) && IsFakeClient(client2)) {
+				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
+			}
+		}
+		return;
+	} else if (StrEqual(arg, "@humans")) {
+		for (int client2 = 1; client2 <= MaxClients; client2++) {
+			if (IsClientInGame(client2) && !IsFakeClient(client2)) {
 				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
 			}
 		}
