@@ -11,7 +11,7 @@
 #define	MAX_EDICTS (1<<MAX_EDICT_BITS)
 #define MAX_PARTICLES 10 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
 
-int numberofpowerups = 10; // do not make this into a definition because it gets called weirdly
+int numberofpowerups = 10; // Do not define this
 int powerupid[MAX_EDICTS];
 int powerup[MAXPLAYERS + 1] = 0;
 int PlayerParticle[MAXPLAYERS + 1][MAX_PARTICLES + 1];
@@ -48,7 +48,8 @@ Handle DestroyPowerupHandle[MAX_EDICTS + 1] = INVALID_HANDLE;
 6 - Time Travel
 7 - Blast
 8 - Mega Mann
-9 - Frost Touch */
+9 - Frost Touch
+10 - Mystery */
 
 public OnPluginStart() {
 	for (int client = 1; client <= MaxClients ; client++) {
@@ -61,7 +62,7 @@ public OnPluginStart() {
 	HookEvent("teamplay_round_win", teamplay_round_win);
 	HookEvent("player_death", player_death);
 	RegConsoleCmd("sm_setpowerup", SetPowerup);
-	RegConsoleCmd("sm_fb_particle", BabySharkDooDooDoo);
+	/* RegConsoleCmd("sm_particletest", ParticleTest); */
 	RegConsoleCmd("sm_fortressblast", FBMenu);
 	CreateConVar("sm_fortressblast_action_use", "attack3", "Which action to watch for in order to use powerups.");
 	CreateConVar("sm_fortressblast_bot", "1", "Disable or enable bots using powerups.");
@@ -132,21 +133,21 @@ public TF2_OnConditionAdded(int client, TFCond condition) {
 }
 
 public Action FBMenu(int client, int args) {
-	AdvMOTD_ShowMOTDPanel(client, "How are you reading this?", "http://fortress-blast.github.io/0.5", MOTDPANEL_TYPE_URL, true, true, true, INVALID_FUNCTION);
+	AdvMOTD_ShowMOTDPanel(client, "How are you reading this?", "http://fortress-blast.github.io/1.0", MOTDPANEL_TYPE_URL, true, true, true, INVALID_FUNCTION);
 	CPrintToChat(client, "{orange}[Fortress Blast] {haunted}Opening Fortress Blast manual... If nothing happens, open your developer console and {yellow}try setting cl_disablehtmlmotd to 0{haunted}, then try again.");
 }
-public Action BabySharkDooDooDoo(int client, int args) {
+
+/* public Action ParticleTest(int client, int args) {
 	if (GetConVarFloat(FindConVar("sm_fortressblast_debug")) < 1) {
-		FakeClientCommand(client, "say looking for single boys add me to chat <333");
-		// jack5 if you remove this the boogieman is coming for you
+		CPrintToChat(client, "{orange}[Fortress Blast] {red}You do not have permission to use this command.");
 		return;
 	}
 	char arg[80];
 	GetCmdArg(1, arg, sizeof(arg));
 	PowerupParticle(client, arg, 5.0);
-	DebugText("%N is trying out particle %s", client, arg);
-	
-}
+	DebugText("%N is testing particle %s", client, arg);
+} */
+
 public Action SetPowerup(int client, int args) {
 	if (!CheckCommandAccess(client, "", ADMFLAG_ROOT) && GetConVarFloat(FindConVar("sm_fortressblast_debug")) < 1) {
 		CPrintToChat(client, "{orange}[Fortress Blast] {red}You do not have permission to use this command.");
@@ -230,17 +231,17 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 			}
 		}
 	}
-	for (int entity = 1; entity <= MAX_EDICTS ; entity++) {
+	for (int entity = 1; entity <= MAX_EDICTS ; entity++) { // Remove leftover powerups
 		if (IsValidEntity(entity)) {
 			char classname[60];
 			GetEntityClassname(entity, classname, sizeof(classname));
 			if (StrEqual(classname, "tf_halloween_pickup")) {
-				DebugText("Removing duplicate halloween pickup entity %d", entity);
+				DebugText("Removing leftover powerup entity %d", entity);
 				RemoveEntity(entity);
 			}
 		}
-	} // do not put this into one loop, because it'll start into new stuff
-	for (int entity = 1; entity <= MAX_EDICTS ; entity++) {
+	}
+	for (int entity = 1; entity <= MAX_EDICTS ; entity++) { // Add powerups and replace Mannpower
 		if(IsValidEntity(entity)){
 			char classname[60];
 			GetEntityClassname(entity, classname, sizeof(classname));
@@ -250,10 +251,10 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 						if (StrEqual(classname, "info_powerup_spawn")) {
 							float coords[3] = 69.420;
 							GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
-							DebugText("MannPower PowerUp At %f %f %f", coords[0], coords[1], coords[2]);
+							DebugText("Found Mannpower spawn at %f, %f, %f", coords[0], coords[1], coords[2]);
 							SpawnPower(coords, true);
 						}
-						DebugText("removing entity of the %s", classname);
+						DebugText("Removing entity name %s", classname);
 						RemoveEntity(entity);
 					}
 				}
@@ -271,7 +272,7 @@ public OnEntityDestroyed(int entity) {
 
 public Action PesterThisDude(Handle timer, int client) {
 	if (IsClientInGame(client)) { // Required because player might disconnect before this fires
-		CPrintToChat(client, "{orange}[Fortress Blast] {haunted}This server is running {yellow}Fortress Blast v0.5! {haunted}If you would like to know more or are unsure what a powerup does, type the command {yellow}!fortressblast {haunted}into chat.");
+		CPrintToChat(client, "{orange}[Fortress Blast] {haunted}This server is running {yellow}Fortress Blast v1.0! {haunted}If you would like to know more or are unsure what a powerup does, type the command {yellow}!fortressblast {haunted}into chat.");
 	}
 }
 
@@ -530,18 +531,14 @@ UsePower(client) {
 		SuperBounce[client] = true;
 		ClearTimer(SuperBounceHandle[client]);
 		SuperBounceHandle[client] = CreateTimer(5.0, RemoveSuperBounce, client);
-		if(TF2_GetClientTeam(client) == TFTeam_Red){
-			PowerupParticle(client, "teleporter_red_charged_level2", 5.0);
-		}
-		if(TF2_GetClientTeam(client) == TFTeam_Blue){
-			PowerupParticle(client, "teleporter_blue_charged_level2", 5.0);
-		}
+		PowerupParticle(client, "teleporter_blue_charged_level2", 5.0);
 	} else if (powerup[client] == 2) {
 		// Shock Absorber - 75% damage and 100% knockback resistances for 5 seconds
 		ShockAbsorber[client] = true;
 		EmitAmbientSound("fortressblast2/shockabsorber_use.mp3", vel, client);
 		ClearTimer(ShockAbsorberHandle[client]);
 		ShockAbsorberHandle[client] = CreateTimer(5.0, RemoveShockAbsorb, client);
+		PowerupParticle(client, "teleporter_red_charged_level2", 5.0);
 	} else if (powerup[client] == 3) {
 		// Super Speed - Increased speed, gradually wears off over 10 seconds
 		OldSpeed[client] = GetEntPropFloat(client, Prop_Send, "m_flMaxspeed");
@@ -550,10 +547,9 @@ UsePower(client) {
 		CreateTimer(0.1, RecalcSpeed, client);
 	} else if (powerup[client] == 4) {
 		// Super Jump - Launch user into air
-		if(MegaMann[client]){
+		if (MegaMann[client]) {
 			vel[2] = 400.0;
-		}
-		else{
+		} else {
 			vel[2] = 800.0;
 		}
 		TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vel);
@@ -622,8 +618,9 @@ UsePower(client) {
 		FrostTouch[client] = true;
 		PowerupParticle(client, "smoke_rocket_steam", 8.0);
 	} else if (powerup[client] == 10) {
+		// Mystery - Random powerup
 		int mysrand = 10;
-		while (mysrand == 10){
+		while (mysrand == 10) {
 			mysrand = GetRandomInt(1, numberofpowerups);
 		}
 		powerup[client] = mysrand;
@@ -861,7 +858,7 @@ PowerupParticle(int client, char particlename[80], float time) {
 	GetEntPropVector(client, Prop_Send, "m_vecOrigin", coords);
 	TeleportEntity(particle, coords, NULL_VECTOR, NULL_VECTOR);
 	int freeid = -5;
-	for (int partid = MAX_PARTICLES; partid > 0 ; partid--){
+	for (int partid = MAX_PARTICLES; partid > 0 ; partid--) {
 		if (!IsValidEntity(PlayerParticle[client][partid])) {
 			freeid = partid;
 		}
