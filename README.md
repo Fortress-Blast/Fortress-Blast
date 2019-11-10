@@ -2,28 +2,25 @@
 
 Fortress Blast is a Team Fortress 2 server mod created by Naleksuh and Jack5 that adds powerups from the Marble Blast series into TF2. It can be run on top of other gamemodes and server mods. Fortress Blast is mostly dependent on user-defined spawning locations, but comes packaged with support for many official and custom maps.
 
+**Visit the [wiki](https://github.com/Fortress-Blast/Fortress-Blast/wiki) for more information about the plugin and how to install it.**
+
 Powerups
 --------
 
-The following powerups exist in the base version of this server mod:
+The lifeblood of Fortress Blast is its powerups, and *here are just a few examples:*
 
-- Super Bounce - The user is forced to uncontrollably bunny hop for 5 seconds. Air-strafing while this is active allows the user to build up speed.
-- Shock Absorber - The user gets 75% damage resistance and full knockback immunity for 5 seconds.
-- Super Speed - The user's speed is drastically increased, but gradually wears off.
-- Super Jump - The user is launched into the air and will resist the initial fall damage. Using this powerup immediately after jumping results in a higher launch.
-- Gyrocopter - The user has 25% gravity for 5 seconds.
-- Time Travel - The user is invisible, has increased speed and cannot attack for 3 seconds. This allows for uncontested passage through or escape from challenging situations.
-- Blast - An explosion is emitted from the user, killing low-health enemies and harming others nearby. Most effective when paired with other sources of damage.
-- Mega Mann - The user becomes 75% larger and is overhealed to 4 times their current health for 10 seconds. Overheal is capped at 4 times the user's maximmum health.
+- Blast - An explosion is emitted from the user, killing low-health enemies and harming others nearby.
 - Frost Touch - For 8 seconds, when the user touches an enemy, they turn into an ice statue for 3 seconds.
-- Mystery - This powerup takes on the effects of another random powerup.
+- Mega Mann - The user becomes 75% larger and is overhealed to 4 times their current health for 10 seconds.
+- Super Bounce - The user is forced to uncontrollably bunny hop for 5 seconds.
+- Time Travel - The user is invisible, has increased speed and cannot attack for 3 seconds.
 
 Features
 --------
 
-Fortress Blast comes with a few quality-of-life features:
+Fortress Blast comes with several quality-of-life features, *such as:*
 
-- A MOTD is available to players which provides them with information on what powerups there are, what they do, and tips on how they can be used.
+- A MOTD is available to players, with information on what powerups there are, what they do, and how they can be used.
 - A server admin can allow players to drop Fortress Blast powerups on death with a ConVar.
 - Bots can pick up powerups and randomly use them based on a user-defined range of time.
 - By default, Mannpower powerups are replaced with Fortress Blast powerups.
@@ -56,7 +53,7 @@ ConVars
 - `sm_fortressblast_drop_team <1-3>` - Set the teams that will drop powerups on death. 1 = Both (default), 2 = RED only, 3 = BLU only.
 - `sm_fortressblast_mannpower <0-2>` - Set whether Mannpower powerups are replaced with Fortress Blast powerups. 0 = Don't replace, 1 = Replace only if there is no .json file, 2 = Always replace (default).
 
-Known bugs (v0.4.1)
+Known bugs (v0.5)
 -----------------
 
 All known bugs have been taken care of for the next version at this time.
