@@ -16,6 +16,7 @@ The following powerups exist in the base version of this server mod:
 - Blast - An explosion is emitted from the user, killing low-health enemies and harming others nearby. Most effective when paired with other sources of damage.
 - Mega Mann - The user becomes 75% larger and is overhealed to 4 times their current health for 10 seconds. Overheal is capped at 4 times the user's maximmum health.
 - Frost Touch - For 8 seconds, when the user touches an enemy, they turn into an ice statue for 3 seconds.
+- Mystery - This powerup takes on the effects of another random powerup.
 
 Features
 --------
@@ -47,7 +48,6 @@ ConVars
 
 - `sm_fortressblast_action_use <string>` - Set the input to watch for using a powerup. `attack3` is default, but `reload` is recommended for PASS Time. Players are warned if they press `attack3` but it is not the set action.
 - `sm_fortressblast_bot <0-1>` - Disable or enable bots using powerups within a random amount of time. On by default.
-<!-- - `sm_fortressblast_bot_collect <0-1>` - Disable or enable bots collecting powerups, a setting useful for Mann vs. Machine. On by default. -->
 - `sm_fortressblast_bot_min <#>` - Minimum time for bots to use a powerup. Default 2.
 - `sm_fortressblast_bot_max <#>` - Maximum time for bots to use a powerup. Default 15.
 - `sm_fortressblast_debug <0-1>` - Disable or enable debug mode, which displays messages in chat and lets all players set powerups. Off by default.
