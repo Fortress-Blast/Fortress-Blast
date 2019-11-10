@@ -119,6 +119,17 @@ public OnMapStart() {
 	AddFileToDownloadsTable("sound/fortressblast2/frosttouch_freeze.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/frosttouch_unfreeze.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/mystery_pickup.mp3");
+	
+	
+	AddFileToDownloadsTable("materials/models/fortressblast/pickups/fb_pickup/pickup_fb.vmt");
+	AddFileToDownloadsTable("materials/models/fortressblast/pickups/fb_pickup/pickup_fb.vtf");
+	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.mdl");
+	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.mdl");
+	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.dx80.vtx");
+	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.dx90.vtx");
+	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.phy");
+	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.sw.vtx");
+	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.vvd");
 	char map[80];
 	GetCurrentMap(map, sizeof(map));
 	char path[PLATFORM_MAX_PATH + 1];
