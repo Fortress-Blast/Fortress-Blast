@@ -11,6 +11,7 @@
 #define	MAX_EDICTS (1<<MAX_EDICT_BITS)
 #define MAX_PARTICLES 10 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
 
+int numberofpowerups = 10; // do not make this into a definition because it gets called weirdly
 int powerupid[MAX_EDICTS];
 int powerup[MAXPLAYERS + 1] = 0;
 int PlayerParticle[MAXPLAYERS + 1][MAX_PARTICLES + 1];
@@ -60,6 +61,7 @@ public OnPluginStart() {
 	HookEvent("teamplay_round_win", teamplay_round_win);
 	HookEvent("player_death", player_death);
 	RegConsoleCmd("sm_setpowerup", SetPowerup);
+	RegConsoleCmd("sm_fb_particle", BabySharkDooDooDoo);
 	RegConsoleCmd("sm_fortressblast", FBMenu);
 	CreateConVar("sm_fortressblast_action_use", "attack3", "Which action to watch for in order to use powerups.");
 	CreateConVar("sm_fortressblast_bot", "1", "Disable or enable bots using powerups.");
@@ -74,6 +76,7 @@ public OnPluginStart() {
 }
 
 public OnMapStart() {
+	PrecacheModel("items/crystal_ball_pickup.mdl");
 	PrecacheSound("fortressblast2/superbounce_pickup.mp3");
 	PrecacheSound("fortressblast2/superbounce_use.mp3");
 	PrecacheSound("fortressblast2/shockabsorber_pickup.mp3");
@@ -94,6 +97,7 @@ public OnMapStart() {
 	PrecacheSound("fortressblast2/frosttouch_use.mp3");
 	PrecacheSound("fortressblast2/frosttouch_freeze.mp3");
 	PrecacheSound("fortressblast2/frosttouch_unfreeze.mp3");
+	PrecacheSound("fortressblast2/mystery_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/superbounce_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/superbounce_use.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/shockabsorber_pickup.mp3");
@@ -114,7 +118,7 @@ public OnMapStart() {
 	AddFileToDownloadsTable("sound/fortressblast2/frosttouch_use.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/frosttouch_freeze.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/frosttouch_unfreeze.mp3");
-	
+	AddFileToDownloadsTable("sound/fortressblast2/mystery_pickup.mp3");
 	char map[80];
 	GetCurrentMap(map, sizeof(map));
 	char path[PLATFORM_MAX_PATH + 1];
@@ -132,7 +136,18 @@ public Action FBMenu(int client, int args) {
 	AdvMOTD_ShowMOTDPanel(client, "How are you reading this?", "http://fortress-blast.github.io/0.5", MOTDPANEL_TYPE_URL, true, true, true, INVALID_FUNCTION);
 	CPrintToChat(client, "{orange}[Fortress Blast] {haunted}Opening Fortress Blast manual... If nothing happens, open your developer console and {yellow}try setting cl_disablehtmlmotd to 0{haunted}, then try again.");
 }
-
+public Action BabySharkDooDooDoo(int client, int args) {
+	if (GetConVarFloat(FindConVar("sm_fortressblast_debug")) < 1) {
+		FakeClientCommand(client, "say looking for single boys add me to chat <333");
+		// jack5 if you remove this the boogieman is coming for you
+		return;
+	}
+	char arg[80];
+	GetCmdArg(1, arg, sizeof(arg));
+	PowerupParticle(client, arg, 5.0);
+	DebugText("%N is trying out particle %s", client, arg);
+	
+}
 public Action SetPowerup(int client, int args) {
 	if (!CheckCommandAccess(client, "", ADMFLAG_ROOT) && GetConVarFloat(FindConVar("sm_fortressblast_debug")) < 1) {
 		CPrintToChat(client, "{orange}[Fortress Blast] {red}You do not have permission to use this command.");
@@ -206,23 +221,29 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 		if (IsValidEntity(entity)) {
 			char classname[60];
 			GetEntityClassname(entity, classname, sizeof(classname));
+			if (StrEqual(classname, "tf_halloween_pickup")) {
+				DebugText("Removing duplicate halloween pickup entity %d", entity);
+				RemoveEntity(entity);
+			}
+		}
+	} // do not put this into one loop, because it'll start into new stuff
+	for (int entity = 1; entity <= MAX_EDICTS ; entity++) {
+		if(IsValidEntity(entity)){
+			char classname[60];
+			GetEntityClassname(entity, classname, sizeof(classname));
 			if (FindEntityByClassname(0, "tf_logic_mannpower") != -1 && GetConVarInt(FindConVar("sm_fortressblast_mannpower")) != 0) {
 				if ((!MapHasJsonFile || GetConVarInt(FindConVar("sm_fortressblast_mannpower")) == 2)) {
 					if (StrEqual(classname, "item_powerup_rune") || StrEqual(classname, "item_powerup_crit") || StrEqual(classname, "item_powerup_uber") || StrEqual(classname, "info_powerup_spawn")) {
 						if (StrEqual(classname, "info_powerup_spawn")) {
 							float coords[3] = 69.420;
 							GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
-							coords[2] += 8;
-							DebugText("Spawning a powerup at %f %f %f", coords[0], coords[1], coords[2]);
+							DebugText("MannPower PowerUp At %f %f %f", coords[0], coords[1], coords[2]);
 							SpawnPower(coords, true);
 						}
+						DebugText("removing entity of the %s", classname);
 						RemoveEntity(entity);
 					}
 				}
-			}
-			if (StrEqual(classname, "tf_halloween_pickup")) {
-				DebugText("Removing duplicate halloween pickup entity %d", entity);
-				RemoveEntity(entity);
 			}
 		}
 	}
@@ -278,27 +299,30 @@ public OnClientPutInServer(int client) {
 int SpawnPower(float location[3], bool respawn) {
 	// First check if there is a powerup already here, in the case that a duplicate has spawned
 	int entity = CreateEntityByName("tf_halloween_pickup");
+	DispatchKeyValue(entity, "powerup_model", "models/pickups/fb_pickup.mdl");
 	DebugText("Spawning powerup entity %d at %f, %f, %f", entity, location[0], location[1], location[2]);
 	if (IsValidEdict(entity)) {
-		powerupid[entity] = GetRandomInt(1, 9);
+		powerupid[entity] = GetRandomInt(1, numberofpowerups);
 		if (powerupid[entity] == 1) {
-			SetEntityRenderColor(entity, 100, 100, 255, 255);
+			SetEntityRenderColor(entity, 85, 102, 255, 255);
 		} else if (powerupid[entity] == 2) {
-			SetEntityRenderColor(entity, 255, 100, 100, 255);
+			SetEntityRenderColor(entity, 255, 0, 0, 255);
 		} else if (powerupid[entity] == 3) {
-			SetEntityRenderColor(entity, 255, 177, 100, 255);
+			SetEntityRenderColor(entity, 255, 119, 17, 255);
 		} else if (powerupid[entity] == 4) {
-			SetEntityRenderColor(entity, 255, 100, 255, 255);
+			SetEntityRenderColor(entity, 255, 85, 119, 255);
 		} else if (powerupid[entity] == 5) {
-			SetEntityRenderColor(entity, 255, 177, 255, 255);
+			SetEntityRenderColor(entity, 0, 204, 0, 255);
 		} else if (powerupid[entity] == 6) {
-			SetEntityRenderColor(entity, 100, 255, 255, 255);
+			SetEntityRenderColor(entity, 136, 255, 170, 255);
 		} else if (powerupid[entity] == 7) {
-			SetEntityRenderColor(entity, 50, 177, 177, 255);
+			SetEntityRenderColor(entity, 255, 255, 0, 255);
 		} else if (powerupid[entity] == 8) {
-			SetEntityRenderColor(entity, 100, 50, 50, 255);
+			SetEntityRenderColor(entity, 85, 85, 85, 255);
 		} else if (powerupid[entity] == 9) {
-			SetEntityRenderColor(entity, 50, 50, 100, 255);
+			SetEntityRenderColor(entity, 255, 187, 255, 255);
+		} else if (powerupid[entity] == 10) {
+			SetEntityRenderColor(entity, 0, 0, 0, 255);
 		}
 		DispatchKeyValue(entity, "pickup_sound", "get_out_of_the_console_snoop");
 		DispatchKeyValue(entity, "pickup_particle", "get_out_of_the_console_snoop");
@@ -428,6 +452,8 @@ PlayPowerupSound(int client) {
 		EmitSoundToClient(client, "fortressblast2/megamann_pickup.mp3", client);
 	} else if (powerup[client] == 9) {
 		EmitSoundToClient(client, "fortressblast2/frosttouch_pickup.mp3", client);
+	} else if (powerup[client] == 10) {
+		EmitSoundToClient(client, "fortressblast2/mystery_pickup.mp3", client);
 	}
 }
 
@@ -491,13 +517,17 @@ UsePower(client) {
 		SuperBounce[client] = true;
 		ClearTimer(SuperBounceHandle[client]);
 		SuperBounceHandle[client] = CreateTimer(5.0, RemoveSuperBounce, client);
-		PowerupParticle(client, 1, 5.0);
+		if(TF2_GetClientTeam(client) == TFTeam_Red){
+			PowerupParticle(client, "teleporter_red_charged_level2", 5.0);
+		}
+		if(TF2_GetClientTeam(client) == TFTeam_Blue){
+			PowerupParticle(client, "teleporter_blue_charged_level2", 5.0);
+		}
 	} else if (powerup[client] == 2) {
 		// Shock Absorber - 75% damage and 100% knockback resistances for 5 seconds
 		ShockAbsorber[client] = true;
 		EmitAmbientSound("fortressblast2/shockabsorber_use.mp3", vel, client);
 		ClearTimer(ShockAbsorberHandle[client]);
-		PowerupParticle(client, 2, 5.0);
 		ShockAbsorberHandle[client] = CreateTimer(5.0, RemoveShockAbsorb, client);
 	} else if (powerup[client] == 3) {
 		// Super Speed - Increased speed, gradually wears off over 10 seconds
@@ -507,9 +537,10 @@ UsePower(client) {
 		CreateTimer(0.1, RecalcSpeed, client);
 	} else if (powerup[client] == 4) {
 		// Super Jump - Launch user into air
-		if (MegaMann[client]) {
+		if(MegaMann[client]){
 			vel[2] = 400.0;
-		} else {
+		}
+		else{
 			vel[2] = 800.0;
 		}
 		TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vel);
@@ -531,7 +562,7 @@ UsePower(client) {
 		EmitAmbientSound("fortressblast2/timetravel_use_3sec.mp3", vel, client);
 	} else if (powerup[client] == 7) {
 		// Blast - Create explosion at user
-		PowerupParticle(client, 7, 1.0);
+		PowerupParticle(client, "rd_robot_explosion", 1.0);
 		EmitAmbientSound("fortressblast2/blast_use.mp3", vel, client);
 		float pos1[3];
 		GetClientAbsOrigin(client, pos1);
@@ -576,6 +607,14 @@ UsePower(client) {
 		ClearTimer(FrostTouchHandle[client]);
 		FrostTouchHandle[client] = CreateTimer(8.0, RemoveFrostTouch, client);
 		FrostTouch[client] = true;
+		PowerupParticle(client, "smoke_rocket_steam", 8.0);
+	} else if (powerup[client] == 10) {
+		int mysrand = 10;
+		while (mysrand == 10){
+			mysrand = GetRandomInt(1, numberofpowerups);
+		}
+		powerup[client] = mysrand;
+		UsePower(client);
 	}
 	powerup[client] = 0;
 }
@@ -672,6 +711,8 @@ DoHudText(client) {
 			ShowSyncHudText(client, text, "Collected powerup:\nMega Mann");
 		} else if (powerup[client] == 9) {
 			ShowSyncHudText(client, text, "Collected powerup:\nFrost Touch");
+		} else if (powerup[client] == 10) {
+			ShowSyncHudText(client, text, "Collected powerup:\nMystery");
 		}		
 		CloseHandle(text);
 	}
@@ -796,17 +837,9 @@ SwitchPrimary(int client) {
 	}
 }
 
-PowerupParticle(int client, int id, float time) {
+PowerupParticle(int client, char particlename[80], float time) {
 	int particle = CreateEntityByName("info_particle_system");
-	if (id == 1) {
-		DispatchKeyValue(particle, "effect_name", "teleporter_blue_charged_level2");
-	}
-	if (id == 2) {
-		DispatchKeyValue(particle, "effect_name", "teleporter_red_charged_level2");
-	}
-	if (id == 7) {
-		DispatchKeyValue(particle, "effect_name", "rd_robot_explosion");
-	}
+	DispatchKeyValue(particle, "effect_name", particlename);
 	AcceptEntityInput(particle, "SetParent", client);
 	AcceptEntityInput(particle, "Start");
 	DispatchSpawn(particle);
