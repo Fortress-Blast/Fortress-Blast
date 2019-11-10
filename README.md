@@ -2,7 +2,7 @@
 
 **[Visit the wiki](https://github.com/Fortress-Blast/Fortress-Blast/wiki) for how to install Fortress Blast, as well as more in-depth information about the plugin.**
 
-Fortress Blast is a Team Fortress 2 server mod created by Naleksuh and Jack5 that adds powerups from the Marble Blast series into TF2. It can be run on top of other gamemodes and server mods. Fortress Blast is mostly dependent on user-defined spawning locations, but comes packaged with support for many official and custom maps.
+Fortress Blast is a SourceMod plugin for Team Fortress 2, created by Naleksuh and Jack5, that adds collectable powerups from the Marble Blast series and more into TF2. It can be run on top of other gamemodes and server mods. Fortress Blast is mostly dependent on user-defined spawning locations, but comes with support for some official maps, as well as an entire library of official and custom map support available in a separate repository.
 
 A powerup bonanza!
 ------------------
@@ -20,11 +20,11 @@ Heavily customisable!
 
 Fortress Blast comes with several quality-of-life features, *such as:*
 
-- A MOTD is available to players, with information on what powerups there are, what they do, and how they can be used.
+- A MOTD is available to players, containing information on the plugin's controls and powerups.
 - A server admin can allow players to drop Fortress Blast powerups on death with a ConVar.
 - Bots can pick up powerups and randomly use them based on a user-defined range of time.
 - By default, Mannpower powerups are replaced with Fortress Blast powerups.
-- Debug mode can be turned on to test functions of the server mod without having to look at the console.
+- A debug ConVar is available to test the plugin without having to check the server console.
 
 Contributors
 ------------
