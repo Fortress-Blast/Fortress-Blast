@@ -52,8 +52,3 @@ ConVars
 - `sm_fortressblast_drop_rate <0-100>` - Set the chance a player will drop a powerup on death out of 100. Default 10.
 - `sm_fortressblast_drop_team <1-3>` - Set the teams that will drop powerups on death. 1 = Both (default), 2 = RED only, 3 = BLU only.
 - `sm_fortressblast_mannpower <0-2>` - Set whether Mannpower powerups are replaced with Fortress Blast powerups. 0 = Don't replace, 1 = Replace only if there is no .json file, 2 = Always replace (default).
-
-Known bugs (v0.5)
------------------
-
-All known bugs have been taken care of for the next version at this time.
