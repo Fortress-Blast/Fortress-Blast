@@ -1,6 +1,6 @@
 ![Fortress Blast](https://fortress-blast.github.io/images/logo.png)
 
-**[Visit the wiki](https://github.com/Fortress-Blast/Fortress-Blast/wiki) for more information about Fortress Blast and how to install it.**
+**[Visit the wiki](https://github.com/Fortress-Blast/Fortress-Blast/wiki) for how to install Fortress Blast, as well as more in-depth information about the plugin.**
 
 Fortress Blast is a Team Fortress 2 server mod created by Naleksuh and Jack5 that adds powerups from the Marble Blast series into TF2. It can be run on top of other gamemodes and server mods. Fortress Blast is mostly dependent on user-defined spawning locations, but comes packaged with support for many official and custom maps.
 
