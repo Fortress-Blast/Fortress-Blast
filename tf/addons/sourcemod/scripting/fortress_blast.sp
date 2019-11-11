@@ -517,6 +517,11 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		}
 	}
 	PreviousAttack3[client] = (buttons > 33554431);
+	if(IsValidEntity(GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon"))){
+		if(GetEntProp(GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon"), Prop_Send, "m_iItemDefinitionIndex") == 28 && !MegaMannStuckComplete[client] && MegaMann[client]){
+			buttons &= ~IN_ATTACK;
+		}
+	}
 }
 
 public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3]) {
