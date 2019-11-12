@@ -283,7 +283,7 @@ public OnEntityDestroyed(int entity) {
 
 public Action PesterThisDude(Handle timer, int client) {
 	if (IsClientInGame(client)) { // Required because player might disconnect before this fires
-		CPrintToChat(client, "{orange}[Fortress Blast] {haunted}This server is running {yellow}Fortress Blast v1.0! {haunted}If you would like to know more or are unsure what a powerup does, type the command {yellow}!fortressblast {haunted}into chat.");
+		CPrintToChat(client, "{orange}[Fortress Blast] {haunted}This server is running {yellow}Fortress Blast v1.0.1! {haunted}If you would like to know more or are unsure what a powerup does, type the command {yellow}!fortressblast {haunted}into chat.");
 	}
 }
 
@@ -517,8 +517,9 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		}
 	}
 	PreviousAttack3[client] = (buttons > 33554431);
-	if(IsValidEntity(GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon"))){
-		if(GetEntProp(GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon"), Prop_Send, "m_iItemDefinitionIndex") == 28 && !MegaMannStuckComplete[client] && MegaMann[client]){
+	// Block placing buildings until Mega Mann stuck-check is complete
+	if (IsValidEntity(GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon"))) {
+		if (GetEntProp(GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon"), Prop_Send, "m_iItemDefinitionIndex") == 28 && !MegaMannStuckComplete[client] && MegaMann[client]) {
 			buttons &= ~IN_ATTACK;
 		}
 	}
