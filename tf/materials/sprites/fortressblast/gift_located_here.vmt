@@ -1,0 +1,7 @@
+"UnlitGeneric"
+{
+	"$basetexture" "sprites/fortressblast/gift_located_here"
+	"$ignorez" 1
+	"$nofog" 1
+	"$translucent" 1
+}
