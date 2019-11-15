@@ -63,7 +63,6 @@ public OnPluginStart() {
 	HookEvent("teamplay_round_win", teamplay_round_win);
 	HookEvent("player_death", player_death);
 	RegConsoleCmd("sm_setpowerup", SetPowerup);
-	/* RegConsoleCmd("sm_particletest", ParticleTest); */
 	RegConsoleCmd("sm_fortressblast", FBMenu);
 	CreateConVar("sm_fortressblast_action_use", "attack3", "Which action to watch for in order to use powerups.");
 	CreateConVar("sm_fortressblast_bot", "1", "Disable or enable bots using powerups.");
@@ -122,7 +121,6 @@ public OnMapStart() {
 	AddFileToDownloadsTable("sound/fortressblast2/frosttouch_unfreeze.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/mystery_pickup.mp3");
 	
-	
 	AddFileToDownloadsTable("materials/models/fortressblast/pickups/fb_pickup/pickup_fb.vmt");
 	AddFileToDownloadsTable("materials/models/fortressblast/pickups/fb_pickup/pickup_fb.vtf");
 	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.mdl");
@@ -132,6 +130,7 @@ public OnMapStart() {
 	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.phy");
 	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.sw.vtx");
 	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.vvd");
+	
 	char map[80];
 	GetCurrentMap(map, sizeof(map));
 	char path[PLATFORM_MAX_PATH + 1];
@@ -149,17 +148,6 @@ public Action FBMenu(int client, int args) {
 	AdvMOTD_ShowMOTDPanel(client, "How are you reading this?", "http://fortress-blast.github.io/1.0", MOTDPANEL_TYPE_URL, true, true, true, INVALID_FUNCTION);
 	CPrintToChat(client, "{orange}[Fortress Blast] {haunted}Opening Fortress Blast manual... If nothing happens, open your developer console and {yellow}try setting cl_disablehtmlmotd to 0{haunted}, then try again.");
 }
-
-/* public Action ParticleTest(int client, int args) {
-	if (GetConVarFloat(FindConVar("sm_fortressblast_debug")) < 1) {
-		CPrintToChat(client, "{orange}[Fortress Blast] {red}You do not have permission to use this command.");
-		return;
-	}
-	char arg[80];
-	GetCmdArg(1, arg, sizeof(arg));
-	PowerupParticle(client, arg, 5.0);
-	DebugText("%N is testing particle %s", client, arg);
-} */
 
 public Action SetPowerup(int client, int args) {
 	if (!CheckCommandAccess(client, "", ADMFLAG_ROOT) && GetConVarFloat(FindConVar("sm_fortressblast_debug")) < 1) {
@@ -229,7 +217,6 @@ public Action SetPowerup(int client, int args) {
 
 public Action teamplay_round_start(Event event, const char[] name, bool dontBroadcast) {
 	VictoryTime = false;
-	EntFire("fb_warningmessage", "Kill");
 	if (!GameRules_GetProp("m_bInWaitingForPlayers")) {
 		for (int client = 1; client <= MaxClients; client++) {
 			powerup[client] = 0;
@@ -1059,41 +1046,16 @@ BlockAttacking(int client, float time) { // Roll the Dice function with new synt
 	}
 }
 
-// sm_entfire with updated syntax
-EntFire(char[] strTargetname, char[] strInput, char strParameter[] = "", float flDelay = 0.0) {
-	char strBuffer[255];
-	Format(strBuffer, sizeof(strBuffer), "OnUser1 %s:%s:%s:%f:1", strTargetname, strInput, strParameter, flDelay);
-	int entity = CreateEntityByName("info_target");
-	if (IsValidEdict(entity)) {
-		DispatchSpawn(entity);
-		ActivateEntity(entity);
-		SetVariantString(strBuffer);
-		AcceptEntityInput(entity, "AddOutput");
-		AcceptEntityInput(entity, "FireUser1");
-		CreateTimer(0.0, DeleteEdict, entity);
-		return true;
-	}
-	return false;
-}
-
-public Action DeleteEdict(Handle timer, int entity) {
-	if(IsValidEdict(entity)) RemoveEdict(entity);
-	return Plugin_Stop;
-}
-
 bool PowerupIsEnabled(int id) {
 	int max = (Bitfieldify(NumberOfPowerups) * 2) - 1;
 	int bitfield = GetConVarInt(FindConVar("sm_fortressblast_powerups"));
 	if (bitfield == -1) {
-		return true; // intentionally bad. can't be 0 cause that's strings and stuff
-	} else if (bitfield < 1) {
-		PrintToServer("[Fortress Blast] Your powerup whitelist ConVar was not a valid bitfield. As a fallback, all powerups are allowed.");
-		return true;
-	} else if (bitfield > max) {
-		PrintToServer("[Fortress Blast] Your powerup whitelist ConVar was impossibly large. As a fallback, all powerups are allowed.");
+		return true; // All powerups enabled
+	} else if (bitfield < 1 || bitfield > max) {
+		PrintToServer("[Fortress Blast] Your powerup whitelist ConVar is out of range. As a fallback, all powerups are allowed.");
 		return true;
 	} else if(bitfield == 512) {
-		PrintToServer("[Fortress Blast] Your powerup whitelist ConVar only allowed Mystery. Due to selecting a random powerup, Mystery requires at least one other powerup to work and cannot be used on its own. As a fallback, all powerups are allowed.");
+		PrintToServer("[Fortress Blast] Your powerup whitelist ConVar is set to Mystery only. Mystery requires at least one other powerup to work and cannot be used on its own. As a fallback, all powerups are allowed.");
 		return true;
 	} // The below statement might need to merged with an else
 	if (bitfield & Bitfieldify(id)) {
