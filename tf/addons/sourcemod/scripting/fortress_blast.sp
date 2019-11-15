@@ -135,6 +135,8 @@ public OnMapStart() {
 	AddFileToDownloadsTable("sound/fortressblast2/gemhunt_gem_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/gemhunt_goal_enemyteam.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/gemhunt_goal_playerteam.mp3");
+	AddFileToDownloadsTable("materials/sprites/fortressblast/gift_located_here.vmt");
+	AddFileToDownloadsTable("materials/sprites/fortressblast/gift_located_here.vtf");
 	
 	AddFileToDownloadsTable("materials/models/fortressblast/pickups/fb_pickup/pickup_fb.vmt");
 	AddFileToDownloadsTable("materials/models/fortressblast/pickups/fb_pickup/pickup_fb.vtf");
@@ -243,6 +245,7 @@ public Action SetPowerup(int client, int args) {
 
 public Action teamplay_round_start(Event event, const char[] name, bool dontBroadcast) {
 	VictoryTime = false;
+	EntFire("fb_warningmessage", "Kill");
 	if (!GameRules_GetProp("m_bInWaitingForPlayers")) {
 		for (int client = 1; client <= MaxClients; client++) {
 			powerup[client] = 0;
@@ -296,7 +299,22 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 
 public OnEntityDestroyed(int entity) {
 	if (IsValidEntity(entity) && entity > 0) {
-		ClearTimer(DestroyPowerupHandle[entity]); // This causes about half a second of lag when a new round starts. not having it causes problems
+		ClearTimer(DestroyPowerupHandle[entity]); // This causes about half a second of lag when a new round starts. but not having it causes problems
+		char classname[60];
+		GetEntityClassname(entity, classname, sizeof(classname));
+		if(StrEqual(classname, "tf_halloween_pickup") && powerupid[entity] == 0){ // this is just an optimizer, the same thing would happen without this but slower
+			char giftidsandstuff[20];
+			Format(giftidsandstuff, sizeof(giftidsandstuff), "fb_giftid_%d", entity);
+			int entity2 = 0;
+			while ((entity2 = FindEntityByClassname(entity2, "env_sprite")) != -1) {
+				char name2[50];
+				GetEntPropString(entity2, Prop_Data, "m_iName", name2, sizeof(name2));
+				if (StrEqual(name2, giftidsandstuff)) {
+					DebugText("%s was %s class is %s removing %d", name2, giftidsandstuff, classname, entity2);
+					RemoveEntity(entity2);
+				}
+			}
+		}
 	}
 }
 
@@ -458,6 +476,19 @@ int SpawnGift(float location[3]) {
 		TeleportEntity(entity, location, NULL_VECTOR, NULL_VECTOR);
 		SDKHook(entity, SDKHook_StartTouch, OnStartTouchDontRespawn);
 		powerupid[entity] = 0;
+		int entity2 = CreateEntityByName("env_sprite");
+		if(IsValidEntity(entity2)){
+			DispatchKeyValue(entity2, "model", "sprites/fortressblast/gift_located_here.vmt");
+			//SetEntityFlags(entity2, 1);
+			DispatchKeyValue(entity2, "spawnflags", "1");
+			DispatchSpawn(entity2);
+			ActivateEntity(entity2);
+			float coords[3] = 69.420;
+			GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
+			coords[2] += 32.0;
+			TeleportEntity(entity2, coords, NULL_VECTOR, NULL_VECTOR);
+			DispatchKeyValue(entity2, "targetname", giftidsandstuff);
+		}
 	}
 }
 
@@ -1186,11 +1217,13 @@ CollectedGift(int client) {
 			PrintCenterTextAll("BLU team has collected the required number of gifts!");
 			DebugText("BLU team has collected the required number of gifts", client);
 		}
-		for (int client2 = 1 ; client2 <= 5 ; client2++) {
-			if (GetClientTeam(client2) == GetClientTeam(client)) {
-				EmitSoundToClient(client2, "fortressblast2/gemhunt_goal_playerteam.mp3", client2);
-			} else {
-				EmitSoundToClient(client2, "fortressblast2/gemhunt_goal_enemyteam.mp3", client2);
+		for (int client2 = 1 ; client2 <= MaxClients ; client2++) {
+			if(IsClientInGame(client2)){
+				if (GetClientTeam(client2) == GetClientTeam(client)) {
+					EmitSoundToClient(client2, "fortressblast2/gemhunt_goal_playerteam.mp3", client2);
+				} else {
+					EmitSoundToClient(client2, "fortressblast2/gemhunt_goal_enemyteam.mp3", client2);
+				}
 			}
 		}
 	}
