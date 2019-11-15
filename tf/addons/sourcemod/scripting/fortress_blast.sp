@@ -12,15 +12,13 @@
 #define MAX_PARTICLES 10 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
 
 int NumberOfPowerups = 10; // Do not define this
-int Gifts[4] = 0;
-int powerupid[MAX_EDICTS] = -1;
+int powerupid[MAX_EDICTS];
 int powerup[MAXPLAYERS + 1] = 0;
 int PlayerParticle[MAXPLAYERS + 1][MAX_PARTICLES + 1];
 int SpeedRotationsLeft[MAXPLAYERS + 1] = 80;
 bool PreviousAttack3[MAXPLAYERS + 1] = false;
 bool VictoryTime = false;
 bool MapHasJsonFile = false;
-bool GiftHunt = false;
 bool SuperBounce[MAXPLAYERS + 1] = false;
 bool ShockAbsorber[MAXPLAYERS + 1] = false;
 bool TimeTravel[MAXPLAYERS + 1] = false;
@@ -43,7 +41,6 @@ Handle FrostTouchUnfreezeHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle DestroyPowerupHandle[MAX_EDICTS + 1] = INVALID_HANDLE;
 
 /* Powerup IDs
-0 - No powerup if on player, gift if on powerup entity
 1 - Super Bounce
 2 - Shock Absorber
 3 - Super Speed
@@ -76,16 +73,12 @@ public OnPluginStart() {
 	CreateConVar("sm_fortressblast_drop", "1", "How to handle dropping powerups on death.");
 	CreateConVar("sm_fortressblast_drop_rate", "10", "Chance out of 100 for a powerup to drop on death.");
 	CreateConVar("sm_fortressblast_drop_teams", "1", "Set the teams that will drop powerups on death.");
-	CreateConVar("sm_fortressblast_gifthunt_goal", "200", "Maximum amount of gifts to play to on Gift Hunt maps.");
 	CreateConVar("sm_fortressblast_mannpower", "2", "How to handle replacing Mannpower powerups.");
 	CreateConVar("sm_fortressblast_powerups", "-1", "Bitfield of which powerups to enable, a number within 1 and 1023.");
 	LoadTranslations("common.phrases");
 }
 
 public OnMapStart() {
-	GiftHunt = false;
-	Gifts[2] = 0;
-	Gifts[3] = 0;
 	PrecacheSound("fortressblast2/superbounce_pickup.mp3");
 	PrecacheSound("fortressblast2/superbounce_use.mp3");
 	PrecacheSound("fortressblast2/shockabsorber_pickup.mp3");
@@ -129,25 +122,16 @@ public OnMapStart() {
 	AddFileToDownloadsTable("sound/fortressblast2/frosttouch_unfreeze.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/mystery_pickup.mp3");
 	
-	PrecacheSound("fortressblast2/gemhunt_gem_pickup.mp3");
-	PrecacheSound("fortressblast2/gemhunt_goal_enemyteam.mp3");
-	PrecacheSound("fortressblast2/gemhunt_goal_playerteam.mp3");
-	AddFileToDownloadsTable("sound/fortressblast2/gemhunt_gem_pickup.mp3");
-	AddFileToDownloadsTable("sound/fortressblast2/gemhunt_goal_enemyteam.mp3");
-	AddFileToDownloadsTable("sound/fortressblast2/gemhunt_goal_playerteam.mp3");
-	AddFileToDownloadsTable("materials/sprites/fortressblast/gift_located_here.vmt");
-	AddFileToDownloadsTable("materials/sprites/fortressblast/gift_located_here.vtf");
 	
 	AddFileToDownloadsTable("materials/models/fortressblast/pickups/fb_pickup/pickup_fb.vmt");
 	AddFileToDownloadsTable("materials/models/fortressblast/pickups/fb_pickup/pickup_fb.vtf");
 	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.mdl");
-	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.mdl"); // Why is there two of this?
+	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.mdl");
 	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.dx80.vtx");
 	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.dx90.vtx");
 	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.phy");
 	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.sw.vtx");
 	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.vvd");
-	
 	char map[80];
 	GetCurrentMap(map, sizeof(map));
 	char path[PLATFORM_MAX_PATH + 1];
@@ -162,7 +146,7 @@ public TF2_OnConditionAdded(int client, TFCond condition) {
 }
 
 public Action FBMenu(int client, int args) {
-	AdvMOTD_ShowMOTDPanel(client, "How are you reading this?", "http://fortress-blast.github.io/2.0", MOTDPANEL_TYPE_URL, true, true, true, INVALID_FUNCTION);
+	AdvMOTD_ShowMOTDPanel(client, "How are you reading this?", "http://fortress-blast.github.io/1.0", MOTDPANEL_TYPE_URL, true, true, true, INVALID_FUNCTION);
 	CPrintToChat(client, "{orange}[Fortress Blast] {haunted}Opening Fortress Blast manual... If nothing happens, open your developer console and {yellow}try setting cl_disablehtmlmotd to 0{haunted}, then try again.");
 }
 
@@ -292,91 +276,17 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 		}
 	}
 	GetPowerupPlacements();
-	DebugText("%d batches of gifts detected", AmountOfGiftBatches());
-	Gifts[2] = 0;
-	Gifts[3] = 0;
 }
 
 public OnEntityDestroyed(int entity) {
 	if (IsValidEntity(entity) && entity > 0) {
-		ClearTimer(DestroyPowerupHandle[entity]); // This causes about half a second of lag when a new round starts. but not having it causes problems
-		char classname[60];
-		GetEntityClassname(entity, classname, sizeof(classname));
-		if (StrEqual(classname, "tf_halloween_pickup") && powerupid[entity] == 0) { // Optimisation code
-			char giftidsandstuff[20];
-			Format(giftidsandstuff, sizeof(giftidsandstuff), "fb_giftid_%d", entity);
-			int entity2 = 0;
-			while ((entity2 = FindEntityByClassname(entity2, "env_sprite")) != -1) {
-				char name2[50];
-				GetEntPropString(entity2, Prop_Data, "m_iName", name2, sizeof(name2));
-				if (StrEqual(name2, giftidsandstuff)) {
-					DebugText("%s was %s class is %s removing %d", name2, giftidsandstuff, classname, entity2);
-					RemoveEntity(entity2);
-				}
-			}
-		}
+		ClearTimer(DestroyPowerupHandle[entity]); // This causes about half a second of lag when a new round starts. not having it causes problems
 	}
-}
-
-public OnGameFrame() {
-	if (NumberOfActiveGifts() == 0) {
-		RestockRandomBatch();
-	}
-}
-
-int AmountOfGiftBatches() {
-	int batches = 1;
-	char batchname[20];
-	Format(batchname, sizeof(batchname), "fb_giftbatch_%d", batches);
-	while (CustomNameExists(batchname)) {
-		batches++;
-		Format(batchname, sizeof(batchname), "fb_giftbatch_%d", batches);
-	}
-	return (batches - 1);
-}
-
-bool CustomNameExists(const char[] name) {
-	int entity = 0;
-	while ((entity = FindEntityByClassname(entity, "info_target")) != -1) {
-		char name2[50];
-		GetEntPropString(entity, Prop_Data, "m_iName", name2, sizeof(name2));
-		if (StrEqual(name2, name)) {
-			return true;
-		}
-	}
-	return false;
-}
-
-RestockRandomBatch() {
-	int entity = 0;
-	char batchname[20];
-	Format(batchname, sizeof(batchname), "fb_giftbatch_%d", GetRandomInt(1, AmountOfGiftBatches()));
-	while ((entity = FindEntityByClassname(entity, "info_target")) != -1) {
-		char name2[50];
-		GetEntPropString(entity, Prop_Data, "m_iName", name2, sizeof(name2));
-		if (StrEqual(name2, batchname)) {
-			float coords[3];
-			GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
-			coords[2] += 8.0;
-			SpawnGift(coords);
-		}
-	}
-}
-
-int NumberOfActiveGifts() {
-	int totalgifts;
-	int entity;
-	while ((entity = FindEntityByClassname(entity, "tf_halloween_pickup")) != -1) {
-		if (powerupid[entity] == 0) {
-			totalgifts++;
-		}
-	}
-	return totalgifts;
 }
 
 public Action PesterThisDude(Handle timer, int client) {
 	if (IsClientInGame(client)) { // Required because player might disconnect before this fires
-		CPrintToChat(client, "{orange}[Fortress Blast] {haunted}This server is running {yellow}Fortress Blast v2.0! {haunted}If you would like to know more or are unsure what a powerup does, type the command {yellow}!fortressblast {haunted}into chat.");
+		CPrintToChat(client, "{orange}[Fortress Blast] {haunted}This server is running {yellow}Fortress Blast v1.0.1! {haunted}If you would like to know more or are unsure what a powerup does, type the command {yellow}!fortressblast {haunted}into chat.");
 	}
 }
 
@@ -460,38 +370,6 @@ int SpawnPower(float location[3], bool respawn) {
 	return entity;
 }
 
-int SpawnGift(float location[3]) {
-	GiftHunt = true;
-	int entity = CreateEntityByName("tf_halloween_pickup");
-	if (IsValidEntity(entity)) {
-		DispatchKeyValue(entity, "powerup_model", "models/items/tf_gift.mdl");
-		DispatchKeyValue(entity, "pickup_sound", "get_out_of_the_console_snoop");
-		DispatchKeyValue(entity, "pickup_particle", "get_out_of_the_console_snoop");
-		char giftidsandstuff[20];
-		Format(giftidsandstuff, sizeof(giftidsandstuff), "fb_giftid_%d", entity);
-		DispatchKeyValue(entity, "targetname", giftidsandstuff);
-		AcceptEntityInput(entity, "EnableCollision");
-		DispatchSpawn(entity);
-		ActivateEntity(entity);
-		TeleportEntity(entity, location, NULL_VECTOR, NULL_VECTOR);
-		SDKHook(entity, SDKHook_StartTouch, OnStartTouchDontRespawn);
-		powerupid[entity] = 0;
-		int entity2 = CreateEntityByName("env_sprite");
-		if(IsValidEntity(entity2)){
-			DispatchKeyValue(entity2, "model", "sprites/fortressblast/gift_located_here.vmt");
-			//SetEntityFlags(entity2, 1);
-			DispatchKeyValue(entity2, "spawnflags", "1");
-			DispatchSpawn(entity2);
-			ActivateEntity(entity2);
-			float coords[3] = 69.420;
-			GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
-			coords[2] += 32.0;
-			TeleportEntity(entity2, coords, NULL_VECTOR, NULL_VECTOR);
-			DispatchKeyValue(entity2, "targetname", giftidsandstuff);
-		}
-	}
-}
-
 public Action OnStartTouchFrozen(entity, other) {
 	// Test that using player and touched player are both valid targets
 	if (entity > 0 && entity <= MaxClients && other > 0 && other <= MaxClients && IsClientInGame(entity) && IsClientInGame(other)) {
@@ -544,17 +422,12 @@ public Action OnStartTouchRespawn(entity, other) {
 	return Plugin_Continue;
 }
 
-
 public Action OnStartTouchDontRespawn(entity, other) {
 	DeletePowerup(entity, other);
 }
 
 DeletePowerup(int entity, other) {
 	RemoveEntity(entity);
-	if (powerupid[entity] == 0) {
-		CollectedGift(other);
-		return;
-	}
 	powerup[other] = powerupid[entity];
 	DebugText("%N has collected powerup ID %d", other, powerup[other]);
 	PlayPowerupSound(other);
@@ -590,7 +463,6 @@ public Action SpawnPowerAfterDelay(Handle timer, any data) {
 	DebugText("Respawning powerup at %f, %f, %f", coords[0], coords[1], coords[2]);
 	SpawnPower(coords, true);
 }
-
 
 PlayPowerupSound(int client) {
 	float vel[3];
@@ -882,20 +754,6 @@ DoHudText(client) {
 			ShowSyncHudText(client, text, "Collected powerup:\nMystery");
 		}		
 		CloseHandle(text);
-	}
-	if (GiftHunt) {
-		Handle blue = CreateHudSynchronizer();
-  		SetHudTextParams(0.4, 0.7, 0.25, 0, 0, 255, 255);
-  		ShowSyncHudText(client, blue, "%d", Gifts[3]);
-  		Handle max = CreateHudSynchronizer();
-  		SetHudTextParams(0.43, 0.7, 0.25, 255, 255, 255, 255);
-  		ShowSyncHudText(client, max, "Playing to %d gifts", GetConVarInt(FindConVar("sm_fortressblast_gifthunt_goal")));
-  		Handle red = CreateHudSynchronizer();
-  		SetHudTextParams(0.6, 0.7, 0.25, 255, 64, 64, 255);
-  		ShowSyncHudText(client, red, "%d", Gifts[2]);
-  		CloseHandle(red);
-  		CloseHandle(max);
-  		CloseHandle(blue);
 	}
 }
 
@@ -1198,34 +1056,6 @@ BlockAttacking(int client, float time) { // Roll the Dice function with new synt
 	// Cancel active grappling hook
 	if (GetEntPropEnt(client, Prop_Data, "m_hActiveWeapon") == GetPlayerWeaponSlot(client, 5)) {
 		SwitchPrimary(client);
-	}
-}
-
-CollectedGift(int client) {
-	DebugText("%N has collected a gift", client);
-	float vel[3];
-	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel);
-	EmitAmbientSound("fortressblast2/gemhunt_gem_pickup.mp3", vel, client);
-	Gifts[GetClientTeam(client)]++;
-	if (Gifts[GetClientTeam(client)] == GetConVarInt(FindConVar("sm_fortressblast_gifthunt_goal"))) {
-		if (GetClientTeam(client) == 2) {
-			EntFire("fb_giftscollected_red", "Trigger");
-			PrintCenterTextAll("RED team has collected the required number of gifts!");
-			DebugText("RED team has collected the required number of gifts", client);
-		} else if (GetClientTeam(client) == 3) {
-			EntFire("fb_giftscollected_blu", "Trigger");
-			PrintCenterTextAll("BLU team has collected the required number of gifts!");
-			DebugText("BLU team has collected the required number of gifts", client);
-		}
-		for (int client2 = 1 ; client2 <= MaxClients ; client2++) {
-			if(IsClientInGame(client2)){
-				if (GetClientTeam(client2) == GetClientTeam(client)) {
-					EmitSoundToClient(client2, "fortressblast2/gemhunt_goal_playerteam.mp3", client2);
-				} else {
-					EmitSoundToClient(client2, "fortressblast2/gemhunt_goal_enemyteam.mp3", client2);
-				}
-			}
-		}
 	}
 }
 
