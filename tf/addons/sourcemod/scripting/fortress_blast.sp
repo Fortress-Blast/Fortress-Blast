@@ -145,7 +145,15 @@ public TF2_OnConditionAdded(int client, TFCond condition) {
 }
 
 public Action FBMenu(int client, int args) {
-	AdvMOTD_ShowMOTDPanel(client, "How are you reading this?", "http://fortress-blast.github.io/1.0", MOTDPANEL_TYPE_URL, true, true, true, INVALID_FUNCTION);
+	int bitfield = GetConVarInt(FindConVar("sm_fortressblast_powerups"));
+	if(bitfield < 1 && bitfield > ((Bitfieldify(NumberOfPowerups) * 2) - 1)){
+		bitfield = -1;
+	}
+	char url[200];
+	char action[15];
+	GetConVarString(FindConVar("sm_fortressblast_action_use"), action, sizeof(action));
+	Format(url, sizeof(url), "http://fortress-blast.github.io/1.1?powerups-enabled=%d&action=%s", bitfield, action);
+	AdvMOTD_ShowMOTDPanel(client, "How are you reading this?", url, MOTDPANEL_TYPE_URL, true, true, true, INVALID_FUNCTION);
 	CPrintToChat(client, "{orange}[Fortress Blast] {haunted}Opening Fortress Blast manual... If nothing happens, open your developer console and {yellow}try setting cl_disablehtmlmotd to 0{haunted}, then try again.");
 }
 
@@ -273,7 +281,7 @@ public OnEntityDestroyed(int entity) {
 
 public Action PesterThisDude(Handle timer, int client) {
 	if (IsClientInGame(client)) { // Required because player might disconnect before this fires
-		CPrintToChat(client, "{orange}[Fortress Blast] {haunted}This server is running {yellow}Fortress Blast v1.0.1! {haunted}If you would like to know more or are unsure what a powerup does, type the command {yellow}!fortressblast {haunted}into chat.");
+		CPrintToChat(client, "{orange}[Fortress Blast] {haunted}This server is running {yellow}Fortress Blast v1.1! {haunted}If you would like to know more or are unsure what a powerup does, type the command {yellow}!fortressblast {haunted}into chat.");
 	}
 }
 
