@@ -1062,7 +1062,7 @@ bool PowerupIsEnabled(int id) {
 	} else if (bitfield < 1 || bitfield > max) {
 		PrintToServer("[Fortress Blast] Your powerup whitelist ConVar is out of range. As a fallback, all powerups are allowed.");
 		return true;
-	} else if(bitfield == 512) {
+	} else if (bitfield == 512) {
 		PrintToServer("[Fortress Blast] Your powerup whitelist ConVar is set to Mystery only. Mystery requires at least one other powerup to work and cannot be used on its own. As a fallback, all powerups are allowed.");
 		return true;
 	} // The below statement might need to merged with an else
