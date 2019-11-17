@@ -146,7 +146,7 @@ public TF2_OnConditionAdded(int client, TFCond condition) {
 
 public Action FBMenu(int client, int args) {
 	int bitfield = GetConVarInt(FindConVar("sm_fortressblast_powerups"));
-	if(bitfield < 1 && bitfield > ((Bitfieldify(NumberOfPowerups) * 2) - 1)){
+	if (bitfield < 1 && bitfield > ((Bitfieldify(NumberOfPowerups) * 2) - 1)) {
 		bitfield = -1;
 	}
 	char url[200];
