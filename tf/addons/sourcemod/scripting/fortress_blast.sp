@@ -275,7 +275,7 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 	GetPowerupPlacements();
 	int spawnrooms;
 	while ((spawnrooms = FindEntityByClassname(spawnrooms, "func_respawnroom")) != -1) {
-		SDKHook(i, SDKHook_TouchPost, OnTouchRespawnRoom);
+		SDKHook(spawnrooms, SDKHook_TouchPost, OnTouchRespawnRoom);
 	}
 }
 
