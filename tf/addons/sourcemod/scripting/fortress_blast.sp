@@ -62,8 +62,9 @@ public OnPluginStart() {
 	HookEvent("teamplay_round_start", teamplay_round_start);
 	HookEvent("teamplay_round_win", teamplay_round_win);
 	HookEvent("player_death", player_death);
-	RegConsoleCmd("sm_setpowerup", SetPowerup);
 	RegConsoleCmd("sm_fortressblast", FBMenu);
+	RegConsoleCmd("sm_setpowerup", SetPowerup);
+	RegAdminCmd("sm_spawnpowerup", SpawnPowerup, ADMFLAG_ROOT);
 	CreateConVar("sm_fortressblast_action_use", "attack3", "Which action to watch for in order to use powerups.");
 	CreateConVar("sm_fortressblast_bot", "1", "Disable or enable bots using powerups.");
 	CreateConVar("sm_fortressblast_bot_min", "2", "Minimum time for bots to use a powerup.");
@@ -74,6 +75,7 @@ public OnPluginStart() {
 	CreateConVar("sm_fortressblast_drop_teams", "1", "Set the teams that will drop powerups on death.");
 	CreateConVar("sm_fortressblast_mannpower", "2", "How to handle replacing Mannpower powerups.");
 	CreateConVar("sm_fortressblast_powerups", "-1", "Bitfield of which powerups to enable, a number within 1 and 1023.");
+	CreateConVar("sm_fortressblast_spawnroom_kill", "1", "Disable or enable killing enemies inside spawnrooms due to Mega Mann exploit.");
 	LoadTranslations("common.phrases");
 }
 
@@ -271,6 +273,10 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 		}
 	}
 	GetPowerupPlacements();
+	int spawnrooms;
+	while ((spawnrooms = FindEntityByClassname(spawnrooms, "func_respawnroom")) != -1) {
+		SDKHook(spawnrooms, SDKHook_TouchPost, OnTouchRespawnRoom);
+	}
 }
 
 public OnEntityDestroyed(int entity) {
@@ -281,7 +287,7 @@ public OnEntityDestroyed(int entity) {
 
 public Action PesterThisDude(Handle timer, int client) {
 	if (IsClientInGame(client)) { // Required because player might disconnect before this fires
-		CPrintToChat(client, "{orange}[Fortress Blast] {haunted}This server is running {yellow}Fortress Blast v1.1! {haunted}If you would like to know more or are unsure what a powerup does, type the command {yellow}!fortressblast {haunted}into chat.");
+		CPrintToChat(client, "{orange}[Fortress Blast] {haunted}This server is running {yellow}Fortress Blast v1.1.1! {haunted}If you would like to know more or are unsure what a powerup does, type the command {yellow}!fortressblast {haunted}into chat.");
 	}
 }
 
@@ -319,15 +325,19 @@ public OnClientPutInServer(int client) {
 	CreateTimer(3.0, PesterThisDude, client);
 }
 
-int SpawnPower(float location[3], bool respawn) {
+int SpawnPower(float location[3], bool respawn, int id = 0) {
 	// First check if there is a powerup already here, in the case that a duplicate has spawned
 	int entity = CreateEntityByName("tf_halloween_pickup");
 	DispatchKeyValue(entity, "powerup_model", "models/fortressblast/pickups/fb_pickup.mdl");
 	DebugText("Spawning powerup entity %d at %f, %f, %f", entity, location[0], location[1], location[2]);
 	if (IsValidEdict(entity)) {
-		powerupid[entity] = GetRandomInt(1, NumberOfPowerups);
-		while (!PowerupIsEnabled(powerupid[entity])) {
+		if (id == 0) {
 			powerupid[entity] = GetRandomInt(1, NumberOfPowerups);
+			while (!PowerupIsEnabled(powerupid[entity])) {
+				powerupid[entity] = GetRandomInt(1, NumberOfPowerups);
+			}
+		} else {
+			powerupid[entity] = id;
 		}
 		if (powerupid[entity] == 1) {
 			SetEntityRenderColor(entity, 85, 102, 255, 255);
@@ -520,6 +530,10 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		}
 	}
 	PreviousAttack3[client] = (buttons > 33554431);
+	// Block placing sapping during Time Travel
+	if (TimeTravel[client]) {
+		buttons &= ~IN_ATTACK;
+	}
 	// Block placing buildings until Mega Mann stuck-check is complete
 	if (IsValidEntity(GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon"))) {
 		if (GetEntProp(GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon"), Prop_Send, "m_iItemDefinitionIndex") == 28 && !MegaMannStuckComplete[client] && MegaMann[client]) {
@@ -1079,4 +1093,51 @@ int Bitfieldify(int bitter) {
 		num = num * 2;
 	}
 	return (num / 2);
+}
+
+public Action SpawnPowerup(int client, int args){
+	if (client == 0) {
+		PrintToServer("[Fortress Blast] Because this command uses the crosshair, it cannot be executed from the server console.");
+		return Plugin_Handled;
+	}
+	float points[3];
+	GetCollisionPoint(client, points);
+	char arg1[3];
+	GetCmdArg(1, arg1, sizeof(arg1));
+	SpawnPower(points, false, StringToInt(arg1));
+	return Plugin_Handled;
+}
+
+stock GetCollisionPoint(client, float pos[3])
+{
+	float vOrigin[3];
+	float vAngles[3];
+	
+	GetClientEyePosition(client, vOrigin);
+	GetClientEyeAngles(client, vAngles);
+	
+	Handle trace = TR_TraceRayFilterEx(vOrigin, vAngles, MASK_SOLID, RayType_Infinite, TraceEntityFilterPlayer);
+	
+	if (TR_DidHit(trace)) {
+		TR_GetEndPosition(pos, trace);
+		CloseHandle(trace);
+		return;
+	}
+	CloseHandle(trace);
+}
+
+public bool TraceEntityFilterPlayer(entity, contentsMask) {
+	return entity > MaxClients;
+}  
+
+public OnTouchRespawnRoom(entity, other) {
+	if (other < 1 || other > MaxClients) return;
+	if (!IsClientInGame(other)) return;
+	if (!IsPlayerAlive(other)) return;
+	// Kill enemies inside spawnrooms
+	if (GetEntProp(entity, Prop_Send, "m_iTeamNum") != GetClientTeam(other) && (GetConVarInt(FindConVar("sm_fortressblast_spawnroom_kill")) > 0)) {
+		FakeClientCommandEx(other, "kill");
+		PrintToServer("[Fortress Blast] %N was killed due to being inside an enemy team spawnroom.", other);
+		CPrintToChat(other, "{orange}[Fortress Blast] {red}You were killed because you were inside the enemy spawn.");
+	}
 }
