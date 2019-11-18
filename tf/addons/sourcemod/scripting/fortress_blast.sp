@@ -325,15 +325,19 @@ public OnClientPutInServer(int client) {
 	CreateTimer(3.0, PesterThisDude, client);
 }
 
-int SpawnPower(float location[3], bool respawn) {
+int SpawnPower(float location[3], bool respawn, int id = 0) {
 	// First check if there is a powerup already here, in the case that a duplicate has spawned
 	int entity = CreateEntityByName("tf_halloween_pickup");
 	DispatchKeyValue(entity, "powerup_model", "models/fortressblast/pickups/fb_pickup.mdl");
 	DebugText("Spawning powerup entity %d at %f, %f, %f", entity, location[0], location[1], location[2]);
 	if (IsValidEdict(entity)) {
-		powerupid[entity] = GetRandomInt(1, NumberOfPowerups);
-		while (!PowerupIsEnabled(powerupid[entity])) {
+		if (id == 0) {
 			powerupid[entity] = GetRandomInt(1, NumberOfPowerups);
+			while (!PowerupIsEnabled(powerupid[entity])) {
+				powerupid[entity] = GetRandomInt(1, NumberOfPowerups);
+			}
+		} else {
+			powerupid[entity] = id;
 		}
 		if (powerupid[entity] == 1) {
 			SetEntityRenderColor(entity, 85, 102, 255, 255);
