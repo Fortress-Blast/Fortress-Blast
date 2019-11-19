@@ -294,7 +294,6 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 		}
 	}
 	GetPowerupPlacements();
-	DebugText("%d batches of gifts detected", AmountOfGiftBatches());
 	Gifts[2] = 0;
 	Gifts[3] = 0;
 	int i;
@@ -331,37 +330,12 @@ public OnGameFrame() {
 	}
 }
 
-int AmountOfGiftBatches() {
-	int batches = 1;
-	char batchname[20];
-	Format(batchname, sizeof(batchname), "fb_giftbatch_%d", batches);
-	while (CustomNameExists(batchname)) {
-		batches++;
-		Format(batchname, sizeof(batchname), "fb_giftbatch_%d", batches);
-	}
-	return (batches - 1);
-}
 
-bool CustomNameExists(const char[] name) {
-	int entity = 0;
-	while ((entity = FindEntityByClassname(entity, "info_target")) != -1) {
-		char name2[50];
-		GetEntPropString(entity, Prop_Data, "m_iName", name2, sizeof(name2));
-		if (StrEqual(name2, name)) {
-			return true;
-		}
-	}
-	return false;
-}
 
 RestockRandomBatch() {
 	int entity = 0;
-	char batchname[20];
-	Format(batchname, sizeof(batchname), "fb_giftbatch_%d", GetRandomInt(1, AmountOfGiftBatches()));
 	while ((entity = FindEntityByClassname(entity, "info_target")) != -1) {
-		char name2[50];
-		GetEntPropString(entity, Prop_Data, "m_iName", name2, sizeof(name2));
-		if (StrEqual(name2, batchname)) {
+		if (GetRandomInt(1,4) == 1) {
 			float coords[3];
 			GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
 			coords[2] += 8.0;
@@ -898,7 +872,7 @@ DoHudText(client) {
 		}		
 		CloseHandle(text);
 	}
-	if (GiftHunt) {
+	if (GiftHunt) {/*
 		Handle blue = CreateHudSynchronizer();
   		SetHudTextParams(0.4, 0.7, 0.25, 0, 0, 255, 255);
   		ShowSyncHudText(client, blue, "%d", Gifts[3]);
@@ -910,7 +884,11 @@ DoHudText(client) {
   		ShowSyncHudText(client, red, "%d", Gifts[2]);
   		CloseHandle(red);
   		CloseHandle(max);
-  		CloseHandle(blue);
+  		CloseHandle(blue);*/
+  		Handle gemtext = CreateHudSynchronizer();
+  		SetHudTextParams(-1.0, 0.7, 0.25, 111, 45, 182, 255);
+  		ShowSyncHudText(client, gemtext, "BLU: %d | Playing to %d gifts | RED: %d", Gifts[3], GetConVarInt(FindConVar("sm_fortressblast_gifthunt_goal")), Gifts[2]);
+  		CloseHandle(gemtext);
 	}
 }
 
