@@ -65,10 +65,9 @@ public OnPluginStart() {
 	HookEvent("teamplay_round_start", teamplay_round_start);
 	HookEvent("teamplay_round_win", teamplay_round_win);
 	HookEvent("player_death", player_death);
+	RegConsoleCmd("sm_fortressblast", FBMenu);
 	RegConsoleCmd("sm_setpowerup", SetPowerup);
 	RegAdminCmd("sm_spawnpowerup", SpawnPowerup, ADMFLAG_ROOT);
-	/* RegConsoleCmd("sm_particletest", ParticleTest); */
-	RegConsoleCmd("sm_fortressblast", FBMenu);
 	CreateConVar("sm_fortressblast_action_use", "attack3", "Which action to watch for in order to use powerups.");
 	CreateConVar("sm_fortressblast_bot", "1", "Disable or enable bots using powerups.");
 	CreateConVar("sm_fortressblast_bot_min", "2", "Minimum time for bots to use a powerup.");
@@ -80,7 +79,7 @@ public OnPluginStart() {
 	CreateConVar("sm_fortressblast_gifthunt_goal", "200", "Maximum amount of gifts to play to on Gift Hunt maps.");
 	CreateConVar("sm_fortressblast_mannpower", "2", "How to handle replacing Mannpower powerups.");
 	CreateConVar("sm_fortressblast_powerups", "-1", "Bitfield of which powerups to enable, a number within 1 and 1023.");
-	CreateConVar("sm_fortressblast_spawnroom_kill", "1", "Whether or not to kill players in the enemies spawnrooms. Setting this to 0 will allow an exploit with Mega Mann to get into the enemy spawn");
+	CreateConVar("sm_fortressblast_spawnroom_kill", "1", "Disable or enable killing enemies inside spawnrooms due to Mega Mann exploit.");
 	LoadTranslations("common.phrases");
 }
 
@@ -143,7 +142,6 @@ public OnMapStart() {
 	AddFileToDownloadsTable("materials/models/fortressblast/pickups/fb_pickup/pickup_fb.vmt");
 	AddFileToDownloadsTable("materials/models/fortressblast/pickups/fb_pickup/pickup_fb.vtf");
 	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.mdl");
-	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.mdl"); // Why is there two of this?
 	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.dx80.vtx");
 	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.dx90.vtx");
 	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.phy");
@@ -164,20 +162,17 @@ public TF2_OnConditionAdded(int client, TFCond condition) {
 }
 
 public Action FBMenu(int client, int args) {
-	AdvMOTD_ShowMOTDPanel(client, "How are you reading this?", "http://fortress-blast.github.io/2.0", MOTDPANEL_TYPE_URL, true, true, true, INVALID_FUNCTION);
+	int bitfield = GetConVarInt(FindConVar("sm_fortressblast_powerups"));
+	if (bitfield < 1 && bitfield > ((Bitfieldify(NumberOfPowerups) * 2) - 1)) {
+		bitfield = -1;
+	}
+	char url[200];
+	char action[15];
+	GetConVarString(FindConVar("sm_fortressblast_action_use"), action, sizeof(action));
+	Format(url, sizeof(url), "http://fortress-blast.github.io/2.0?powerups-enabled=%d&action=%s", bitfield, action);
+	AdvMOTD_ShowMOTDPanel(client, "How are you reading this?", url, MOTDPANEL_TYPE_URL, true, true, true, INVALID_FUNCTION);
 	CPrintToChat(client, "{orange}[Fortress Blast] {haunted}Opening Fortress Blast manual... If nothing happens, open your developer console and {yellow}try setting cl_disablehtmlmotd to 0{haunted}, then try again.");
 }
-
-/* public Action ParticleTest(int client, int args) {
-	if (GetConVarFloat(FindConVar("sm_fortressblast_debug")) < 1) {
-		CPrintToChat(client, "{orange}[Fortress Blast] {red}You do not have permission to use this command.");
-		return;
-	}
-	char arg[80];
-	GetCmdArg(1, arg, sizeof(arg));
-	PowerupParticle(client, arg, 5.0);
-	DebugText("%N is testing particle %s", client, arg);
-} */
 
 public Action SetPowerup(int client, int args) {
 	if (!CheckCommandAccess(client, "", ADMFLAG_ROOT) && GetConVarFloat(FindConVar("sm_fortressblast_debug")) < 1) {
@@ -296,10 +291,9 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 	GetPowerupPlacements();
 	Gifts[2] = 0;
 	Gifts[3] = 0;
-	int i;
-	while ((i = FindEntityByClassname(i, "func_respawnroom")) != -1)
-	{
-		SDKHook(i, SDKHook_TouchPost, OnTouchRespawnRoom);
+	int spawnrooms;
+	while ((spawnrooms = FindEntityByClassname(spawnrooms, "func_respawnroom")) != -1) {
+		SDKHook(spawnrooms, SDKHook_TouchPost, OnTouchRespawnRoom);
 	}
 }
 
@@ -316,7 +310,6 @@ public OnEntityDestroyed(int entity) {
 				char name2[50];
 				GetEntPropString(entity2, Prop_Data, "m_iName", name2, sizeof(name2));
 				if (StrEqual(name2, giftidsandstuff)) {
-					DebugText("%s was %s class is %s removing %d", name2, giftidsandstuff, classname, entity2);
 					RemoveEntity(entity2);
 				}
 			}
@@ -401,13 +394,12 @@ int SpawnPower(float location[3], bool respawn, int id = 0) {
 	DispatchKeyValue(entity, "powerup_model", "models/fortressblast/pickups/fb_pickup.mdl");
 	DebugText("Spawning powerup entity %d at %f, %f, %f", entity, location[0], location[1], location[2]);
 	if (IsValidEdict(entity)) {
-		if(id == 0){
+		if (id == 0) {
 			powerupid[entity] = GetRandomInt(1, NumberOfPowerups);
 			while (!PowerupIsEnabled(powerupid[entity])) {
 				powerupid[entity] = GetRandomInt(1, NumberOfPowerups);
 			}
-		}
-		else{
+		} else {
 			powerupid[entity] = id;
 		}
 		if (powerupid[entity] == 1) {
@@ -530,7 +522,6 @@ public Action OnStartTouchRespawn(entity, other) {
 	return Plugin_Continue;
 }
 
-
 public Action OnStartTouchDontRespawn(entity, other) {
 	DeletePowerup(entity, other);
 }
@@ -576,7 +567,6 @@ public Action SpawnPowerAfterDelay(Handle timer, any data) {
 	DebugText("Respawning powerup at %f, %f, %f", coords[0], coords[1], coords[2]);
 	SpawnPower(coords, true);
 }
-
 
 PlayPowerupSound(int client) {
 	float vel[3];
@@ -639,7 +629,8 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		}
 	}
 	PreviousAttack3[client] = (buttons > 33554431);
-	if(TimeTravel[client]){
+	// Block placing sapping during Time Travel
+	if (TimeTravel[client]) {
 		buttons &= ~IN_ATTACK;
 	}
 	// Block placing buildings until Mega Mann stuck-check is complete
@@ -872,19 +863,7 @@ DoHudText(client) {
 		}		
 		CloseHandle(text);
 	}
-	if (GiftHunt) {/*
-		Handle blue = CreateHudSynchronizer();
-  		SetHudTextParams(0.4, 0.7, 0.25, 0, 0, 255, 255);
-  		ShowSyncHudText(client, blue, "%d", Gifts[3]);
-  		Handle max = CreateHudSynchronizer();
-  		SetHudTextParams(0.43, 0.7, 0.25, 255, 255, 255, 255);
-  		ShowSyncHudText(client, max, "Playing to %d gifts", GetConVarInt(FindConVar("sm_fortressblast_gifthunt_goal")));
-  		Handle red = CreateHudSynchronizer();
-  		SetHudTextParams(0.6, 0.7, 0.25, 255, 64, 64, 255);
-  		ShowSyncHudText(client, red, "%d", Gifts[2]);
-  		CloseHandle(red);
-  		CloseHandle(max);
-  		CloseHandle(blue);*/
+	if (GiftHunt) {
   		Handle gemtext = CreateHudSynchronizer();
   		SetHudTextParams(-1.0, 0.7, 0.25, 111, 45, 182, 255);
   		ShowSyncHudText(client, gemtext, "BLU: %d | Playing to %d gifts | RED: %d", Gifts[3], GetConVarInt(FindConVar("sm_fortressblast_gifthunt_goal")), Gifts[2]);
@@ -1248,15 +1227,12 @@ bool PowerupIsEnabled(int id) {
 	int max = (Bitfieldify(NumberOfPowerups) * 2) - 1;
 	int bitfield = GetConVarInt(FindConVar("sm_fortressblast_powerups"));
 	if (bitfield == -1) {
-		return true; // intentionally bad. can't be 0 cause that's strings and stuff
-	} else if (bitfield < 1) {
-		PrintToServer("[Fortress Blast] Your powerup whitelist ConVar was not a valid bitfield. As a fallback, all powerups are allowed.");
+		return true; // All powerups enabled
+	} else if (bitfield < 1 || bitfield > max) {
+		PrintToServer("[Fortress Blast] Your powerup whitelist ConVar is out of range. As a fallback, all powerups are allowed.");
 		return true;
-	} else if (bitfield > max) {
-		PrintToServer("[Fortress Blast] Your powerup whitelist ConVar was impossibly large. As a fallback, all powerups are allowed.");
-		return true;
-	} else if(bitfield == 512) {
-		PrintToServer("[Fortress Blast] Your powerup whitelist ConVar only allowed Mystery. Due to selecting a random powerup, Mystery requires at least one other powerup to work and cannot be used on its own. As a fallback, all powerups are allowed.");
+	} else if (bitfield == 512) {
+		PrintToServer("[Fortress Blast] Your powerup whitelist ConVar is set to Mystery only. Mystery requires at least one other powerup to work and cannot be used on its own. As a fallback, all powerups are allowed.");
 		return true;
 	} // The below statement might need to merged with an else
 	if (bitfield & Bitfieldify(id)) {
@@ -1273,9 +1249,10 @@ int Bitfieldify(int bitter) {
 	}
 	return (num / 2);
 }
+
 public Action SpawnPowerup(int client, int args){
-	if(client == 0){
-		PrintToServer("Because this command uses your crosshair point, it cannot be used from the server console.");
+	if (client == 0) {
+		PrintToServer("[Fortress Blast] Because this command uses the crosshair, it cannot be executed from the server console.");
 		return Plugin_Handled;
 	}
 	float points[3];
@@ -1296,30 +1273,26 @@ stock GetCollisionPoint(client, float pos[3])
 	
 	Handle trace = TR_TraceRayFilterEx(vOrigin, vAngles, MASK_SOLID, RayType_Infinite, TraceEntityFilterPlayer);
 	
-	if(TR_DidHit(trace))
-	{
+	if (TR_DidHit(trace)) {
 		TR_GetEndPosition(pos, trace);
 		CloseHandle(trace);
-		
 		return;
 	}
-	
 	CloseHandle(trace);
 }
 
-public bool TraceEntityFilterPlayer(entity, contentsMask)
-{
+public bool TraceEntityFilterPlayer(entity, contentsMask) {
 	return entity > MaxClients;
 }  
 
-public OnTouchRespawnRoom(entity, other)
-{
+public OnTouchRespawnRoom(entity, other) {
 	if (other < 1 || other > MaxClients) return;
 	if (!IsClientInGame(other)) return;
 	if (!IsPlayerAlive(other)) return;
-	
-	if(GetEntProp(entity, Prop_Send, "m_iTeamNum") != GetClientTeam(other) && (GetConVarInt(FindConVar("sm_fortressblast_spawnroom_kill")) > 0)){
+	// Kill enemies inside spawnrooms
+	if (GetEntProp(entity, Prop_Send, "m_iTeamNum") != GetClientTeam(other) && (GetConVarInt(FindConVar("sm_fortressblast_spawnroom_kill")) > 0)) {
 		FakeClientCommandEx(other, "kill");
-		FakeClientCommand(other, "say I am bad at exploiting :))");
+		PrintToServer("[Fortress Blast] %N was killed due to being inside an enemy team spawnroom.", other);
+		CPrintToChat(other, "{orange}[Fortress Blast] {red}You were killed because you were inside the enemy spawn.");
 	}
 }
