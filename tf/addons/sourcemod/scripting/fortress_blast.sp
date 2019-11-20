@@ -131,12 +131,12 @@ public OnMapStart() {
 	AddFileToDownloadsTable("sound/fortressblast2/frosttouch_unfreeze.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/mystery_pickup.mp3");
 	
-	PrecacheSound("fortressblast2/gemhunt_gem_pickup.mp3");
-	PrecacheSound("fortressblast2/gemhunt_goal_enemyteam.mp3");
-	PrecacheSound("fortressblast2/gemhunt_goal_playerteam.mp3");
-	AddFileToDownloadsTable("sound/fortressblast2/gemhunt_gem_pickup.mp3");
-	AddFileToDownloadsTable("sound/fortressblast2/gemhunt_goal_enemyteam.mp3");
-	AddFileToDownloadsTable("sound/fortressblast2/gemhunt_goal_playerteam.mp3");
+	PrecacheSound("fortressblast2/gifthunt_gift_pickup.mp3");
+	PrecacheSound("fortressblast2/gifthunt_goal_enemyteam.mp3");
+	PrecacheSound("fortressblast2/gifthunt_goal_playerteam.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/gifthunt_gift_pickup.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/gifthunt_goal_enemyteam.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/gifthunt_goal_playerteam.mp3");
 	AddFileToDownloadsTable("materials/sprites/fortressblast/gift_located_here.vmt");
 	AddFileToDownloadsTable("materials/sprites/fortressblast/gift_located_here.vtf");
 	
