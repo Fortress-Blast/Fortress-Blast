@@ -80,6 +80,7 @@ public OnPluginStart() {
 	CreateConVar("sm_fortressblast_mannpower", "2", "How to handle replacing Mannpower powerups.");
 	CreateConVar("sm_fortressblast_powerups", "-1", "Bitfield of which powerups to enable, a number within 1 and 1023.");
 	CreateConVar("sm_fortressblast_spawnroom_kill", "1", "Disable or enable killing enemies inside spawnrooms due to Mega Mann exploit.");
+	CreateConVar("sm_fortressblast_gifthunt_rate", "20", "Percentage chance of any random gift to spawn.");
 	LoadTranslations("common.phrases");
 }
 
@@ -328,7 +329,9 @@ public OnGameFrame() {
 RestockRandomBatch() {
 	int entity = 0;
 	while ((entity = FindEntityByClassname(entity, "info_target")) != -1) {
-		if (GetRandomInt(1,4) == 1) {
+		char name2[50];
+		GetEntPropString(entity, Prop_Data, "m_iName", name2, sizeof(name2));
+		if (StrEqual(name2, "fb_giftspawn") && GetRandomInt(0,99) < GetConVarInt(FindConVar("sm_fortressblast_gifthunt_rate"))) {
 			float coords[3];
 			GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
 			coords[2] += 8.0;
@@ -865,7 +868,7 @@ DoHudText(client) {
 	}
 	if (GiftHunt) {
   		Handle gemtext = CreateHudSynchronizer();
-  		SetHudTextParams(-1.0, 0.7, 0.25, 111, 45, 182, 255);
+  		SetHudTextParams(-1.0, 0.775, 0.25, 111, 45, 182, 255);
   		ShowSyncHudText(client, gemtext, "BLU: %d | Playing to %d gifts | RED: %d", Gifts[3], GetConVarInt(FindConVar("sm_fortressblast_gifthunt_goal")), Gifts[2]);
   		CloseHandle(gemtext);
 	}
