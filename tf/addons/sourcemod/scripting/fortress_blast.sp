@@ -76,11 +76,11 @@ public OnPluginStart() {
 	CreateConVar("sm_fortressblast_drop", "1", "How to handle dropping powerups on death.");
 	CreateConVar("sm_fortressblast_drop_rate", "10", "Chance out of 100 for a powerup to drop on death.");
 	CreateConVar("sm_fortressblast_drop_teams", "1", "Set the teams that will drop powerups on death.");
-	CreateConVar("sm_fortressblast_gifthunt_goal", "200", "Maximum amount of gifts to play to on Gift Hunt maps.");
+	CreateConVar("sm_fortressblast_gifthunt_goal", "200", "Amount of gifts to play to on Gift Hunt maps.");
+	CreateConVar("sm_fortressblast_gifthunt_rate", "20", "Chance out of 100 for each gift to spawn once all gifts are collected.");
 	CreateConVar("sm_fortressblast_mannpower", "2", "How to handle replacing Mannpower powerups.");
 	CreateConVar("sm_fortressblast_powerups", "-1", "Bitfield of which powerups to enable, a number within 1 and 1023.");
 	CreateConVar("sm_fortressblast_spawnroom_kill", "1", "Disable or enable killing enemies inside spawnrooms due to Mega Mann exploit.");
-	CreateConVar("sm_fortressblast_gifthunt_rate", "20", "Percentage chance of any random gift to spawn.");
 	LoadTranslations("common.phrases");
 }
 
@@ -331,7 +331,7 @@ RestockRandomBatch() {
 	while ((entity = FindEntityByClassname(entity, "info_target")) != -1) {
 		char name2[50];
 		GetEntPropString(entity, Prop_Data, "m_iName", name2, sizeof(name2));
-		if (StrEqual(name2, "fb_giftspawn") && GetRandomInt(0,99) < GetConVarInt(FindConVar("sm_fortressblast_gifthunt_rate"))) {
+		if (StrEqual(name2, "fb_giftspawn") && GetRandomInt(0, 99) < GetConVarInt(FindConVar("sm_fortressblast_gifthunt_rate"))) {
 			float coords[3];
 			GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
 			coords[2] += 8.0;
