@@ -1,4 +1,4 @@
-**[Visit the developer wiki](https://github.com/Fortress-Blast/Fortress-Blast/wiki) for how to install Fortress Blast, as well as more in-depth information about the plugin.**
+**[Visit the wiki](https://fortressblast.miraheze.org/) for how to install Fortress Blast, as well as more in-depth information about the plugin.**
 
 ![Fortress Blast](https://fortress-blast.github.io/images/logo.png)
 
