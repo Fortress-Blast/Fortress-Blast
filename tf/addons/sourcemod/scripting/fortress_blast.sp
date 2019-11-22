@@ -254,6 +254,7 @@ public Action SetPowerup(int client, int args) {
 public Action teamplay_round_start(Event event, const char[] name, bool dontBroadcast) {
 	VictoryTime = false;
 	EntFire("fb_warningmessage", "Kill");
+	PlayersAmount = 0;
 	if (!GameRules_GetProp("m_bInWaitingForPlayers")) {
 		for (int client = 1; client <= MaxClients; client++) {
 			powerup[client] = 0;
@@ -374,7 +375,7 @@ int NumberOfActiveGifts() {
 
 public Action PesterThisDude(Handle timer, int client) {
 	if (IsClientInGame(client)) { // Required because player might disconnect before this fires
-		CPrintToChat(client, "{orange}[Fortress Blast] {haunted}This server is running {yellow}Fortress Blast v2.0! {haunted}If you would like to know more or are unsure what a powerup does, type the command {yellow}!fortressblast {haunted}into chat.");
+		CPrintToChat(client, "{orange}[Fortress Blast] {haunted}This server is running {yellow}Fortress Blast v2.0.1! {haunted}If you would like to know more or are unsure what a powerup does, type the command {yellow}!fortressblast {haunted}into chat.");
 	}
 }
 
@@ -628,7 +629,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		char button[40];
 		GetConVarString(FindConVar("sm_fortressblast_action_use"), button, sizeof(button));
 		CPrintToChat(client, "{orange}[Fortress Blast] {red}Special attack is currerntly disabled on this server. You are required to {yellow}perform the '%s' action to use a powerup.", button);
-	} else if (buttons & StringButtonInt() && IsPlayerAlive(client)) {
+	} else if (buttons & StringButtonInt() && IsPlayerAlive(client) && !FrostTouchFrozen[client]) {
 		UsePower(client);
 		// Only Super Speed should be blocked when carrying the PASS Time Jack
 	}
