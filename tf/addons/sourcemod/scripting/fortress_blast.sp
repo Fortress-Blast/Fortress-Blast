@@ -12,6 +12,8 @@
 #define MAX_PARTICLES 10 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
 
 int NumberOfPowerups = 10; // Do not define this
+int PlayersAmount;
+int giftgoal;
 int Gifts[4] = 0;
 int powerupid[MAX_EDICTS] = -1;
 int powerup[MAXPLAYERS + 1] = 0;
@@ -41,6 +43,9 @@ Handle MegaMannHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle FrostTouchHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle FrostTouchUnfreezeHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle DestroyPowerupHandle[MAX_EDICTS + 1] = INVALID_HANDLE;
+
+Handle texthand;
+Handle gemtext;
 
 /* Powerup IDs
 0 - No powerup if on player, gift if on powerup entity
@@ -76,12 +81,18 @@ public OnPluginStart() {
 	CreateConVar("sm_fortressblast_drop", "1", "How to handle dropping powerups on death.");
 	CreateConVar("sm_fortressblast_drop_rate", "10", "Chance out of 100 for a powerup to drop on death.");
 	CreateConVar("sm_fortressblast_drop_teams", "1", "Set the teams that will drop powerups on death.");
-	CreateConVar("sm_fortressblast_gifthunt_goal", "200", "Amount of gifts to play to on Gift Hunt maps.");
+	CreateConVar("sm_fortressblast_gifthunt_goal", "125", "Base goal before creating more by players");
+	CreateConVar("sm_fortressblast_gifthunt_increment", "25", "Amount to increment for every players count reach");
+	CreateConVar("sm_fortressblast_gifthunt_players", "4", "Amount to players there must be to increment another time");
 	CreateConVar("sm_fortressblast_gifthunt_rate", "20", "Chance out of 100 for each gift to spawn once all gifts are collected.");
 	CreateConVar("sm_fortressblast_mannpower", "2", "How to handle replacing Mannpower powerups.");
 	CreateConVar("sm_fortressblast_powerups", "-1", "Bitfield of which powerups to enable, a number within 1 and 1023.");
 	CreateConVar("sm_fortressblast_spawnroom_kill", "1", "Disable or enable killing enemies inside spawnrooms due to Mega Mann exploit.");
 	LoadTranslations("common.phrases");
+	
+	
+	texthand = CreateHudSynchronizer();
+	gemtext = CreateHudSynchronizer();
 }
 
 public OnMapStart() {
@@ -248,6 +259,7 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 		for (int client = 1; client <= MaxClients; client++) {
 			powerup[client] = 0;
 			if (IsClientInGame(client)) {
+				PlayersAmount++;
 				CreateTimer(3.0, PesterThisDude, client);
 				// Remove powerup effects on round start
 				SetEntityGravity(client, 1.0);
@@ -259,6 +271,9 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 			}
 		}
 	}
+	DebugText("Preparing gem function....");
+	CalculateGemAmountForPlayers();
+	DebugText("Gem function done called");
 	for (int entity = 1; entity <= MAX_EDICTS ; entity++) { // Remove leftover powerups
 		if (IsValidEntity(entity)) {
 			char classname[60];
@@ -297,7 +312,16 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 		SDKHook(spawnrooms, SDKHook_TouchPost, OnTouchRespawnRoom);
 	}
 }
-
+CalculateGemAmountForPlayers(){
+	giftgoal = GetConVarInt(FindConVar("sm_fortressblast_gifthunt_goal"));
+	DebugText("Base goal to %d from convar", giftgoal);
+	int a = RoundToFloor((PlayersAmount - 1) / GetConVarFloat(FindConVar("sm_fortressblast_gifthunt_players")));
+	if(a < 0){
+		a = 0;
+	}
+	giftgoal += (GetConVarInt(FindConVar("sm_fortressblast_gifthunt_increment")) * a);
+	DebugText("Final goal was %d", giftgoal);
+}
 public OnEntityDestroyed(int entity) {
 	if (IsValidEntity(entity) && entity > 0) {
 		ClearTimer(DestroyPowerupHandle[entity]); // This causes about half a second of lag when a new round starts. but not having it causes problems
@@ -841,36 +865,32 @@ public Action RecalcSpeed(Handle timer, int client) {
 
 DoHudText(client) {
 	if (powerup[client] != 0) {
-		Handle text = CreateHudSynchronizer();
   		SetHudTextParams(0.9, 0.5, 0.25, 255, 255, 0, 255);
   		if (powerup[client] == 1) {
-			ShowSyncHudText(client, text, "Collected powerup:\nSuper Bounce");
+			ShowSyncHudText(client, texthand, "Collected powerup:\nSuper Bounce");
 		} else if (powerup[client] == 2) {
-			ShowSyncHudText(client, text, "Collected powerup:\nShock Absorber");
+			ShowSyncHudText(client, texthand, "Collected powerup:\nShock Absorber");
 		} else if (powerup[client] == 3) {
-			ShowSyncHudText(client, text, "Collected powerup:\nSuper Speed");
+			ShowSyncHudText(client, texthand, "Collected powerup:\nSuper Speed");
 		} else if (powerup[client] == 4) {
-			ShowSyncHudText(client, text, "Collected powerup:\nSuper Jump");
+			ShowSyncHudText(client, texthand, "Collected powerup:\nSuper Jump");
 		} else if (powerup[client] == 5) {
-			ShowSyncHudText(client, text, "Collected powerup:\nGyrocopter");
+			ShowSyncHudText(client, texthand, "Collected powerup:\nGyrocopter");
 		} else if (powerup[client] == 6) {
-			ShowSyncHudText(client, text, "Collected powerup:\nTime Travel");
+			ShowSyncHudText(client, texthand, "Collected powerup:\nTime Travel");
 		} else if (powerup[client] == 7) {
-			ShowSyncHudText(client, text, "Collected powerup:\nBlast");
+			ShowSyncHudText(client, texthand, "Collected powerup:\nBlast");
 		} else if (powerup[client] == 8) {
-			ShowSyncHudText(client, text, "Collected powerup:\nMega Mann");
+			ShowSyncHudText(client, texthand, "Collected powerup:\nMega Mann");
 		} else if (powerup[client] == 9) {
-			ShowSyncHudText(client, text, "Collected powerup:\nFrost Touch");
+			ShowSyncHudText(client, texthand, "Collected powerup:\nFrost Touch");
 		} else if (powerup[client] == 10) {
-			ShowSyncHudText(client, text, "Collected powerup:\nMystery");
-		}		
-		CloseHandle(text);
+			ShowSyncHudText(client, texthand, "Collected powerup:\nMystery");
+		}
 	}
-	if (GiftHunt) {
-  		Handle gemtext = CreateHudSynchronizer();
-  		SetHudTextParams(-1.0, 0.775, 0.25, 111, 45, 182, 255);
-  		ShowSyncHudText(client, gemtext, "BLU: %d | Playing to %d gifts | RED: %d", Gifts[3], GetConVarInt(FindConVar("sm_fortressblast_gifthunt_goal")), Gifts[2]);
-  		CloseHandle(gemtext);
+	if (GiftHunt && !VictoryTime) {
+  		SetHudTextParams(-1.0, 0.775, 0.25, 255, 255, 255, 255);
+  		ShowSyncHudText(client, gemtext, "BLU: %d | Playing to %d gifts | RED: %d", Gifts[3], giftgoal, Gifts[2]);
 	}
 }
 
@@ -1180,9 +1200,9 @@ CollectedGift(int client) {
 	DebugText("%N has collected a gift", client);
 	float vel[3];
 	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel);
-	EmitAmbientSound("fortressblast2/gemhunt_gem_pickup.mp3", vel, client);
+	EmitAmbientSound("fortressblast2/gifthunt_gift_pickup.mp3", vel, client);
 	Gifts[GetClientTeam(client)]++;
-	if (Gifts[GetClientTeam(client)] == GetConVarInt(FindConVar("sm_fortressblast_gifthunt_goal"))) {
+	if (Gifts[GetClientTeam(client)] == giftgoal) {
 		if (GetClientTeam(client) == 2) {
 			EntFire("fb_giftscollected_red", "Trigger");
 			PrintCenterTextAll("RED team has collected the required number of gifts!");
@@ -1195,9 +1215,9 @@ CollectedGift(int client) {
 		for (int client2 = 1 ; client2 <= MaxClients ; client2++) {
 			if(IsClientInGame(client2)){
 				if (GetClientTeam(client2) == GetClientTeam(client)) {
-					EmitSoundToClient(client2, "fortressblast2/gemhunt_goal_playerteam.mp3", client2);
+					EmitSoundToClient(client2, "fortressblast2/gifthunt_goal_playerteam.mp3", client2);
 				} else {
-					EmitSoundToClient(client2, "fortressblast2/gemhunt_goal_enemyteam.mp3", client2);
+					EmitSoundToClient(client2, "fortressblast2/gifthunt_goal_enemyteam.mp3", client2);
 				}
 			}
 		}
