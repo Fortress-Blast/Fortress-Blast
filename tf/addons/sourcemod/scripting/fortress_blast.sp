@@ -22,7 +22,6 @@ int SpeedRotationsLeft[MAXPLAYERS + 1] = 80;
 bool PreviousAttack3[MAXPLAYERS + 1] = false;
 bool VictoryTime = false;
 bool MapHasJsonFile = false;
-bool GiftHunt = false;
 bool SuperBounce[MAXPLAYERS + 1] = false;
 bool ShockAbsorber[MAXPLAYERS + 1] = false;
 bool TimeTravel[MAXPLAYERS + 1] = false;
@@ -48,7 +47,6 @@ Handle texthand;
 Handle gemtext;
 
 /* Powerup IDs
-0 - No powerup if on player, gift if on powerup entity
 1 - Super Bounce
 2 - Shock Absorber
 3 - Super Speed
@@ -95,9 +93,6 @@ public OnPluginStart() {
 }
 
 public OnMapStart() {
-	GiftHunt = false;
-	Gifts[2] = 0;
-	Gifts[3] = 0;
 	PrecacheSound("fortressblast2/superbounce_pickup.mp3");
 	PrecacheSound("fortressblast2/superbounce_use.mp3");
 	PrecacheSound("fortressblast2/shockabsorber_pickup.mp3");
@@ -253,7 +248,6 @@ public Action SetPowerup(int client, int args) {
 
 public Action teamplay_round_start(Event event, const char[] name, bool dontBroadcast) {
 	VictoryTime = false;
-	EntFire("fb_warningmessage", "Kill");
 	if (!GameRules_GetProp("m_bInWaitingForPlayers")) {
 		for (int client = 1; client <= MaxClients; client++) {
 			powerup[client] = 0;
@@ -374,7 +368,7 @@ int NumberOfActiveGifts() {
 
 public Action PesterThisDude(Handle timer, int client) {
 	if (IsClientInGame(client)) { // Required because player might disconnect before this fires
-		CPrintToChat(client, "{orange}[Fortress Blast] {haunted}This server is running {yellow}Fortress Blast v2.0! {haunted}If you would like to know more or are unsure what a powerup does, type the command {yellow}!fortressblast {haunted}into chat.");
+		CPrintToChat(client, "{orange}[Fortress Blast] {haunted}This server is running {yellow}Fortress Blast v1.1.1! {haunted}If you would like to know more or are unsure what a powerup does, type the command {yellow}!fortressblast {haunted}into chat.");
 	}
 }
 
@@ -462,38 +456,6 @@ int SpawnPower(float location[3], bool respawn, int id = 0) {
 	return entity;
 }
 
-int SpawnGift(float location[3]) {
-	GiftHunt = true;
-	int entity = CreateEntityByName("tf_halloween_pickup");
-	if (IsValidEntity(entity)) {
-		DispatchKeyValue(entity, "powerup_model", "models/items/tf_gift.mdl");
-		DispatchKeyValue(entity, "pickup_sound", "get_out_of_the_console_snoop");
-		DispatchKeyValue(entity, "pickup_particle", "get_out_of_the_console_snoop");
-		char giftidsandstuff[20];
-		Format(giftidsandstuff, sizeof(giftidsandstuff), "fb_giftid_%d", entity);
-		DispatchKeyValue(entity, "targetname", giftidsandstuff);
-		AcceptEntityInput(entity, "EnableCollision");
-		DispatchSpawn(entity);
-		ActivateEntity(entity);
-		TeleportEntity(entity, location, NULL_VECTOR, NULL_VECTOR);
-		SDKHook(entity, SDKHook_StartTouch, OnStartTouchDontRespawn);
-		powerupid[entity] = 0;
-		int entity2 = CreateEntityByName("env_sprite");
-		if(IsValidEntity(entity2)){
-			DispatchKeyValue(entity2, "model", "sprites/fortressblast/gift_located_here.vmt");
-			//SetEntityFlags(entity2, 1);
-			DispatchKeyValue(entity2, "spawnflags", "1");
-			DispatchSpawn(entity2);
-			ActivateEntity(entity2);
-			float coords[3] = 69.420;
-			GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
-			coords[2] += 32.0;
-			TeleportEntity(entity2, coords, NULL_VECTOR, NULL_VECTOR);
-			DispatchKeyValue(entity2, "targetname", giftidsandstuff);
-		}
-	}
-}
-
 public Action OnStartTouchFrozen(entity, other) {
 	// Test that using player and touched player are both valid targets
 	if (entity > 0 && entity <= MaxClients && other > 0 && other <= MaxClients && IsClientInGame(entity) && IsClientInGame(other)) {
@@ -552,10 +514,6 @@ public Action OnStartTouchDontRespawn(entity, other) {
 
 DeletePowerup(int entity, other) {
 	RemoveEntity(entity);
-	if (powerupid[entity] == 0) {
-		CollectedGift(other);
-		return;
-	}
 	powerup[other] = powerupid[entity];
 	DebugText("%N has collected powerup ID %d", other, powerup[other]);
 	PlayPowerupSound(other);
