@@ -74,22 +74,21 @@ public OnPluginStart() {
 	RegConsoleCmd("sm_setpowerup", SetPowerup);
 	RegAdminCmd("sm_spawnpowerup", SpawnPowerup, ADMFLAG_ROOT);
 	CreateConVar("sm_fortressblast_action_use", "attack3", "Which action to watch for in order to use powerups.");
-	CreateConVar("sm_fortressblast_bot", "1", "Disable or enable bots using powerups.");
+	CreateConVar("sm_fortressblast_bot", "1", "Disables or enables bots using powerups.");
 	CreateConVar("sm_fortressblast_bot_min", "2", "Minimum time for bots to use a powerup.");
 	CreateConVar("sm_fortressblast_bot_max", "15", "Maximum time for bots to use a powerup.");
-	CreateConVar("sm_fortressblast_debug", "0", "Disable or enable command permission overrides and debug messages in chat.");
+	CreateConVar("sm_fortressblast_debug", "0", "Disables or enables command permission overrides and debug messages in chat.");
 	CreateConVar("sm_fortressblast_drop", "1", "How to handle dropping powerups on death.");
 	CreateConVar("sm_fortressblast_drop_rate", "10", "Chance out of 100 for a powerup to drop on death.");
-	CreateConVar("sm_fortressblast_drop_teams", "1", "Set the teams that will drop powerups on death.");
-	CreateConVar("sm_fortressblast_gifthunt_goal", "125", "Base goal before creating more by players");
-	CreateConVar("sm_fortressblast_gifthunt_increment", "25", "Amount to increment for every players count reach");
-	CreateConVar("sm_fortressblast_gifthunt_players", "4", "Amount to players there must be to increment another time");
+	CreateConVar("sm_fortressblast_drop_teams", "1", "Teams that will drop powerups on death.");
+	CreateConVar("sm_fortressblast_gifthunt_goal", "125", "Base number of gifts required to unlock the objective in Gift Hunt.");
+	CreateConVar("sm_fortressblast_gifthunt_increment", "25", "Amount to increase the gift goal per extra group of players.");
+	CreateConVar("sm_fortressblast_gifthunt_players", "4", "Number of players in a group, any more and the gift goal increases.");
 	CreateConVar("sm_fortressblast_gifthunt_rate", "20", "Chance out of 100 for each gift to spawn once all gifts are collected.");
 	CreateConVar("sm_fortressblast_mannpower", "2", "How to handle replacing Mannpower powerups.");
 	CreateConVar("sm_fortressblast_powerups", "-1", "Bitfield of which powerups to enable, a number within 1 and 1023.");
-	CreateConVar("sm_fortressblast_spawnroom_kill", "1", "Disable or enable killing enemies inside spawnrooms due to Mega Mann exploit.");
+	CreateConVar("sm_fortressblast_spawnroom_kill", "1", "Disables or enables killing enemies inside spawnrooms due to Mega Mann exploit.");
 	LoadTranslations("common.phrases");
-	
 	
 	texthand = CreateHudSynchronizer();
 	gemtext = CreateHudSynchronizer();
@@ -271,9 +270,7 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 			}
 		}
 	}
-	DebugText("Preparing gem function....");
 	CalculateGemAmountForPlayers();
-	DebugText("Gem function done called");
 	for (int entity = 1; entity <= MAX_EDICTS ; entity++) { // Remove leftover powerups
 		if (IsValidEntity(entity)) {
 			char classname[60];
@@ -285,7 +282,7 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 		}
 	}
 	for (int entity = 1; entity <= MAX_EDICTS ; entity++) { // Add powerups and replace Mannpower
-		if(IsValidEntity(entity)){
+		if (IsValidEntity(entity)) {
 			char classname[60];
 			GetEntityClassname(entity, classname, sizeof(classname));
 			if (FindEntityByClassname(0, "tf_logic_mannpower") != -1 && GetConVarInt(FindConVar("sm_fortressblast_mannpower")) != 0) {
@@ -312,22 +309,24 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 		SDKHook(spawnrooms, SDKHook_TouchPost, OnTouchRespawnRoom);
 	}
 }
-CalculateGemAmountForPlayers(){
+
+CalculateGemAmountForPlayers() {
 	giftgoal = GetConVarInt(FindConVar("sm_fortressblast_gifthunt_goal"));
-	DebugText("Base goal to %d from convar", giftgoal);
-	int a = RoundToFloor((PlayersAmount - 1) / GetConVarFloat(FindConVar("sm_fortressblast_gifthunt_players")));
-	if(a < 0){
-		a = 0;
+	DebugText("Base gift goal is %d", giftgoal);
+	int steps = RoundToFloor((PlayersAmount - 1) / GetConVarFloat(FindConVar("sm_fortressblast_gifthunt_players")));
+	if (steps < 0) {
+		steps = 0;
 	}
-	giftgoal += (GetConVarInt(FindConVar("sm_fortressblast_gifthunt_increment")) * a);
-	DebugText("Final goal was %d", giftgoal);
+	giftgoal += (GetConVarInt(FindConVar("sm_fortressblast_gifthunt_increment")) * steps);
+	DebugText("Calculated gift goal is %d", giftgoal);
 }
+
 public OnEntityDestroyed(int entity) {
 	if (IsValidEntity(entity) && entity > 0) {
 		ClearTimer(DestroyPowerupHandle[entity]); // This causes about half a second of lag when a new round starts. but not having it causes problems
 		char classname[60];
 		GetEntityClassname(entity, classname, sizeof(classname));
-		if(StrEqual(classname, "tf_halloween_pickup") && powerupid[entity] == 0){ // this is just an optimizer, the same thing would happen without this but slower
+		if(StrEqual(classname, "tf_halloween_pickup") && powerupid[entity] == 0){ // This is just an optimizer, the same thing would happen without this but slower
 			char giftidsandstuff[20];
 			Format(giftidsandstuff, sizeof(giftidsandstuff), "fb_giftid_%d", entity);
 			int entity2 = 0;
@@ -347,8 +346,6 @@ public OnGameFrame() {
 		RestockRandomBatch();
 	}
 }
-
-
 
 RestockRandomBatch() {
 	int entity = 0;
