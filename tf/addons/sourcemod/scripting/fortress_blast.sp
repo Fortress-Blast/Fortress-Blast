@@ -47,6 +47,22 @@ Handle DestroyPowerupHandle[MAX_EDICTS + 1] = INVALID_HANDLE;
 Handle texthand;
 Handle gemtext;
 
+ConVar sm_fortressblast_action_use;
+ConVar sm_fortressblast_bot;
+ConVar sm_fortressblast_bot_min;
+ConVar sm_fortressblast_bot_max;
+ConVar sm_fortressblast_debug;
+ConVar sm_fortressblast_drop;
+ConVar sm_fortressblast_drop_rate;
+ConVar sm_fortressblast_drop_teams;
+ConVar sm_fortressblast_gifthunt_goal;
+ConVar sm_fortressblast_gifthunt_increment;
+ConVar sm_fortressblast_gifthunt_players;
+ConVar sm_fortressblast_gifthunt_rate;
+ConVar sm_fortressblast_mannpower;
+ConVar sm_fortressblast_powerups;
+ConVar sm_fortressblast_spawnroom_kill;
+
 /* Powerup IDs
 0 - No powerup if on player, gift if on powerup entity
 1 - Super Bounce
@@ -73,23 +89,22 @@ public OnPluginStart() {
 	RegConsoleCmd("sm_fortressblast", FBMenu);
 	RegConsoleCmd("sm_setpowerup", SetPowerup);
 	RegAdminCmd("sm_spawnpowerup", SpawnPowerup, ADMFLAG_ROOT);
-	CreateConVar("sm_fortressblast_action_use", "attack3", "Which action to watch for in order to use powerups.");
-	CreateConVar("sm_fortressblast_bot", "1", "Disables or enables bots using powerups.");
-	CreateConVar("sm_fortressblast_bot_min", "2", "Minimum time for bots to use a powerup.");
-	CreateConVar("sm_fortressblast_bot_max", "15", "Maximum time for bots to use a powerup.");
-	CreateConVar("sm_fortressblast_debug", "0", "Disables or enables command permission overrides and debug messages in chat.");
-	CreateConVar("sm_fortressblast_drop", "1", "How to handle dropping powerups on death.");
-	CreateConVar("sm_fortressblast_drop_rate", "10", "Chance out of 100 for a powerup to drop on death.");
-	CreateConVar("sm_fortressblast_drop_teams", "1", "Teams that will drop powerups on death.");
-	CreateConVar("sm_fortressblast_gifthunt_goal", "125", "Base number of gifts required to unlock the objective in Gift Hunt.");
-	CreateConVar("sm_fortressblast_gifthunt_increment", "25", "Amount to increase the gift goal per extra group of players.");
-	CreateConVar("sm_fortressblast_gifthunt_players", "4", "Number of players in a group, any more and the gift goal increases.");
-	CreateConVar("sm_fortressblast_gifthunt_rate", "20", "Chance out of 100 for each gift to spawn once all gifts are collected.");
-	CreateConVar("sm_fortressblast_mannpower", "2", "How to handle replacing Mannpower powerups.");
-	CreateConVar("sm_fortressblast_powerups", "-1", "Bitfield of which powerups to enable, a number within 1 and 1023.");
-	CreateConVar("sm_fortressblast_spawnroom_kill", "1", "Disables or enables killing enemies inside spawnrooms due to Mega Mann exploit.");
 	LoadTranslations("common.phrases");
-	
+	sm_fortressblast_action_use = CreateConVar("sm_fortressblast_action_use", "attack3", "Which action to watch for in order to use powerups.");
+	sm_fortressblast_bot = CreateConVar("sm_fortressblast_bot", "1", "Disables or enables bots using powerups.");
+	sm_fortressblast_bot_min = CreateConVar("sm_fortressblast_bot_min", "2", "Minimum time for bots to use a powerup.");
+	sm_fortressblast_bot_max = CreateConVar("sm_fortressblast_bot_max", "15", "Maximum time for bots to use a powerup.");
+	sm_fortressblast_debug = CreateConVar("sm_fortressblast_debug", "0", "Disables or enables command permission overrides and debug messages in chat.");
+	sm_fortressblast_drop = CreateConVar("sm_fortressblast_drop", "1", "How to handle dropping powerups on death.");
+	sm_fortressblast_drop_rate = CreateConVar("sm_fortressblast_drop_rate", "10", "Chance out of 100 for a powerup to drop on death.");
+	sm_fortressblast_drop_teams = CreateConVar("sm_fortressblast_drop_teams", "1", "Teams that will drop powerups on death.");
+	sm_fortressblast_gifthunt_goal = CreateConVar("sm_fortressblast_gifthunt_goal", "125", "Base number of gifts required to unlock the objective in Gift Hunt.");
+	sm_fortressblast_gifthunt_increment = CreateConVar("sm_fortressblast_gifthunt_increment", "25", "Amount to increase the gift goal per extra group of players.");
+	sm_fortressblast_gifthunt_players = CreateConVar("sm_fortressblast_gifthunt_players", "4", "Number of players in a group, any more and the gift goal increases.");
+	sm_fortressblast_gifthunt_rate = CreateConVar("sm_fortressblast_gifthunt_rate", "20", "Chance out of 100 for each gift to spawn once all gifts are collected.");
+	sm_fortressblast_mannpower = CreateConVar("sm_fortressblast_mannpower", "2", "How to handle replacing Mannpower powerups.");
+	sm_fortressblast_powerups = CreateConVar("sm_fortressblast_powerups", "-1", "Bitfield of which powerups to enable, a number within 1 and 1023.");
+	sm_fortressblast_spawnroom_kill = CreateConVar("sm_fortressblast_spawnroom_kill", "1", "Disables or enables killing enemies inside spawnrooms due to Mega Mann exploit.");
 	texthand = CreateHudSynchronizer();
 	gemtext = CreateHudSynchronizer();
 }
@@ -173,20 +188,20 @@ public TF2_OnConditionAdded(int client, TFCond condition) {
 }
 
 public Action FBMenu(int client, int args) {
-	int bitfield = GetConVarInt(FindConVar("sm_fortressblast_powerups"));
+	int bitfield = GetConVarInt(sm_fortressblast_powerups);
 	if (bitfield < 1 && bitfield > ((Bitfieldify(NumberOfPowerups) * 2) - 1)) {
 		bitfield = -1;
 	}
 	char url[200];
 	char action[15];
-	GetConVarString(FindConVar("sm_fortressblast_action_use"), action, sizeof(action));
+	GetConVarString(sm_fortressblast_action_use, action, sizeof(action));
 	Format(url, sizeof(url), "http://fortress-blast.github.io/2.0?powerups-enabled=%d&action=%s", bitfield, action);
 	AdvMOTD_ShowMOTDPanel(client, "How are you reading this?", url, MOTDPANEL_TYPE_URL, true, true, true, INVALID_FUNCTION);
 	CPrintToChat(client, "{orange}[Fortress Blast] {haunted}Opening Fortress Blast manual... If nothing happens, open your developer console and {yellow}try setting cl_disablehtmlmotd to 0{haunted}, then try again.");
 }
 
 public Action SetPowerup(int client, int args) {
-	if (!CheckCommandAccess(client, "", ADMFLAG_ROOT) && GetConVarFloat(FindConVar("sm_fortressblast_debug")) < 1) {
+	if (!CheckCommandAccess(client, "", ADMFLAG_ROOT) && GetConVarFloat(sm_fortressblast_debug) < 1) {
 		CPrintToChat(client, "{orange}[Fortress Blast] {red}You do not have permission to use this command.");
 		return;
 	}
@@ -235,13 +250,13 @@ public Action SetPowerup(int client, int args) {
 	powerup[player] = StringToInt(arg2);
 	PlayPowerupSound(player);
 	// If player is a bot and bot support is enabled
-	if (IsFakeClient(player) && GetConVarFloat(FindConVar("sm_fortressblast_bot")) >= 1) { // Replace with GetConVarBool
+	if (IsFakeClient(player) && GetConVarFloat(sm_fortressblast_bot) >= 1) { // Replace with GetConVarBool
 		// Get minimum and maximum times
-		float convar1 = GetConVarFloat(FindConVar("sm_fortressblast_bot_min"));
+		float convar1 = GetConVarFloat(sm_fortressblast_bot_min);
 		if (convar1 < 0) {
 			convar1 == 0;
 		}
-		float convar2 = GetConVarFloat(FindConVar("sm_fortressblast_bot_max"));
+		float convar2 = GetConVarFloat(sm_fortressblast_bot_max);
 		if (convar2 < convar1) {
 			convar2 == convar1;
 		}
@@ -286,8 +301,8 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 		if (IsValidEntity(entity)) {
 			char classname[60];
 			GetEntityClassname(entity, classname, sizeof(classname));
-			if (FindEntityByClassname(0, "tf_logic_mannpower") != -1 && GetConVarInt(FindConVar("sm_fortressblast_mannpower")) != 0) {
-				if ((!MapHasJsonFile || GetConVarInt(FindConVar("sm_fortressblast_mannpower")) == 2)) {
+			if (FindEntityByClassname(0, "tf_logic_mannpower") != -1 && GetConVarInt(sm_fortressblast_mannpower) != 0) {
+				if ((!MapHasJsonFile || GetConVarInt(sm_fortressblast_mannpower) == 2)) {
 					if (StrEqual(classname, "item_powerup_rune") || StrEqual(classname, "item_powerup_crit") || StrEqual(classname, "item_powerup_uber") || StrEqual(classname, "info_powerup_spawn")) {
 						if (StrEqual(classname, "info_powerup_spawn")) {
 							float coords[3] = 69.420;
@@ -312,13 +327,13 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 }
 
 CalculateGemAmountForPlayers() {
-	giftgoal = GetConVarInt(FindConVar("sm_fortressblast_gifthunt_goal"));
+	giftgoal = GetConVarInt(sm_fortressblast_gifthunt_goal);
 	DebugText("Base gift goal is %d", giftgoal);
-	int steps = RoundToFloor((PlayersAmount - 1) / GetConVarFloat(FindConVar("sm_fortressblast_gifthunt_players")));
+	int steps = RoundToFloor((PlayersAmount - 1) / GetConVarFloat(sm_fortressblast_gifthunt_players));
 	if (steps < 0) {
 		steps = 0;
 	}
-	giftgoal += (GetConVarInt(FindConVar("sm_fortressblast_gifthunt_increment")) * steps);
+	giftgoal += (GetConVarInt(sm_fortressblast_gifthunt_increment) * steps);
 	DebugText("Calculated gift goal is %d", giftgoal);
 }
 
@@ -353,7 +368,7 @@ RestockRandomBatch() {
 	while ((entity = FindEntityByClassname(entity, "info_target")) != -1) {
 		char name2[50];
 		GetEntPropString(entity, Prop_Data, "m_iName", name2, sizeof(name2));
-		if (StrEqual(name2, "fb_giftspawn") && GetRandomInt(0, 99) < GetConVarInt(FindConVar("sm_fortressblast_gifthunt_rate"))) {
+		if (StrEqual(name2, "fb_giftspawn") && GetRandomInt(0, 99) < GetConVarInt(sm_fortressblast_gifthunt_rate)) {
 			float coords[3];
 			GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
 			coords[2] += 8.0;
@@ -386,11 +401,11 @@ public Action teamplay_round_win(Event event, const char[] name, bool dontBroadc
 public Action player_death(Event event, const char[] name, bool dontBroadcast) {
 	powerup[GetClientOfUserId(event.GetInt("userid"))] = 0;
 	// Is dropping powerups enabled
-	if (GetConVarFloat(FindConVar("sm_fortressblast_drop")) == 2 || (GetConVarFloat(FindConVar("sm_fortressblast_drop")) && !MapHasJsonFile)) { // Replace with GetConVarBool
+	if (GetConVarFloat(sm_fortressblast_drop) == 2 || (GetConVarFloat(sm_fortressblast_drop) && !MapHasJsonFile)) { // Replace with GetConVarBool
 		// Get chance a powerup will be dropped
-		float convar = GetConVarFloat(FindConVar("sm_fortressblast_drop_rate"));
+		float convar = GetConVarFloat(sm_fortressblast_drop_rate);
 		int randomNumber = GetRandomInt(0, 99);
-		if (convar > randomNumber && (GetConVarInt(FindConVar("sm_fortressblast_drop_teams")) == GetClientTeam(GetClientOfUserId(event.GetInt("userid"))) || GetConVarInt(FindConVar("sm_fortressblast_drop_teams")) == 1)) {
+		if (convar > randomNumber && (GetConVarInt(sm_fortressblast_drop_teams) == GetClientTeam(GetClientOfUserId(event.GetInt("userid"))) || GetConVarInt(sm_fortressblast_drop_teams) == 1)) {
 			DebugText("Dropping powerup due to player death");
 			float coords[3];
 			GetEntPropVector(GetClientOfUserId(event.GetInt("userid")), Prop_Send, "m_vecOrigin", coords);
@@ -561,13 +576,13 @@ DeletePowerup(int entity, other) {
 	DebugText("%N has collected powerup ID %d", other, powerup[other]);
 	PlayPowerupSound(other);
 	// If player is a bot and bot support is enabled
-	if (IsFakeClient(other) && GetConVarFloat(FindConVar("sm_fortressblast_bot")) >= 1) { // Replace with GetConVarBool
+	if (IsFakeClient(other) && GetConVarFloat(sm_fortressblast_bot) >= 1) { // Replace with GetConVarBool
 		// Get minimum and maximum times
-		float convar1 = GetConVarFloat(FindConVar("sm_fortressblast_bot_min"));
+		float convar1 = GetConVarFloat(sm_fortressblast_bot_min);
 		if (convar1 < 0) {
 			convar1 == 0;
 		}
-		float convar2 = GetConVarFloat(FindConVar("sm_fortressblast_bot_max"));
+		float convar2 = GetConVarFloat(sm_fortressblast_bot_max);
 		if (convar2 < convar1) {
 			convar2 == convar1;
 		}
@@ -627,7 +642,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	}
 	if (buttons & 33554432 && (!PreviousAttack3[client]) && StringButtonInt() != 33554432) {
 		char button[40];
-		GetConVarString(FindConVar("sm_fortressblast_action_use"), button, sizeof(button));
+		GetConVarString(sm_fortressblast_action_use, button, sizeof(button));
 		CPrintToChat(client, "{orange}[Fortress Blast] {red}Special attack is currerntly disabled on this server. You are required to {yellow}perform the '%s' action to use a powerup.", button);
 	} else if (buttons & StringButtonInt() && IsPlayerAlive(client) && !FrostTouchFrozen[client]) {
 		UsePower(client);
@@ -1050,7 +1065,7 @@ public Action RemoveParticle(Handle timer, any data) {
 }
 
 DebugText(const char[] text, any ...) {
-	if (GetConVarFloat(FindConVar("sm_fortressblast_debug")) >= 1) {
+	if (GetConVarFloat(sm_fortressblast_debug) >= 1) {
 		int len = strlen(text) + 255;
 		char[] format = new char[len];
 		VFormat(format, len, text, 2);
@@ -1061,7 +1076,7 @@ DebugText(const char[] text, any ...) {
 
 int StringButtonInt() {
 	char button[40];
-	GetConVarString(FindConVar("sm_fortressblast_action_use"), button, sizeof(button));
+	GetConVarString(sm_fortressblast_action_use, button, sizeof(button));
 	if (StrEqual(button, "attack")) {
 		return 1;
 	} else if (StrEqual(button, "jump")) {
@@ -1246,7 +1261,7 @@ public Action DeleteEdict(Handle timer, int entity) {
 
 bool PowerupIsEnabled(int id) {
 	int max = (Bitfieldify(NumberOfPowerups) * 2) - 1;
-	int bitfield = GetConVarInt(FindConVar("sm_fortressblast_powerups"));
+	int bitfield = GetConVarInt(sm_fortressblast_powerups);
 	if (bitfield == -1) {
 		return true; // All powerups enabled
 	} else if (bitfield < 1 || bitfield > max) {
@@ -1311,7 +1326,7 @@ public OnTouchRespawnRoom(entity, other) {
 	if (!IsClientInGame(other)) return;
 	if (!IsPlayerAlive(other)) return;
 	// Kill enemies inside spawnrooms
-	if (GetEntProp(entity, Prop_Send, "m_iTeamNum") != GetClientTeam(other) && (GetConVarInt(FindConVar("sm_fortressblast_spawnroom_kill")) > 0)) {
+	if (GetEntProp(entity, Prop_Send, "m_iTeamNum") != GetClientTeam(other) && (GetConVarInt(sm_fortressblast_spawnroom_kill) > 0)) {
 		FakeClientCommandEx(other, "kill");
 		PrintToServer("[Fortress Blast] %N was killed due to being inside an enemy team spawnroom.", other);
 		CPrintToChat(other, "{orange}[Fortress Blast] {red}You were killed because you were inside the enemy spawn.");
