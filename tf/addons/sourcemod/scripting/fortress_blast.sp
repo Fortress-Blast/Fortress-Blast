@@ -1326,7 +1326,7 @@ public OnTouchRespawnRoom(entity, other) {
 	if (!IsClientInGame(other)) return;
 	if (!IsPlayerAlive(other)) return;
 	// Kill enemies inside spawnrooms
-	if (GetEntProp(entity, Prop_Send, "m_iTeamNum") != GetClientTeam(other) && (GetConVarInt(sm_fortressblast_spawnroom_kill) > 0)) {
+	if (GetEntProp(entity, Prop_Send, "m_iTeamNum") != GetClientTeam(other) && (GetConVarInt(sm_fortressblast_spawnroom_kill) > 0) && !VictoryTime) {
 		FakeClientCommandEx(other, "kill");
 		PrintToServer("[Fortress Blast] %N was killed due to being inside an enemy team spawnroom.", other);
 		CPrintToChat(other, "{orange}[Fortress Blast] {red}You were killed because you were inside the enemy spawn.");
