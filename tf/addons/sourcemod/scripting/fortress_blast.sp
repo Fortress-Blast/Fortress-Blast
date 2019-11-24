@@ -11,7 +11,7 @@
 #define	MAX_EDICTS (1<<MAX_EDICT_BITS)
 #define MAX_PARTICLES 10 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
 
-int NumberOfPowerups = 10; // Do not define this
+int NumberOfPowerups = 11; // Do not define this
 int PlayersAmount;
 int giftgoal;
 int Gifts[4] = 0;
@@ -43,6 +43,7 @@ Handle MegaMannHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle FrostTouchHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle FrostTouchUnfreezeHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle DestroyPowerupHandle[MAX_EDICTS + 1] = INVALID_HANDLE;
+Handle TeleportationHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 
 Handle texthand;
 Handle gemtext;
@@ -74,7 +75,8 @@ ConVar sm_fortressblast_spawnroom_kill;
 7 - Blast
 8 - Mega Mann
 9 - Frost Touch
-10 - Mystery */
+10 - Mystery
+11 - Teleportation*/
 
 public OnPluginStart() {
 	for (int client = 1; client <= MaxClients ; client++) {
@@ -134,6 +136,8 @@ public OnMapStart() {
 	PrecacheSound("fortressblast2/frosttouch_freeze.mp3");
 	PrecacheSound("fortressblast2/frosttouch_unfreeze.mp3");
 	PrecacheSound("fortressblast2/mystery_pickup.mp3");
+	PrecacheSound("fortressblast2/teleportation_pickup.mp3");
+	PrecacheSound("fortressblast2/teleportation_use.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/superbounce_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/superbounce_use.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/shockabsorber_pickup.mp3");
@@ -155,6 +159,8 @@ public OnMapStart() {
 	AddFileToDownloadsTable("sound/fortressblast2/frosttouch_freeze.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/frosttouch_unfreeze.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/mystery_pickup.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/teleportation_pickup.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/teleportation_use.mp3");
 	
 	PrecacheSound("fortressblast2/gifthunt_gift_pickup.mp3");
 	PrecacheSound("fortressblast2/gifthunt_goal_enemyteam.mp3");
@@ -357,6 +363,8 @@ public OnEntityDestroyed(int entity) {
 	}
 }
 
+
+
 public OnGameFrame() {
 	if (NumberOfActiveGifts() == 0) {
 		RestockRandomBatch();
@@ -462,6 +470,8 @@ int SpawnPower(float location[3], bool respawn, int id = 0) {
 			SetEntityRenderColor(entity, 255, 187, 255, 255);
 		} else if (powerupid[entity] == 10) {
 			SetEntityRenderColor(entity, 0, 0, 0, 255);
+		} else if (powerupid[entity] == 11) {
+			SetEntityRenderColor(entity, 255, 153, 153, 255);
 		}
 		DispatchKeyValue(entity, "pickup_sound", "get_out_of_the_console_snoop");
 		DispatchKeyValue(entity, "pickup_particle", "get_out_of_the_console_snoop");
@@ -631,6 +641,8 @@ PlayPowerupSound(int client) {
 		EmitSoundToClient(client, "fortressblast2/frosttouch_pickup.mp3", client);
 	} else if (powerup[client] == 10) {
 		EmitSoundToClient(client, "fortressblast2/mystery_pickup.mp3", client);
+	} else if (powerup[client] == 11) {
+		EmitSoundToClient(client, "fortressblast2/teleportation_pickup.mp3", client);
 	}
 }
 
@@ -799,10 +811,71 @@ UsePower(client) {
 		}
 		powerup[client] = mysrand;
 		UsePower(client);
+	} else if (powerup[client] == 11) {
+		ClearTimer(TeleportationHandle[client]);
+		TeleportationHandle[client] = CreateTimer(0.5, BeginTeleporter, client);
+		EmitAmbientSound("fortressblast2/teleportation_use.mp3", vel, client);
+		PowerupParticle(client, "teleported_flash", 0.5);
+		int clients[2];
+		clients[0] = client;	
+		
+		int duration = 255;
+		int holdtime = 255;
+		int flags = 0x0002;
+		int color[4] = { 0, 0, 0, 255};
+		color[0] = 255;
+		color[1] = 255;
+		color[2] = 255;
+		UserMsg g_FadeUserMsgId = GetUserMessageId("Fade");
+		Handle message = StartMessageEx(g_FadeUserMsgId, clients, 1);
+		if (GetUserMessageType() == UM_Protobuf)
+		{
+			Protobuf pb = UserMessageToProtobuf(message);
+			pb.SetInt("duration", duration);
+			pb.SetInt("hold_time", holdtime);
+			pb.SetInt("flags", flags);	
+			pb.SetColor("clr", color);
+		}
+		else
+		{
+			BfWriteShort(message, duration);
+			BfWriteShort(message, holdtime);	
+			BfWriteShort(message, flags);
+			BfWriteByte(message, color[0]);
+			BfWriteByte(message, color[1]);
+			BfWriteByte(message, color[2]);
+			BfWriteByte(message, color[3]);
+		}
+	
+		EndMessage();
 	}
 	powerup[client] = 0;
 }
-
+public Action BeginTeleporter(Handle timer, int client) {
+	TeleportationHandle[client] = INVALID_HANDLE;
+	int entity;
+	while ((entity = FindEntityByClassname(entity, "obj_teleporter")) != -1) {
+		if(TF2_GetClientTeam(GetEntPropEnt(entity, Prop_Send, "m_hBuilder")) == TF2_GetClientTeam(client)){
+			if(TF2_GetObjectMode(entity) == TFObjectMode_Exit){
+				float coords[3] = 69.420;
+				GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
+				coords[2] += 24.00;
+				TeleportEntity(client, coords, NULL_VECTOR, NULL_VECTOR);
+				break;
+			}
+		}
+	}
+	if(entity == -1){
+		PrintToChat(client, "fallback spawn something something...jack5 will probably replace this anyway so why bother");
+		TF2_RespawnPlayer(client);
+	}
+	if(TF2_GetClientTeam(client) == TFTeam_Red){
+		PowerupParticle(client, "teleportedin_blue", 1.0);
+	}
+	if(TF2_GetClientTeam(client) == TFTeam_Blue){
+		PowerupParticle(client, "teleportedin_red", 1.0);
+	}
+}
 public Action RemoveFrostTouch(Handle timer, int client) {
 	FrostTouchHandle[client] = INVALID_HANDLE;
 	FrostTouch[client] = false;
@@ -899,6 +972,8 @@ DoHudText(client) {
 			ShowSyncHudText(client, texthand, "Collected powerup:\nFrost Touch");
 		} else if (powerup[client] == 10) {
 			ShowSyncHudText(client, texthand, "Collected powerup:\nMystery");
+		} else if (powerup[client] == 11) {
+			ShowSyncHudText(client, texthand, "Collected powerup:\nTeleportation");
 		}
 	}
 	if (GiftHunt && !VictoryTime) {
