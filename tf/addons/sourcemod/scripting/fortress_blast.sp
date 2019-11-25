@@ -205,20 +205,20 @@ public void TF2_OnConditionAdded(int client, TFCond condition) {
 }
 
 public Action FBMenu(int client, int args) {
-	int bitfield = GetConVarInt(sm_fortressblast_powerups);
+	int bitfield = sm_fortressblast_powerups.IntValue;
 	if (bitfield < 1 && bitfield > ((Bitfieldify(NumberOfPowerups) * 2) - 1)) {
 		bitfield = -1;
 	}
 	char url[200];
 	char action[15];
-	GetConVarString(sm_fortressblast_action_use, action, sizeof(action));
+	sm_fortressblast_action_use.GetString(action, sizeof(action))
 	Format(url, sizeof(url), "http://fortress-blast.github.io/2.1?powerups-enabled=%d&action=%s", bitfield, action);
 	AdvMOTD_ShowMOTDPanel(client, "How are you reading this?", url, MOTDPANEL_TYPE_URL, true, true, true, INVALID_FUNCTION);
 	CPrintToChat(client, "{orange}[Fortress Blast] {haunted}Opening Fortress Blast manual... If nothing happens, open your developer console and {yellow}try setting cl_disablehtmlmotd to 0{haunted}, then try again.");
 }
 
 public Action SetPowerup(int client, int args) {
-	if (!CheckCommandAccess(client, "", ADMFLAG_ROOT) && GetConVarFloat(sm_fortressblast_debug) < 1) {
+	if (!CheckCommandAccess(client, "", ADMFLAG_ROOT) && sm_fortressblast_debug.BoolValue) {
 		CPrintToChat(client, "{orange}[Fortress Blast] {red}You do not have permission to use this command.");
 		return;
 	}
@@ -267,13 +267,13 @@ public Action SetPowerup(int client, int args) {
 	powerup[player] = StringToInt(arg2);
 	PlayPowerupSound(player);
 	// If player is a bot and bot support is enabled
-	if (IsFakeClient(player) && GetConVarFloat(sm_fortressblast_bot) >= 1) { // Replace with GetConVarBool
+	if (IsFakeClient(player) && sm_fortressblast_bot.BoolValue) { // Replace with GetConVarBool
 		// Get minimum and maximum times
-		float convar1 = GetConVarFloat(sm_fortressblast_bot_min);
+		float convar1 = sm_fortressblast_bot_min.FloatValue;
 		if (convar1 < 0) {
 			convar1 == 0;
 		}
-		float convar2 = GetConVarFloat(sm_fortressblast_bot_max);
+		float convar2 = sm_fortressblast_bot_max.FloatValue;
 		if (convar2 < convar1) {
 			convar2 == convar1;
 		}
@@ -318,8 +318,8 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 		if (IsValidEntity(entity)) {
 			char classname[60];
 			GetEntityClassname(entity, classname, sizeof(classname));
-			if (FindEntityByClassname(0, "tf_logic_mannpower") != -1 && GetConVarInt(sm_fortressblast_mannpower) != 0) {
-				if ((!MapHasJsonFile || GetConVarInt(sm_fortressblast_mannpower) == 2)) {
+			if (FindEntityByClassname(0, "tf_logic_mannpower") != -1 && sm_fortressblast_mannpower.IntValue != 0) {
+				if ((!MapHasJsonFile || sm_fortressblast_mannpower.IntValue == 2)) {
 					if (StrEqual(classname, "item_powerup_rune") || StrEqual(classname, "item_powerup_crit") || StrEqual(classname, "item_powerup_uber") || StrEqual(classname, "info_powerup_spawn")) {
 						if (StrEqual(classname, "info_powerup_spawn")) {
 							float coords[3] = 69.420;
@@ -344,13 +344,13 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 }
 
 public void CalculateGemAmountForPlayers() {
-	giftgoal = GetConVarInt(sm_fortressblast_gifthunt_goal);
+	giftgoal = sm_fortressblast_gifthunt_goal.IntValue;
 	DebugText("Base gift goal is %d", giftgoal);
-	int steps = RoundToFloor((PlayersAmount - 1) / GetConVarFloat(sm_fortressblast_gifthunt_players));
+	int steps = RoundToFloor((PlayersAmount - 1) / sm_fortressblast_gifthunt_players.FloatValue);
 	if (steps < 0) {
 		steps = 0;
 	}
-	giftgoal += (GetConVarInt(sm_fortressblast_gifthunt_increment) * steps);
+	giftgoal += (sm_fortressblast_gifthunt_increment.IntValue * steps);
 	DebugText("Calculated gift goal is %d", giftgoal);
 }
 
@@ -385,7 +385,7 @@ public void RestockRandomBatch() {
 	while ((entity = FindEntityByClassname(entity, "info_target")) != -1) {
 		char name2[50];
 		GetEntPropString(entity, Prop_Data, "m_iName", name2, sizeof(name2));
-		if (StrEqual(name2, "fb_giftspawn") && GetRandomInt(0, 99) < GetConVarInt(sm_fortressblast_gifthunt_rate)) {
+		if (StrEqual(name2, "fb_giftspawn") && GetRandomInt(0, 99) < sm_fortressblast_gifthunt_rate.IntValue) {
 			float coords[3];
 			GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
 			coords[2] += 8.0;
@@ -418,11 +418,11 @@ public Action teamplay_round_win(Event event, const char[] name, bool dontBroadc
 public Action player_death(Event event, const char[] name, bool dontBroadcast) {
 	powerup[GetClientOfUserId(event.GetInt("userid"))] = 0;
 	// Is dropping powerups enabled
-	if (GetConVarFloat(sm_fortressblast_drop) == 2 || (GetConVarFloat(sm_fortressblast_drop) && !MapHasJsonFile)) { // Replace with GetConVarBool
+	if (sm_fortressblast_drop.BoolValue && !MapHasJsonFile) { // Replace with GetConVarBool
 		// Get chance a powerup will be dropped
-		float convar = GetConVarFloat(sm_fortressblast_drop_rate);
+		float convar = sm_fortressblast_drop_rate.FloatValue;
 		int randomNumber = GetRandomInt(0, 99);
-		if (convar > randomNumber && (GetConVarInt(sm_fortressblast_drop_teams) == GetClientTeam(GetClientOfUserId(event.GetInt("userid"))) || GetConVarInt(sm_fortressblast_drop_teams) == 1)) {
+		if (convar > randomNumber && (sm_fortressblast_drop_teams.IntValue == GetClientTeam(GetClientOfUserId(event.GetInt("userid"))) || sm_fortressblast_drop_teams.IntValue == 1)) {
 			DebugText("Dropping powerup due to player death");
 			float coords[3];
 			GetEntPropVector(GetClientOfUserId(event.GetInt("userid")), Prop_Send, "m_vecOrigin", coords);
@@ -663,7 +663,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	}
 	if (buttons & 33554432 && (!PreviousAttack3[client]) && StringButtonInt() != 33554432) {
 		char button[40];
-		GetConVarString(sm_fortressblast_action_use, button, sizeof(button));
+		sm_fortressblast_action_use.GetString(button, sizeof(button))
 		CPrintToChat(client, "{orange}[Fortress Blast] {red}Special attack is currerntly disabled on this server. You are required to {yellow}perform the '%s' action to use a powerup.", button);
 	} else if (buttons & StringButtonInt() && IsPlayerAlive(client) && !FrostTouchFrozen[client]) {
 		UsePower(client);
@@ -1169,7 +1169,7 @@ public Action RemoveParticle(Handle timer, any data) {
 }
 
 public void DebugText(const char[] text, any ...) {
-	if (GetConVarFloat(sm_fortressblast_debug) >= 1) {
+	if (sm_fortressblast_debug.BoolValue) {
 		int len = strlen(text) + 255;
 		char[] format = new char[len];
 		VFormat(format, len, text, 2);
@@ -1180,7 +1180,7 @@ public void DebugText(const char[] text, any ...) {
 
 public int StringButtonInt() {
 	char button[40];
-	GetConVarString(sm_fortressblast_action_use, button, sizeof(button));
+	sm_fortressblast_action_use.GetString(button, sizeof(button))
 	if (StrEqual(button, "attack")) {
 		return 1;
 	} else if (StrEqual(button, "jump")) {
@@ -1365,7 +1365,7 @@ public Action DeleteEdict(Handle timer, int entity) {
 
 public bool PowerupIsEnabled(int id) {
 	int max = (Bitfieldify(NumberOfPowerups) * 2) - 1;
-	int bitfield = GetConVarInt(sm_fortressblast_powerups);
+	int bitfield = sm_fortressblast_powerups.IntValue;
 	if (bitfield == -1) {
 		return true; // All powerups enabled
 	} else if (bitfield < 1 || bitfield > max) {
@@ -1430,7 +1430,7 @@ public void OnTouchRespawnRoom(int entity, int other) {
 	if (!IsClientInGame(other)) return;
 	if (!IsPlayerAlive(other)) return;
 	// Kill enemies inside spawnrooms
-	if (GetEntProp(entity, Prop_Send, "m_iTeamNum") != GetClientTeam(other) && (GetConVarInt(sm_fortressblast_spawnroom_kill) > 0) && !VictoryTime) {
+	if (GetEntProp(entity, Prop_Send, "m_iTeamNum") != GetClientTeam(other) && sm_fortressblast_spawnroom_kill.BoolValue && !VictoryTime) {
 		FakeClientCommandEx(other, "kill");
 		PrintToServer("[Fortress Blast] %N was killed due to being inside an enemy team spawnroom.", other);
 		CPrintToChat(other, "{orange}[Fortress Blast] {red}You were killed because you were inside the enemy spawn.");
