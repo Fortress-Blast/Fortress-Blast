@@ -76,7 +76,7 @@ ConVar sm_fortressblast_spawnroom_kill;
 8 - Mega Mann
 9 - Frost Touch
 10 - Mystery
-11 - Teleportation*/
+11 - Teleportation */
 
 public OnPluginStart() {
 	for (int client = 1; client <= MaxClients ; client++) {
@@ -201,7 +201,7 @@ public Action FBMenu(int client, int args) {
 	char url[200];
 	char action[15];
 	GetConVarString(sm_fortressblast_action_use, action, sizeof(action));
-	Format(url, sizeof(url), "http://fortress-blast.github.io/2.0?powerups-enabled=%d&action=%s", bitfield, action);
+	Format(url, sizeof(url), "http://fortress-blast.github.io/2.1?powerups-enabled=%d&action=%s", bitfield, action);
 	AdvMOTD_ShowMOTDPanel(client, "How are you reading this?", url, MOTDPANEL_TYPE_URL, true, true, true, INVALID_FUNCTION);
 	CPrintToChat(client, "{orange}[Fortress Blast] {haunted}Opening Fortress Blast manual... If nothing happens, open your developer console and {yellow}try setting cl_disablehtmlmotd to 0{haunted}, then try again.");
 }
@@ -363,8 +363,6 @@ public OnEntityDestroyed(int entity) {
 	}
 }
 
-
-
 public OnGameFrame() {
 	if (NumberOfActiveGifts() == 0) {
 		RestockRandomBatch();
@@ -398,7 +396,7 @@ int NumberOfActiveGifts() {
 
 public Action PesterThisDude(Handle timer, int client) {
 	if (IsClientInGame(client)) { // Required because player might disconnect before this fires
-		CPrintToChat(client, "{orange}[Fortress Blast] {haunted}This server is running {yellow}Fortress Blast v2.0.1! {haunted}If you would like to know more or are unsure what a powerup does, type the command {yellow}!fortressblast {haunted}into chat.");
+		CPrintToChat(client, "{orange}[Fortress Blast] {haunted}This server is running {yellow}Fortress Blast v2.1! {haunted}If you would like to know more or are unsure what a powerup does, type the command {yellow}!fortressblast {haunted}into chat.");
 	}
 }
 
@@ -812,32 +810,26 @@ UsePower(client) {
 		powerup[client] = mysrand;
 		UsePower(client);
 	} else if (powerup[client] == 11) {
+		// Teleportation - Teleport to random active Engineer exit teleport or spawn
 		ClearTimer(TeleportationHandle[client]);
 		TeleportationHandle[client] = CreateTimer(0.5, BeginTeleporter, client);
 		EmitAmbientSound("fortressblast2/teleportation_use.mp3", vel, client);
-		PowerupParticle(client, "teleported_flash", 0.5);
+		PowerupParticle(client, "teleported_flash", 0.5); // Particle on using powerup
 		int clients[2];
 		clients[0] = client;	
-		
 		int duration = 255;
 		int holdtime = 255;
 		int flags = 0x0002;
-		int color[4] = { 0, 0, 0, 255};
-		color[0] = 255;
-		color[1] = 255;
-		color[2] = 255;
+		int color[4] = {255, 255, 255, 255};
 		UserMsg g_FadeUserMsgId = GetUserMessageId("Fade");
 		Handle message = StartMessageEx(g_FadeUserMsgId, clients, 1);
-		if (GetUserMessageType() == UM_Protobuf)
-		{
+		if (GetUserMessageType() == UM_Protobuf) {
 			Protobuf pb = UserMessageToProtobuf(message);
 			pb.SetInt("duration", duration);
 			pb.SetInt("hold_time", holdtime);
 			pb.SetInt("flags", flags);	
 			pb.SetColor("clr", color);
-		}
-		else
-		{
+		} else {
 			BfWriteShort(message, duration);
 			BfWriteShort(message, holdtime);	
 			BfWriteShort(message, flags);
@@ -846,71 +838,57 @@ UsePower(client) {
 			BfWriteByte(message, color[2]);
 			BfWriteByte(message, color[3]);
 		}
-	
 		EndMessage();
-		
 	}
 	powerup[client] = 0;
 }
+
 public Action BeginTeleporter(Handle timer, int client) {
 	TeleportationHandle[client] = INVALID_HANDLE;
-	if(MegaMann[client]){
-			ClearTimer(MegaMannHandle[client]);
-			MegaMannHandle[client] = CreateTimer(0.0, RemoveMegaMann, client);
-		}
-	int eli = GetRandomInt(1, Eliporters(TF2_GetClientTeam(client)));
-	DebugText("Put random eliporter is %d", eli);
+	if (MegaMann[client]) {
+		ClearTimer(MegaMannHandle[client]);
+		MegaMannHandle[client] = CreateTimer(0.0, RemoveMegaMann, client);
+	}
+	int eli = GetRandomInt(1, GetTeamTeleporters(TF2_GetClientTeam(client)));
+	DebugText("Teleporter number %d has been selected", eli);
 	int countby = 1;
+	PowerupParticle(client, "teleported_flash", 0.5); // Particle on teleporting away
 	int entity;
 	while ((entity = FindEntityByClassname(entity, "obj_teleporter")) != -1) {
-		if(TF2_GetClientTeam(GetEntPropEnt(entity, Prop_Send, "m_hBuilder")) == TF2_GetClientTeam(client)){
-			if(TF2_GetObjectMode(entity) == TFObjectMode_Exit){
-				if(PassesTheNetprops(entity)){
-					if(countby == eli){
-						float coords[3] = 69.420;
-						GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
-						coords[2] += 24.00;
-						TeleportEntity(client, coords, NULL_VECTOR, NULL_VECTOR);
-						break;
-					}
-					countby++;
-				}
-			}
+		if (TF2_GetClientTeam(GetEntPropEnt(entity, Prop_Send, "m_hBuilder")) == TF2_GetClientTeam(client) && TF2_GetObjectMode(entity) == TFObjectMode_Exit) {
+			float coords[3] = 69.420;
+			GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
+			coords[2] += 24.00;
+			TeleportEntity(client, coords, NULL_VECTOR, NULL_VECTOR);
+			break;
 		}
 	}
-	if(entity == -1){
-		PrintToChat(client, "fallback spawn something something...jack5 will probably replace this anyway so why bother");
+	if (entity == -1) {
+		CPrintToChat(client, "{orange}[Fortress Blast] {haunted}You were respawned as there are no active Teleporter exits on your team.");
 		TF2_RespawnPlayer(client);
-	}
-	if(TF2_GetClientTeam(client) == TFTeam_Red){
-		PowerupParticle(client, "teleportedin_blue", 1.0);
-	}
-	if(TF2_GetClientTeam(client) == TFTeam_Blue){
+	} else if (TF2_GetClientTeam(client) == TFTeam_Red) {
 		PowerupParticle(client, "teleportedin_red", 1.0);
+	} else if (TF2_GetClientTeam(client) == TFTeam_Blue) {
+		PowerupParticle(client, "teleportedin_blue", 1.0);
 	}
 }
 
-int Eliporters(TFTeam team){
+int GetTeamTeleporters(TFTeam team) {
 	int entity;
 	int amounter;
 	while ((entity = FindEntityByClassname(entity, "obj_teleporter")) != -1) {
-		if(TF2_GetClientTeam(GetEntPropEnt(entity, Prop_Send, "m_hBuilder")) == team){
-			if(TF2_GetObjectMode(entity) == TFObjectMode_Exit){
-				if(PassesTheNetprops(entity)){
-					amounter++;
-				}
-			}
+		if (TF2_GetClientTeam(GetEntPropEnt(entity, Prop_Send, "m_hBuilder")) == team && TF2_GetObjectMode(entity) == TFObjectMode_Exit && TeleporterPassesNetprops(entity)) {
+			amounter++;
 		}
 	}
-	DebugText("Found %d eliporters in total", amounter);
+	DebugText("Teleporting a player with %d active teleporters", amounter);
 	return amounter;
 }
 
-bool PassesTheNetprops(int entity){
-	if(GetEntProp(entity, Prop_Send, "m_bHasSapper") > 0){
+bool TeleporterPassesNetprops(int entity) {
+	if (GetEntProp(entity, Prop_Send, "m_bHasSapper") > 0) {
 		return false;
-	}
-	if(GetEntProp(entity, Prop_Send, "m_bCarried") > 0){
+	} else if (GetEntProp(entity, Prop_Send, "m_bCarried") > 0) {
 		return false;
 	}
 	return true;
@@ -924,7 +902,7 @@ public Action RemoveFrostTouch(Handle timer, int client) {
 public Action MegaMannStuckCheck(Handle timer, int client) {
 	MegaMannPreHandle[client] = INVALID_HANDLE;
 	MegaMannStuckComplete[client] = true;
-	//MegaMann[client] = false;
+	// MegaMann[client] = false;
 	float coords[3] = 69.420;
 	GetEntPropVector(client, Prop_Send, "m_vecOrigin", coords);
 	if (MegaMannCoords[client][0] == coords[0] && MegaMannCoords[client][1] == coords[1] && MegaMannCoords[client][2] == coords[2]) {
@@ -1448,10 +1426,9 @@ public OnTouchRespawnRoom(entity, other) {
 	}
 }
 
-public Action TF2_OnPlayerTeleport(int client, int teleporter, bool& result){
-	if(MegaMann[client]){
-		result = false;
+public Action TF2_OnPlayerTeleport(int client, int teleporter, bool& result) {
+	if (MegaMann[client]) {
+		result = false; // Prevent players with Mega Mann from taking teleporters
 	}
-	
 	return Plugin_Changed;
 }
