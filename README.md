@@ -29,6 +29,7 @@ Fortress Blast comes with several quality-of-life features, *such as:*
 Contributors
 ------------
 
-- [Naleksuh](https://www.youtube.com/Naleksuh) - Mod programming
+- [Naleksuh](https://www.youtube.com/Naleksuh) - Programmer
 - [Jack5](https://www.youtube.com/user/jack5vlogging) - Concept, design and graphics
 - [ChargingTurnip](https://tf2maps.net/members/true-lemon.31187) - Custom powerup model
+- [Benedevil](https://steamcommunity.com/id/MrBenedevil) - Programming contributions
