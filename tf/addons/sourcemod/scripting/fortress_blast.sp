@@ -9,10 +9,13 @@
 
 #pragma newdecls required
 
+// Defines
 #define	MAX_EDICT_BITS 11
 #define	MAX_EDICTS (1<<MAX_EDICT_BITS)
 #define MAX_PARTICLES 10 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
+#define MESSAGE_PREFIX "{orange}[Fortress Blast]"
 
+// Global Variables
 int NumberOfPowerups = 11; // Do not define this
 int PlayersAmount;
 int giftgoal;
@@ -43,13 +46,15 @@ Handle TimeTravelHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle MegaMannPreHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle MegaMannHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle FrostTouchHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
-Handle FrostTouchUnfreezeHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
+Handle Timer_FrostTouchUnfreezeHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle DestroyPowerupHandle[MAX_EDICTS + 1] = INVALID_HANDLE;
 Handle TeleportationHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 
+// HUDs
 Handle texthand;
 Handle gemtext;
 
+// ConVars
 ConVar sm_fortressblast_action_use;
 ConVar sm_fortressblast_bot;
 ConVar sm_fortressblast_bot_min;
@@ -81,9 +86,11 @@ ConVar sm_fortressblast_spawnroom_kill;
 11 - Teleportation */
 
 public void OnPluginStart() {
+
+	// In case the plugin is reloaded mid-round
 	for (int client = 1; client <= MaxClients; client++) {
 		if (IsClientInGame(client)) {
-			SDKHook(client, SDKHook_OnTakeDamageAlive, OnTakeDamage); // In case the plugin is reloaded mid-round
+			SDKHook(client, SDKHook_OnTakeDamageAlive, OnTakeDamage);
 			SDKHook(client, SDKHook_StartTouch, OnStartTouchFrozen);
 		}
 	}
@@ -95,8 +102,8 @@ public void OnPluginStart() {
 
 	// Commands
 	RegConsoleCmd("sm_fortressblast", FBMenu);
-	RegConsoleCmd("sm_setpowerup", SetPowerup);
-	RegAdminCmd("sm_spawnpowerup", SpawnPowerup, ADMFLAG_ROOT);
+	RegConsoleCmd("sm_setpowerup", Command_SetPowerup);
+	RegAdminCmd("sm_spawnpowerup", Command_SpawnPowerup, ADMFLAG_ROOT);
 
 	LoadTranslations("common.phrases");
 
@@ -172,7 +179,7 @@ public void OnMapStart() {
 	AddFileToDownloadsTable("sound/fortressblast2/mystery_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/teleportation_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/teleportation_use.mp3");
-	
+
 	PrecacheSound("fortressblast2/gifthunt_gift_pickup.mp3");
 	PrecacheSound("fortressblast2/gifthunt_goal_enemyteam.mp3");
 	PrecacheSound("fortressblast2/gifthunt_goal_playerteam.mp3");
@@ -181,7 +188,7 @@ public void OnMapStart() {
 	AddFileToDownloadsTable("sound/fortressblast2/gifthunt_goal_playerteam.mp3");
 	AddFileToDownloadsTable("materials/sprites/fortressblast/gift_located_here.vmt");
 	AddFileToDownloadsTable("materials/sprites/fortressblast/gift_located_here.vtf");
-	
+
 	AddFileToDownloadsTable("materials/models/fortressblast/pickups/fb_pickup/pickup_fb.vmt");
 	AddFileToDownloadsTable("materials/models/fortressblast/pickups/fb_pickup/pickup_fb.vtf");
 	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.mdl");
@@ -190,12 +197,15 @@ public void OnMapStart() {
 	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.phy");
 	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.sw.vtx");
 	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.vvd");
-	
+
 	char map[80];
 	GetCurrentMap(map, sizeof(map));
 	char path[PLATFORM_MAX_PATH + 1];
 	Format(path, sizeof(path), "scripts/fortress_blast/powerup_spots/%s.json", map);
 	MapHasJsonFile = FileExists(path); // So we dont overload read-writes
+
+	// Timer check gifts
+	CreateTimer(0.1, Timer_CheckGifts, _, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE)
 }
 
 public void TF2_OnConditionAdded(int client, TFCond condition) {
@@ -214,12 +224,12 @@ public Action FBMenu(int client, int args) {
 	sm_fortressblast_action_use.GetString(action, sizeof(action))
 	Format(url, sizeof(url), "http://fortress-blast.github.io/2.1?powerups-enabled=%d&action=%s", bitfield, action);
 	AdvMOTD_ShowMOTDPanel(client, "How are you reading this?", url, MOTDPANEL_TYPE_URL, true, true, true, INVALID_FUNCTION);
-	CPrintToChat(client, "{orange}[Fortress Blast] {haunted}Opening Fortress Blast manual... If nothing happens, open your developer console and {yellow}try setting cl_disablehtmlmotd to 0{haunted}, then try again.");
+	CPrintToChat(client, "%s {haunted}Opening Fortress Blast manual... If nothing happens, open your developer console and {yellow}try setting cl_disablehtmlmotd to 0{haunted}, then try again.", MESSAGE_PREFIX);
 }
 
-public Action SetPowerup(int client, int args) {
+public Action Command_SetPowerup(int client, int args) {
 	if (!CheckCommandAccess(client, "", ADMFLAG_ROOT) && sm_fortressblast_debug.BoolValue) {
-		CPrintToChat(client, "{orange}[Fortress Blast] {red}You do not have permission to use this command.");
+		CPrintToChat(client, "%s {red}You do not have permission to use this command.", MESSAGE_PREFIX);
 		return;
 	}
 	char arg[MAX_NAME_LENGTH + 1];
@@ -230,35 +240,35 @@ public Action SetPowerup(int client, int args) {
 	if (StrEqual(arg, "@all")) {
 		for (int client2 = 1; client2 <= MaxClients; client2++) {
 			if (IsClientInGame(client2)) {
-				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
+				FakeClientCommand(client, "sm_Command_SetPowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
 			}
 		}
 		return;
 	} else if (StrEqual(arg, "@red")) {
 		for (int client2 = 1; client2 <= MaxClients; client2++) {
 			if (IsClientInGame(client2) && GetClientTeam(client2) == 2) {
-				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
+				FakeClientCommand(client, "sm_Command_SetPowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
 			}
 		}
 		return;
 	} else if (StrEqual(arg, "@blue")) {
 		for (int client2 = 1; client2 <= MaxClients; client2++) {
 			if (IsClientInGame(client2) && GetClientTeam(client2) == 3) {
-				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
+				FakeClientCommand(client, "sm_Command_SetPowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
 			}
 		}
 		return;
 	} else if (StrEqual(arg, "@bots")) {
 		for (int client2 = 1; client2 <= MaxClients; client2++) {
 			if (IsClientInGame(client2) && IsFakeClient(client2)) {
-				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
+				FakeClientCommand(client, "sm_Command_SetPowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
 			}
 		}
 		return;
 	} else if (StrEqual(arg, "@humans")) {
 		for (int client2 = 1; client2 <= MaxClients; client2++) {
 			if (IsClientInGame(client2) && !IsFakeClient(client2)) {
-				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
+				FakeClientCommand(client, "sm_Command_SetPowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
 			}
 		}
 		return;
@@ -278,7 +288,7 @@ public Action SetPowerup(int client, int args) {
 			convar2 == convar1;
 		}
 		// Get bot to use powerup within the random period
-		CreateTimer(GetRandomFloat(convar1, convar2), BotUsePowerup, player);
+		CreateTimer(GetRandomFloat(convar1, convar2), Timer_BotUsePowerup, player);
 	}
 	DebugText("%N has force-set %N's powerup to ID %d", client, player, StringToInt(arg2));
 }
@@ -292,7 +302,7 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 			powerup[client] = 0;
 			if (IsClientInGame(client)) {
 				PlayersAmount++;
-				CreateTimer(3.0, PesterThisDude, client);
+				CreateTimer(3.0, Timer_PesterThisDude, client);
 				// Remove powerup effects on round start
 				SetEntityGravity(client, 1.0);
 				SuperBounce[client] = false;
@@ -374,7 +384,7 @@ public void OnEntityDestroyed(int entity) {
 	}
 }
 
-public void OnGameFrame() {
+public Action Timer_CheckGifts(Handle timer, any data) {
 	if (NumberOfActiveGifts() == 0) {
 		RestockRandomBatch();
 	}
@@ -405,9 +415,9 @@ public int NumberOfActiveGifts() {
 	return totalgifts;
 }
 
-public Action PesterThisDude(Handle timer, int client) {
+public Action Timer_PesterThisDude(Handle timer, int client) {
 	if (IsClientInGame(client)) { // Required because player might disconnect before this fires
-		CPrintToChat(client, "{orange}[Fortress Blast] {haunted}This server is running {yellow}Fortress Blast v2.1! {haunted}If you would like to know more or are unsure what a powerup does, type the command {yellow}!fortressblast {haunted}into chat.");
+		CPrintToChat(client, "%s {haunted}This server is running {yellow}Fortress Blast v2.1! {haunted}If you would like to know more or are unsure what a powerup does, type the command {yellow}!fortressblast {haunted}into chat.", MESSAGE_PREFIX);
 	}
 }
 
@@ -428,12 +438,12 @@ public Action player_death(Event event, const char[] name, bool dontBroadcast) {
 			GetEntPropVector(GetClientOfUserId(event.GetInt("userid")), Prop_Send, "m_vecOrigin", coords);
 			int entity = SpawnPower(coords, false);
 			ClearTimer(DestroyPowerupHandle[entity]);
-			DestroyPowerupHandle[entity] = CreateTimer(15.0, DestroyPowerupTime, entity);
+			DestroyPowerupHandle[entity] = CreateTimer(15.0, Timer_DestroyPowerupTime, entity);
 		}
 	}
 }
 
-public Action DestroyPowerupTime(Handle timer, int entity){
+public Action Timer_DestroyPowerupTime(Handle timer, int entity){
 	DestroyPowerupHandle[entity] = INVALID_HANDLE;
 	RemoveEntity(entity);
 }
@@ -442,7 +452,7 @@ public void OnClientPutInServer(int client) {
 	powerup[client] = 0;
 	SDKHook(client, SDKHook_OnTakeDamageAlive, OnTakeDamage);
 	SDKHook(client, SDKHook_StartTouch, OnStartTouchFrozen);
-	CreateTimer(3.0, PesterThisDude, client);
+	CreateTimer(3.0, Timer_PesterThisDude, client);
 }
 
 stock int SpawnPower(float location[3], bool respawn, int id = 0) {
@@ -538,22 +548,22 @@ public Action OnStartTouchFrozen(int entity, int other) {
 			EmitAmbientSound("fortressblast2/frosttouch_freeze.mp3", vel, other);
 			SetEntityMoveType(other, MOVETYPE_NONE);
 			ColorizePlayer(other, {255, 255, 255, 0});
-			
+
 			int iRagDoll = CreateRagdoll(other);
 			if (iRagDoll > MaxClients && IsValidEntity(iRagDoll)) {
 				SetClientViewEntity(other, iRagDoll);
 				SetThirdPerson(other, true);
 			}
-			ClearTimer(FrostTouchUnfreezeHandle[other]);
-			FrostTouchUnfreezeHandle[other] = CreateTimer(3.0, FrostTouchUnfreeze, other);
+			ClearTimer(Timer_FrostTouchUnfreezeHandle[other]);
+			Timer_FrostTouchUnfreezeHandle[other] = CreateTimer(3.0, Timer_FrostTouchUnfreeze, other);
 			FrostTouchFrozen[other] = true;
 			BlockAttacking(other, 3.0);
 		}
 	}
 }
 
-public Action FrostTouchUnfreeze(Handle timer, int client) {
-	FrostTouchUnfreezeHandle[client] = INVALID_HANDLE;
+public Action Timer_FrostTouchUnfreeze(Handle timer, int client) {
+	Timer_FrostTouchUnfreezeHandle[client] = INVALID_HANDLE;
 	float vel[3];
 	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel);
 	EmitAmbientSound("fortressblast2/frosttouch_unfreeze.mp3", vel, client);
@@ -573,7 +583,7 @@ public Action OnStartTouchRespawn(int entity, int other) {
 			KvSetFloat(coordskv, "0", coords[0]);
 			KvSetFloat(coordskv, "1", coords[1]);
 			KvSetFloat(coordskv, "2", coords[2]);
-			CreateTimer(10.0, SpawnPowerAfterDelay, coordskv);
+			CreateTimer(10.0, Timer_SpawnPowerAfterDelay, coordskv);
 		}
 		DeletePowerup(entity, other);
 		return Plugin_Continue;
@@ -606,18 +616,18 @@ public void DeletePowerup(int entity, int other) {
 			convar2 == convar1;
 		}
 		// Get bot to use powerup within the random period
-		CreateTimer(GetRandomFloat(convar1, convar2), BotUsePowerup, other);
+		CreateTimer(GetRandomFloat(convar1, convar2), Timer_BotUsePowerup, other);
 	}
 }
 
-public Action BotUsePowerup(Handle timer, int client) {
+public Action Timer_BotUsePowerup(Handle timer, int client) {
 	if (IsClientInGame(client)) {
 		DebugText("Forcing bot %N to use powerup ID %d", client, powerup[client]);
 		UsePower(client);
 	}
 }
 
-public Action SpawnPowerAfterDelay(Handle timer, any data) {
+public Action Timer_SpawnPowerAfterDelay(Handle timer, any data) {
 	float coords[3];
 	Handle coordskv = data;
 	coords[0] = KvGetFloat(coordskv, "0");
@@ -664,7 +674,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	if (buttons & 33554432 && (!PreviousAttack3[client]) && StringButtonInt() != 33554432) {
 		char button[40];
 		sm_fortressblast_action_use.GetString(button, sizeof(button))
-		CPrintToChat(client, "{orange}[Fortress Blast] {red}Special attack is currerntly disabled on this server. You are required to {yellow}perform the '%s' action to use a powerup.", button);
+		CPrintToChat(client, "%s {red}Special attack is currerntly disabled on this server. You are required to {yellow}perform the '%s' action to use a powerup.", MESSAGE_PREFIX, button);
 	} else if (buttons & StringButtonInt() && IsPlayerAlive(client) && !FrostTouchFrozen[client]) {
 		UsePower(client);
 		// Only Super Speed should be blocked when carrying the PASS Time Jack
@@ -680,7 +690,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	}
 	DoHudText(client);
 	VerticalVelocity[client] = vel2[2];
-	
+
 	for (int partid = MAX_PARTICLES; partid > 0 ; partid--) {
 		if (PlayerParticle[client][partid] == 0) {
 			PlayerParticle[client][partid] = -1;
@@ -724,21 +734,21 @@ public void UsePower(int client) {
 		VerticalVelocity[client] = 0.0; // Cancel previously stored vertical velocity
 		SuperBounce[client] = true;
 		ClearTimer(SuperBounceHandle[client]);
-		SuperBounceHandle[client] = CreateTimer(5.0, RemoveSuperBounce, client);
+		SuperBounceHandle[client] = CreateTimer(5.0, Timer_RemoveSuperBounce, client);
 		PowerupParticle(client, "teleporter_blue_charged_level2", 5.0);
 	} else if (powerup[client] == 2) {
 		// Shock Absorber - 75% damage and 100% knockback resistances for 5 seconds
 		ShockAbsorber[client] = true;
 		EmitAmbientSound("fortressblast2/shockabsorber_use.mp3", vel, client);
 		ClearTimer(ShockAbsorberHandle[client]);
-		ShockAbsorberHandle[client] = CreateTimer(5.0, RemoveShockAbsorb, client);
+		ShockAbsorberHandle[client] = CreateTimer(5.0, Timer_RemoveShockAbsorb, client);
 		PowerupParticle(client, "teleporter_red_charged_level2", 5.0);
 	} else if (powerup[client] == 3) {
 		// Super Speed - Increased speed, gradually wears off over 10 seconds
 		OldSpeed[client] = GetEntPropFloat(client, Prop_Send, "m_flMaxspeed");
 		SpeedRotationsLeft[client] = 80;
 		EmitAmbientSound("fortressblast2/superspeed_use.mp3", vel, client);
-		CreateTimer(0.1, RecalcSpeed, client);
+		CreateTimer(0.1, Timer_RecalcSpeed, client);
 	} else if (powerup[client] == 4) {
 		// Super Jump - Launch user into air
 		if (MegaMann[client]) {
@@ -752,7 +762,7 @@ public void UsePower(int client) {
 		// Gyrocopter - 25% gravity for 5 seconds
 		SetEntityGravity(client, 0.25);
 		ClearTimer(GyrocopterHandle[client]);
-		GyrocopterHandle[client] = CreateTimer(5.0, RestoreGravity, client);
+		GyrocopterHandle[client] = CreateTimer(5.0, Timer_RestoreGravity, client);
 		EmitAmbientSound("fortressblast2/gyrocopter_use.mp3", vel, client);
 	} else if (powerup[client] == 6) {
 		// Time Travel - Increased speed, invisibility and can't attack for 5 seconds
@@ -761,7 +771,7 @@ public void UsePower(int client) {
 		TF2_AddCondition(client, TFCond_StealthedUserBuffFade, 3.0);
 		BlockAttacking(client, 3.0);
 		ClearTimer(TimeTravelHandle[client]);
-		TimeTravelHandle[client] = CreateTimer(3.0, RemoveTimeTravel, client);
+		TimeTravelHandle[client] = CreateTimer(3.0, Timer_RemoveTimeTravel, client);
 		EmitAmbientSound("fortressblast2/timetravel_use_3sec.mp3", vel, client);
 	} else if (powerup[client] == 7) {
 		// Blast - Create explosion at user
@@ -781,7 +791,7 @@ public void UsePower(int client) {
 		TF2_RemoveCondition(client, TFCond_StealthedUserBuffFade);
 		TF2_RemoveCondition(client, TFCond_Cloaked);
 		TF2_RemovePlayerDisguise(client);
-		TimeTravelHandle[client] = CreateTimer(0.0, RemoveTimeTravel, client); // Remove Time Travel instantly
+		TimeTravelHandle[client] = CreateTimer(0.0, Timer_RemoveTimeTravel, client); // Remove Time Travel instantly
 	} else if (powerup[client] == 8) {
 		// Mega Mann - Giant and 4x health for 10 seconds
 		EmitAmbientSound("fortressblast2/megamann_use.mp3", vel, client);
@@ -794,8 +804,8 @@ public void UsePower(int client) {
 		}
 		ClearTimer(MegaMannHandle[client]);
 		ClearTimer(MegaMannPreHandle[client]);
-		MegaMannPreHandle[client] = CreateTimer(1.0, MegaMannStuckCheck, client);
-		MegaMannHandle[client] = CreateTimer(10.0, RemoveMegaMann, client);
+		MegaMannPreHandle[client] = CreateTimer(1.0, Timer_MegaMannStuckCheck, client);
+		MegaMannHandle[client] = CreateTimer(10.0, Timer_RemoveMegaMann, client);
 		float coords[3] = 69.420;
 		GetEntPropVector(client, Prop_Send, "m_vecOrigin", coords);
 		coords[2] += 16.0;
@@ -809,7 +819,7 @@ public void UsePower(int client) {
 		// Frost Touch - Freeze touched players for 3 seconds within 8 seconds
 		EmitAmbientSound("fortressblast2/frosttouch_use.mp3", vel, client);
 		ClearTimer(FrostTouchHandle[client]);
-		FrostTouchHandle[client] = CreateTimer(8.0, RemoveFrostTouch, client);
+		FrostTouchHandle[client] = CreateTimer(8.0, Timer_RemoveFrostTouch, client);
 		FrostTouch[client] = true;
 		PowerupParticle(client, "smoke_rocket_steam", 8.0);
 	} else if (powerup[client] == 10) {
@@ -823,11 +833,11 @@ public void UsePower(int client) {
 	} else if (powerup[client] == 11) {
 		// Teleportation - Teleport to random active Engineer exit teleport or spawn
 		ClearTimer(TeleportationHandle[client]);
-		TeleportationHandle[client] = CreateTimer(0.5, BeginTeleporter, client);
+		TeleportationHandle[client] = CreateTimer(0.5, Timer_BeginTeleporter, client);
 		EmitAmbientSound("fortressblast2/teleportation_use.mp3", vel, client);
 		PowerupParticle(client, "teleported_flash", 0.5); // Particle on using powerup
 		int clients[2];
-		clients[0] = client;	
+		clients[0] = client;
 		int duration = 255;
 		int holdtime = 255;
 		int flags = 0x0002;
@@ -838,11 +848,11 @@ public void UsePower(int client) {
 			Protobuf pb = UserMessageToProtobuf(message);
 			pb.SetInt("duration", duration);
 			pb.SetInt("hold_time", holdtime);
-			pb.SetInt("flags", flags);	
+			pb.SetInt("flags", flags);
 			pb.SetColor("clr", color);
 		} else {
 			BfWriteShort(message, duration);
-			BfWriteShort(message, holdtime);	
+			BfWriteShort(message, holdtime);
 			BfWriteShort(message, flags);
 			BfWriteByte(message, color[0]);
 			BfWriteByte(message, color[1]);
@@ -854,15 +864,15 @@ public void UsePower(int client) {
 	powerup[client] = 0;
 }
 
-public Action BeginTeleporter(Handle timer, int client) {
+public Action Timer_BeginTeleporter(Handle timer, int client) {
 	TeleportationHandle[client] = INVALID_HANDLE;
 	if (MegaMann[client]) {
 		ClearTimer(MegaMannHandle[client]);
-		MegaMannHandle[client] = CreateTimer(0.0, RemoveMegaMann, client);
+		MegaMannHandle[client] = CreateTimer(0.0, Timer_RemoveMegaMann, client);
 	}
-	int teles = GetTeamTeleporters(TF2_GetClientTeam(client)); 
+	int teles = GetTeamTeleporters(TF2_GetClientTeam(client));
 	if (teles == 0) {
-		CPrintToChat(client, "{orange}[Fortress Blast] {haunted}You were respawned as there are no active Teleporter exits on your team.");
+		CPrintToChat(client, "%s {haunted}You were respawned as there are no active Teleporter exits on your team.", MESSAGE_PREFIX);
 		TF2_RespawnPlayer(client);
 		return;
 	}
@@ -915,12 +925,12 @@ public bool TeleporterPassesNetprops(int entity) {
 	return false;
 }
 
-public Action RemoveFrostTouch(Handle timer, int client) {
+public Action Timer_RemoveFrostTouch(Handle timer, int client) {
 	FrostTouchHandle[client] = INVALID_HANDLE;
 	FrostTouch[client] = false;
 }
 
-public Action MegaMannStuckCheck(Handle timer, int client) {
+public Action Timer_MegaMannStuckCheck(Handle timer, int client) {
 	MegaMannPreHandle[client] = INVALID_HANDLE;
 	MegaMannStuckComplete[client] = true;
 	// MegaMann[client] = false;
@@ -928,11 +938,11 @@ public Action MegaMannStuckCheck(Handle timer, int client) {
 	GetEntPropVector(client, Prop_Send, "m_vecOrigin", coords);
 	if (MegaMannCoords[client][0] == coords[0] && MegaMannCoords[client][1] == coords[1] && MegaMannCoords[client][2] == coords[2]) {
 		TF2_RespawnPlayer(client);
-		CPrintToChat(client, "{orange}[Fortress Blast] {red}You were respawned as you might have been stuck. Be sure to {yellow}use Mega Mann in open areas {red}and {yellow}move once it is active.");
+		CPrintToChat(client, "%s {red}You were respawned as you might have been stuck. Be sure to {yellow}use Mega Mann in open areas {red}and {yellow}move once it is active.", MESSAGE_PREFIX);
 	}
 }
 
-public Action RemoveMegaMann(Handle timer, int client) {
+public Action Timer_RemoveMegaMann(Handle timer, int client) {
 	MegaMannHandle[client] = INVALID_HANDLE;
 	MegaMann[client] = false;
 	MegaMannStuckComplete[client] = true;
@@ -946,7 +956,7 @@ public Action RemoveMegaMann(Handle timer, int client) {
 	}
 }
 
-public Action RemoveTimeTravel(Handle timer, int client) {
+public Action Timer_RemoveTimeTravel(Handle timer, int client) {
 	TimeTravelHandle[client] = INVALID_HANDLE;
 	TimeTravel[client] = false;
 	SetThirdPerson(client, false);
@@ -955,24 +965,24 @@ public Action RemoveTimeTravel(Handle timer, int client) {
 	}
 }
 
-public Action RestoreGravity(Handle timer, int client) {
+public Action Timer_RestoreGravity(Handle timer, int client) {
 	GyrocopterHandle[client] = INVALID_HANDLE;
 	if (IsClientInGame(client)) {
 		SetEntityGravity(client, 1.0);
 	}
 }
 
-public Action RemoveSuperBounce(Handle timer, int client) {
+public Action Timer_RemoveSuperBounce(Handle timer, int client) {
 	SuperBounceHandle[client] = INVALID_HANDLE;
 	SuperBounce[client] = false;
 }
 
-public Action RemoveShockAbsorb(Handle timer, int client) {
+public Action Timer_RemoveShockAbsorb(Handle timer, int client) {
 	ShockAbsorberHandle[client] = INVALID_HANDLE;
 	ShockAbsorber[client] = false;
 }
 
-public Action RecalcSpeed(Handle timer, int client) {
+public Action Timer_RecalcSpeed(Handle timer, int client) {
 	if (SpeedRotationsLeft[client] > 1) {
 		if (IsPlayerAlive(client)) {
 			if (GetEntPropFloat(client, Prop_Send, "m_flMaxspeed") != SuperSpeed[client]) { // If TF2 changed the speed
@@ -980,7 +990,7 @@ public Action RecalcSpeed(Handle timer, int client) {
 			}
 			SuperSpeed[client] = OldSpeed[client] + (SpeedRotationsLeft[client] * 2);
 			SetEntPropFloat(client, Prop_Send, "m_flMaxspeed", SuperSpeed[client]);
-			CreateTimer(0.1, RecalcSpeed, client);
+			CreateTimer(0.1, Timer_RecalcSpeed, client);
 		}
 	} else {
 		TF2_StunPlayer(client, 0.0, 0.0, TF_STUNFLAG_SLOWDOWN);
@@ -1080,7 +1090,7 @@ public void GetPowerupPlacements() {
 			} else {
 				spcontinue = false;
 			}
-		} 
+		}
 		DebugText("Created powerup at %f, %f, %f", coords[0], coords[1], coords[2]);
 		if (coords[0] != 0.001) {
 			SpawnPower(coords, true);
@@ -1133,7 +1143,7 @@ stock void ClearTimer(Handle Timer) { // From SourceMod forums
 public void SwitchPrimary(int client) {
 	int weapon = GetPlayerWeaponSlot(client, 0);
 	if (IsValidEdict(weapon)) {
-		char class[MAX_NAME_LENGTH * 2]; 
+		char class[MAX_NAME_LENGTH * 2];
 		GetEdictClassname(weapon, class, sizeof(class));
 		FakeClientCommand(client, "use %s", class);
 		SetEntPropEnt(client, Prop_Data, "m_hActiveWeapon", weapon);
@@ -1165,10 +1175,10 @@ public void PowerupParticle(int client, char particlename[80], float time) {
 	Handle partkv = CreateKeyValues("partkv");
 	KvSetNum(partkv, "client", client);
 	KvSetNum(partkv, "id", freeid);
-	CreateTimer(time, RemoveParticle, partkv);
+	CreateTimer(time, Timer_RemoveParticle, partkv);
 }
 
-public Action RemoveParticle(Handle timer, any data) {
+public Action Timer_RemoveParticle(Handle timer, any data) {
 	Handle partkv = data;
 	int client = KvGetNum(partkv, "client");
 	int id = KvGetNum(partkv, "id");
@@ -1197,7 +1207,7 @@ public int StringButtonInt() {
 		return 2;
 	} else if (StrEqual(button, "duck")) {
 		return 4;
-	} else if (StrEqual(button, "forward")) {	
+	} else if (StrEqual(button, "forward")) {
 		return 8;
 	} else if (StrEqual(button, "back")) {
 		return 16;
@@ -1362,13 +1372,13 @@ stock bool EntFire(char[] strTargetname, char[] strInput, char strParameter[] = 
 		SetVariantString(strBuffer);
 		AcceptEntityInput(entity, "AddOutput");
 		AcceptEntityInput(entity, "FireUser1");
-		CreateTimer(0.0, DeleteEdict, entity);
+		CreateTimer(0.0, Timer_DeleteEdict, entity);
 		return true;
 	}
 	return false;
 }
 
-public Action DeleteEdict(Handle timer, int entity) {
+public Action Timer_DeleteEdict(Handle timer, int entity) {
 	if(IsValidEdict(entity)) RemoveEdict(entity);
 	return Plugin_Stop;
 }
@@ -1400,7 +1410,7 @@ public int Bitfieldify(int bitter) {
 	return (num / 2);
 }
 
-public Action SpawnPowerup(int client, int args){
+public Action Command_SpawnPowerup(int client, int args){
 	if (client == 0) {
 		PrintToServer("[Fortress Blast] Because this command uses the crosshair, it cannot be executed from the server console.");
 		return Plugin_Handled;
@@ -1417,12 +1427,12 @@ stock void GetCollisionPoint(int client, float pos[3])
 {
 	float vOrigin[3];
 	float vAngles[3];
-	
+
 	GetClientEyePosition(client, vOrigin);
 	GetClientEyeAngles(client, vAngles);
-	
+
 	Handle trace = TR_TraceRayFilterEx(vOrigin, vAngles, MASK_SOLID, RayType_Infinite, TraceEntityFilterPlayer);
-	
+
 	if (TR_DidHit(trace)) {
 		TR_GetEndPosition(pos, trace);
 		CloseHandle(trace);
@@ -1433,7 +1443,7 @@ stock void GetCollisionPoint(int client, float pos[3])
 
 public bool TraceEntityFilterPlayer(int entity, int contentsMask) {
 	return entity > MaxClients;
-}  
+}
 
 public void OnTouchRespawnRoom(int entity, int other) {
 	if (other < 1 || other > MaxClients) return;
@@ -1443,7 +1453,7 @@ public void OnTouchRespawnRoom(int entity, int other) {
 	if (GetEntProp(entity, Prop_Send, "m_iTeamNum") != GetClientTeam(other) && sm_fortressblast_spawnroom_kill.BoolValue && !VictoryTime) {
 		FakeClientCommandEx(other, "kill");
 		PrintToServer("[Fortress Blast] %N was killed due to being inside an enemy team spawnroom.", other);
-		CPrintToChat(other, "{orange}[Fortress Blast] {red}You were killed because you were inside the enemy spawn.");
+		CPrintToChat(other, "%s {red}You were killed because you were inside the enemy spawn.", MESSAGE_PREFIX);
 	}
 }
 
