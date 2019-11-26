@@ -267,7 +267,7 @@ public Action SetPowerup(int client, int args) {
 	powerup[player] = StringToInt(arg2);
 	PlayPowerupSound(player);
 	// If player is a bot and bot support is enabled
-	if (IsFakeClient(player) && sm_fortressblast_bot.BoolValue) { // Replace with GetConVarBool
+	if (IsFakeClient(player) && sm_fortressblast_bot.BoolValue) {
 		// Get minimum and maximum times
 		float convar1 = sm_fortressblast_bot_min.FloatValue;
 		if (convar1 < 0) {
@@ -418,7 +418,7 @@ public Action teamplay_round_win(Event event, const char[] name, bool dontBroadc
 public Action player_death(Event event, const char[] name, bool dontBroadcast) {
 	powerup[GetClientOfUserId(event.GetInt("userid"))] = 0;
 	// Is dropping powerups enabled
-	if (sm_fortressblast_drop.BoolValue && !MapHasJsonFile) { // Replace with GetConVarBool
+	if (sm_fortressblast_drop.IntValue == 2 || (sm_fortressblast_drop.BoolValue && !MapHasJsonFile)) {
 		// Get chance a powerup will be dropped
 		float convar = sm_fortressblast_drop_rate.FloatValue;
 		int randomNumber = GetRandomInt(0, 99);
@@ -868,12 +868,11 @@ public Action BeginTeleporter(Handle timer, int client) {
 	}
 	int eli = GetRandomInt(1, teles);
 	DebugText("Teleporter number %d has been selected", eli);
-
-	PowerupParticle(client, "teleported_flash", 0.5); // Particle on teleporting away
+	int countby = 1;
 	int entity;
 	while ((entity = FindEntityByClassname(entity, "obj_teleporter")) != -1) {
 		if (TF2_GetClientTeam(GetEntPropEnt(entity, Prop_Send, "m_hBuilder")) == TF2_GetClientTeam(client) && TF2_GetObjectMode(entity) == TFObjectMode_Exit && TeleporterPassesNetprops(entity)) {
-			if(countby == eli){
+			if (countby == eli) {
 				float coords[3] = 69.420;
 				GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
 				coords[2] += 24.00;
