@@ -849,31 +849,37 @@ public Action BeginTeleporter(Handle timer, int client) {
 		ClearTimer(MegaMannHandle[client]);
 		MegaMannHandle[client] = CreateTimer(0.0, RemoveMegaMann, client);
 	}
-	int eli = GetRandomInt(1, GetTeamTeleporters(TF2_GetClientTeam(client)));
+	int teles = GetTeamTeleporters(TF2_GetClientTeam(client)); 
+	if (teles == 0) {
+		CPrintToChat(client, "{orange}[Fortress Blast] {haunted}You were respawned as there are no active Teleporter exits on your team.");
+		TF2_RespawnPlayer(client);
+		return;
+	}
+	int eli = GetRandomInt(1, teles);
 	DebugText("Teleporter number %d has been selected", eli);
 	int countby = 1;
 	PowerupParticle(client, "teleported_flash", 0.5); // Particle on teleporting away
 	int entity;
 	while ((entity = FindEntityByClassname(entity, "obj_teleporter")) != -1) {
-		if (TF2_GetClientTeam(GetEntPropEnt(entity, Prop_Send, "m_hBuilder")) == TF2_GetClientTeam(client) && TF2_GetObjectMode(entity) == TFObjectMode_Exit) {
-			float coords[3] = 69.420;
-			GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
-			coords[2] += 24.00;
-			TeleportEntity(client, coords, NULL_VECTOR, NULL_VECTOR);
-			break;
+		if (TF2_GetClientTeam(GetEntPropEnt(entity, Prop_Send, "m_hBuilder")) == TF2_GetClientTeam(client) && TF2_GetObjectMode(entity) == TFObjectMode_Exit && TeleporterPassesNetprops(entity)) {
+			if(countby == eli){
+				float coords[3] = 69.420;
+				GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
+				coords[2] += 24.00;
+				TeleportEntity(client, coords, NULL_VECTOR, NULL_VECTOR);
+				break;
+			}
+			countby++;
 		}
 	}
-	if (entity == -1) {
-		CPrintToChat(client, "{orange}[Fortress Blast] {haunted}You were respawned as there are no active Teleporter exits on your team.");
-		TF2_RespawnPlayer(client);
-	} else if (TF2_GetClientTeam(client) == TFTeam_Red) {
+	if (TF2_GetClientTeam(client) == TFTeam_Red) {
 		PowerupParticle(client, "teleportedin_red", 1.0);
 	} else if (TF2_GetClientTeam(client) == TFTeam_Blue) {
 		PowerupParticle(client, "teleportedin_blue", 1.0);
 	}
 }
 
-int GetTeamTeleporters(TFTeam team) {
+int GetTeamTeleporters(TFTeam team) { // eliporters
 	int entity;
 	int amounter;
 	while ((entity = FindEntityByClassname(entity, "obj_teleporter")) != -1) {
@@ -886,12 +892,17 @@ int GetTeamTeleporters(TFTeam team) {
 }
 
 bool TeleporterPassesNetprops(int entity) {
+	int state = GetEntProp(entity, Prop_Send, "m_iState");
 	if (GetEntProp(entity, Prop_Send, "m_bHasSapper") > 0) {
 		return false;
 	} else if (GetEntProp(entity, Prop_Send, "m_bCarried") > 0) {
 		return false;
+	} else if (state == 2) {
+		return true;
+	} else if (state == 6) {
+		return true;
 	}
-	return true;
+	return false;
 }
 
 public Action RemoveFrostTouch(Handle timer, int client) {
