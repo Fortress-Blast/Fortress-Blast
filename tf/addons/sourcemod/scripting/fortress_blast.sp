@@ -96,6 +96,7 @@ public void OnPluginStart() {
 	// Commands
 	RegConsoleCmd("sm_fortressblast", FBMenu);
 	RegConsoleCmd("sm_setpowerup", SetPowerup);
+	RegConsoleCmd("sm_coordsjson", CoordsJson);
 	RegAdminCmd("sm_spawnpowerup", SpawnPowerup, ADMFLAG_ROOT);
 
 	LoadTranslations("common.phrases");
@@ -1410,6 +1411,17 @@ public Action SpawnPowerup(int client, int args){
 	char arg1[3];
 	GetCmdArg(1, arg1, sizeof(arg1));
 	SpawnPower(points, false, StringToInt(arg1));
+	return Plugin_Handled;
+}
+
+public Action CoordsJson(int client, int args){
+	if (client == 0) {
+		PrintToServer("[Fortress Blast] Because this command uses the crosshair, it cannot be executed from the server console.");
+		return Plugin_Handled;
+	}
+	float points[3];
+	GetCollisionPoint(client, points);
+	PrintToChat(client, "\"#-x\": \"%d\", \"#-y\": \"%d\", \"#-z\": \"%d\",", RoundFloat(points[0]), RoundFloat(points[1]), RoundFloat(points[2]));
 	return Plugin_Handled;
 }
 
