@@ -879,7 +879,7 @@ public void BuildingDamage(int client, const char[] class) {
 			DebugText("%s ID %N at %f, %f, %f damaged by Blast powerup", class, entity, pos2[0], pos2[1], pos2[2]);
 			float expectedDamage = sm_fortressblast_blast_buildings.FloatValue / 100;
 			if (expectedDamage < 0) {
-				expectedDamage = 0;
+				expectedDamage = 0.0;
 			}
 			SDKHooks_TakeDamage(entity, 0, client, ((150.0 - (GetVectorDistance(pos1, pos2) * 0.4)) * expectedDamage), 0, -1);
 		}
