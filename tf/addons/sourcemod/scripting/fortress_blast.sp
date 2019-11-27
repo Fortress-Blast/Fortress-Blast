@@ -7,16 +7,13 @@
 #include <tf2_stocks>
 #include <advanced_motd>
 
-
-public Plugin myinfo =
-{
+public Plugin myinfo = {
 	name = "Fortress Blast",
-	author = "Naleksuh + Jack5",
+	author = "Naleksuh & Jack5",
 	description = "Adds powerups from Marble Blast into TF2! Can easily be combined with custom gamemodes.",
-	version = "2.1",
+	version = "2.2",
 	url = "http://fortressblast.miraheze.org"
 };
-
 
 #pragma newdecls required
 
@@ -61,6 +58,7 @@ Handle texthand;
 Handle gemtext;
 
 ConVar sm_fortressblast_action_use;
+ConVar sm_fortressblast_blast_buildings;
 ConVar sm_fortressblast_bot;
 ConVar sm_fortressblast_bot_min;
 ConVar sm_fortressblast_bot_max;
@@ -75,7 +73,6 @@ ConVar sm_fortressblast_gifthunt_rate;
 ConVar sm_fortressblast_mannpower;
 ConVar sm_fortressblast_powerups;
 ConVar sm_fortressblast_spawnroom_kill;
-ConVar sm_fortressblast_building_blast_damage;
 
 /* Powerup IDs
 0 - No powerup if on player, gift if on powerup entity
@@ -106,14 +103,15 @@ public void OnPluginStart() {
 
 	// Commands
 	RegConsoleCmd("sm_fortressblast", FBMenu);
-	RegConsoleCmd("sm_setpowerup", SetPowerup);
 	RegConsoleCmd("sm_coordsjson", CoordsJson);
+	RegConsoleCmd("sm_setpowerup", SetPowerup);
 	RegAdminCmd("sm_spawnpowerup", SpawnPowerup, ADMFLAG_ROOT);
 
 	LoadTranslations("common.phrases");
 
 	// ConVars
 	sm_fortressblast_action_use = CreateConVar("sm_fortressblast_action_use", "attack3", "Which action to watch for in order to use powerups.");
+	sm_fortressblast_blast_buildings = CreateConVar("sm_fortressblast_blast_buildings", "100", "Percentage of Blast player damage to inflict on enemy buildings.");
 	sm_fortressblast_bot = CreateConVar("sm_fortressblast_bot", "1", "Disables or enables bots using powerups.");
 	sm_fortressblast_bot_min = CreateConVar("sm_fortressblast_bot_min", "2", "Minimum time for bots to use a powerup.");
 	sm_fortressblast_bot_max = CreateConVar("sm_fortressblast_bot_max", "15", "Maximum time for bots to use a powerup.");
@@ -128,7 +126,6 @@ public void OnPluginStart() {
 	sm_fortressblast_mannpower = CreateConVar("sm_fortressblast_mannpower", "2", "How to handle replacing Mannpower powerups.");
 	sm_fortressblast_powerups = CreateConVar("sm_fortressblast_powerups", "-1", "Bitfield of which powerups to enable, a number within 1 and 1023.");
 	sm_fortressblast_spawnroom_kill = CreateConVar("sm_fortressblast_spawnroom_kill", "1", "Disables or enables killing enemies inside spawnrooms due to Mega Mann exploit.");
-	sm_fortressblast_building_blast_damage = CreateConVar("sm_fortressblast_building_blast_damage", "100", "Percentage multiplier of building damage");
 
 	// HUDs
 	texthand = CreateHudSynchronizer();
@@ -225,13 +222,13 @@ public Action FBMenu(int client, int args) {
 	char url[200];
 	char action[15];
 	sm_fortressblast_action_use.GetString(action, sizeof(action))
-	Format(url, sizeof(url), "http://fortress-blast.github.io/2.1?powerups-enabled=%d&action=%s", bitfield, action);
+	Format(url, sizeof(url), "http://fortress-blast.github.io/2.2?powerups-enabled=%d&action=%s", bitfield, action);
 	AdvMOTD_ShowMOTDPanel(client, "How are you reading this?", url, MOTDPANEL_TYPE_URL, true, true, true, INVALID_FUNCTION);
 	CPrintToChat(client, "{orange}[Fortress Blast] {haunted}Opening Fortress Blast manual... If nothing happens, open your developer console and {yellow}try setting cl_disablehtmlmotd to 0{haunted}, then try again.");
 }
 
 public Action SetPowerup(int client, int args) {
-	if (!CheckCommandAccess(client, "", ADMFLAG_ROOT) && sm_fortressblast_debug.BoolValue) {
+	if (!CheckCommandAccess(client, "", ADMFLAG_ROOT) && !sm_fortressblast_debug.BoolValue) {
 		CPrintToChat(client, "{orange}[Fortress Blast] {red}You do not have permission to use this command.");
 		return;
 	}
@@ -420,7 +417,7 @@ public int NumberOfActiveGifts() {
 
 public Action PesterThisDude(Handle timer, int client) {
 	if (IsClientInGame(client)) { // Required because player might disconnect before this fires
-		CPrintToChat(client, "{orange}[Fortress Blast] {haunted}This server is running {yellow}Fortress Blast v2.1! {haunted}If you would like to know more or are unsure what a powerup does, type the command {yellow}!fortressblast {haunted}into chat.");
+		CPrintToChat(client, "{orange}[Fortress Blast] {haunted}This server is running {yellow}Fortress Blast v2.2! {haunted}If you would like to know more or are unsure what a powerup does, type the command {yellow}!fortressblast {haunted}into chat.");
 	}
 }
 
@@ -608,7 +605,7 @@ public void DeletePowerup(int entity, int other) {
 	DebugText("%N has collected powerup ID %d", other, powerup[other]);
 	PlayPowerupSound(other);
 	// If player is a bot and bot support is enabled
-	if (IsFakeClient(other) && GetConVarFloat(sm_fortressblast_bot) >= 1) { // Replace with GetConVarBool
+	if (IsFakeClient(other) && sm_fortressblast_bot.BoolValue) {
 		// Get minimum and maximum times
 		float convar1 = GetConVarFloat(sm_fortressblast_bot_min);
 		if (convar1 < 0) {
@@ -878,10 +875,13 @@ public void BuildingDamage(int client, const char[] class) {
 		int bobthe = GetEntPropEnt(entity, Prop_Send, "m_hBuilder");
 		float pos2[3];
 		GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos2);
-		DebugText("Building %s built by %N is at %f %f %f", class, bobthe, pos2[0], pos2[1], pos2[2]);
-		if(0 < bobthe <= MaxClients && IsClientInGame(bobthe) && GetClientTeam(bobthe) != GetClientTeam(client) && GetVectorDistance(pos1, pos2) <= 250.0){
-			DebugText("Sending blast damage to building %d built by %N", entity, bobthe);
-			SDKHooks_TakeDamage(entity, 0, client, ((150.0 - (GetVectorDistance(pos1, pos2) * 0.4)) * (sm_fortressblast_building_blast_damage.FloatValue / 100)), 0, -1);
+		if (0 < bobthe <= MaxClients && IsClientInGame(bobthe) && GetClientTeam(bobthe) != GetClientTeam(client) && GetVectorDistance(pos1, pos2) <= 250.0) {
+			DebugText("%s ID %N at %f, %f, %f damaged by Blast powerup", class, entity, pos2[0], pos2[1], pos2[2]);
+			float expectedDamage = sm_fortressblast_blast_buildings.FloatValue / 100;
+			if (expectedDamage < 0) {
+				expectedDamage = 0;
+			}
+			SDKHooks_TakeDamage(entity, 0, client, ((150.0 - (GetVectorDistance(pos1, pos2) * 0.4)) * expectedDamage), 0, -1);
 		}
 	}
 }
@@ -1375,7 +1375,7 @@ public void CollectedGift(int client) {
 			DebugText("BLU team has collected the required number of gifts", client);
 		}
 		for (int client2 = 1 ; client2 <= MaxClients ; client2++) {
-			if(IsClientInGame(client2)){
+			if (IsClientInGame(client2)) {
 				if (GetClientTeam(client2) == GetClientTeam(client)) {
 					EmitSoundToClient(client2, "fortressblast2/gifthunt_goal_playerteam.mp3", client2);
 				} else {
@@ -1404,7 +1404,9 @@ stock bool EntFire(char[] strTargetname, char[] strInput, char strParameter[] = 
 }
 
 public Action DeleteEdict(Handle timer, int entity) {
-	if(IsValidEdict(entity)) RemoveEdict(entity);
+	if (IsValidEdict(entity)) {
+		RemoveEdict(entity);
+	}
 	return Plugin_Stop;
 }
 
@@ -1419,12 +1421,10 @@ public bool PowerupIsEnabled(int id) {
 	} else if (bitfield == 512) {
 		PrintToServer("[Fortress Blast] Your powerup whitelist ConVar is set to Mystery only. Mystery requires at least one other powerup to work and cannot be used on its own. As a fallback, all powerups are allowed.");
 		return true;
-	} // The below statement might need to merged with an else
-	if (bitfield & Bitfieldify(id)) {
+	} else if (bitfield & Bitfieldify(id)) {
 		return true; // return bitfield & Bitfieldify(id) doesn't work
-	} else {
-		return false;
 	}
+	return false;
 }
 
 public int Bitfieldify(int bitter) {
@@ -1435,7 +1435,7 @@ public int Bitfieldify(int bitter) {
 	return (num / 2);
 }
 
-public Action SpawnPowerup(int client, int args){
+public Action SpawnPowerup(int client, int args) {
 	if (client == 0) {
 		PrintToServer("[Fortress Blast] Because this command uses the crosshair, it cannot be executed from the server console.");
 		return Plugin_Handled;
@@ -1448,7 +1448,7 @@ public Action SpawnPowerup(int client, int args){
 	return Plugin_Handled;
 }
 
-public Action CoordsJson(int client, int args){
+public Action CoordsJson(int client, int args) {
 	if (client == 0) {
 		PrintToServer("[Fortress Blast] Because this command uses the crosshair, it cannot be executed from the server console.");
 		return Plugin_Handled;
@@ -1459,8 +1459,7 @@ public Action CoordsJson(int client, int args){
 	return Plugin_Handled;
 }
 
-stock void GetCollisionPoint(int client, float pos[3])
-{
+stock void GetCollisionPoint(int client, float pos[3]) {
 	float vOrigin[3];
 	float vAngles[3];
 	
@@ -1500,9 +1499,7 @@ public Action TF2_OnPlayerTeleport(int client, int teleporter, bool& result) {
 	return Plugin_Changed;
 }
 
-public bool IsEntityStuck(int iEntity) // another function we stole from rtd
-{
-
+public bool IsEntityStuck(int iEntity) { // Roll the Dice function with new syntax
 	float flOrigin[3];
 	float flMins[3];
 	float flMaxs[3];
@@ -1514,12 +1511,9 @@ public bool IsEntityStuck(int iEntity) // another function we stole from rtd
 	return TR_DidHit();
 }
 
-public bool TraceFilterNotSelf(int entity, int contentsMask, any client)
-{
-	if(entity == client)
-	{
+public bool TraceFilterNotSelf(int entity, int contentsMask, any client) {
+	if (entity == client) {
 		return false;
 	}
-	
 	return true;
 }
