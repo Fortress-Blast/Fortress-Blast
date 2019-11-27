@@ -7,6 +7,14 @@
 #include <tf2_stocks>
 #include <advanced_motd>
 
+public Plugin myinfo = {
+	name = "Fortress Blast",
+	author = "Naleksuh & Jack5",
+	description = "Adds powerups from Marble Blast into TF2! Can easily be combined with custom gamemodes.",
+	version = "2.2",
+	url = "http://fortressblast.miraheze.org"
+};
+
 #pragma newdecls required
 
 // Defines
@@ -38,7 +46,6 @@ bool FrostTouchFrozen[MAXPLAYERS + 1] = true;
 float OldSpeed[MAXPLAYERS + 1] = 0.0;
 float SuperSpeed[MAXPLAYERS + 1] = 0.0;
 float VerticalVelocity[MAXPLAYERS + 1];
-float MegaMannCoords[MAXPLAYERS + 1][3];
 Handle SuperBounceHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle ShockAbsorberHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle GyrocopterHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
@@ -56,6 +63,7 @@ Handle gemtext;
 
 // ConVars
 ConVar sm_fortressblast_action_use;
+ConVar sm_fortressblast_blast_buildings;
 ConVar sm_fortressblast_bot;
 ConVar sm_fortressblast_bot_min;
 ConVar sm_fortressblast_bot_max;
@@ -102,6 +110,7 @@ public void OnPluginStart() {
 
 	// Commands
 	RegConsoleCmd("sm_fortressblast", FBMenu);
+	RegConsoleCmd("sm_coordsjson", CoordsJson);
 	RegConsoleCmd("sm_setpowerup", Command_SetPowerup);
 	RegAdminCmd("sm_spawnpowerup", Command_SpawnPowerup, ADMFLAG_ROOT);
 
@@ -109,6 +118,7 @@ public void OnPluginStart() {
 
 	// ConVars
 	sm_fortressblast_action_use = CreateConVar("sm_fortressblast_action_use", "attack3", "Which action to watch for in order to use powerups.");
+	sm_fortressblast_blast_buildings = CreateConVar("sm_fortressblast_blast_buildings", "100", "Percentage of Blast player damage to inflict on enemy buildings.");
 	sm_fortressblast_bot = CreateConVar("sm_fortressblast_bot", "1", "Disables or enables bots using powerups.");
 	sm_fortressblast_bot_min = CreateConVar("sm_fortressblast_bot_min", "2", "Minimum time for bots to use a powerup.");
 	sm_fortressblast_bot_max = CreateConVar("sm_fortressblast_bot_max", "15", "Maximum time for bots to use a powerup.");
@@ -222,7 +232,7 @@ public Action FBMenu(int client, int args) {
 	char url[200];
 	char action[15];
 	sm_fortressblast_action_use.GetString(action, sizeof(action))
-	Format(url, sizeof(url), "http://fortress-blast.github.io/2.1?powerups-enabled=%d&action=%s", bitfield, action);
+	Format(url, sizeof(url), "http://fortress-blast.github.io/2.2?powerups-enabled=%d&action=%s", bitfield, action);
 	AdvMOTD_ShowMOTDPanel(client, "How are you reading this?", url, MOTDPANEL_TYPE_URL, true, true, true, INVALID_FUNCTION);
 	CPrintToChat(client, "%s {haunted}Opening Fortress Blast manual... If nothing happens, open your developer console and {yellow}try setting cl_disablehtmlmotd to 0{haunted}, then try again.", MESSAGE_PREFIX);
 }
@@ -605,7 +615,7 @@ public void DeletePowerup(int entity, int other) {
 	DebugText("%N has collected powerup ID %d", other, powerup[other]);
 	PlayPowerupSound(other);
 	// If player is a bot and bot support is enabled
-	if (IsFakeClient(other) && GetConVarFloat(sm_fortressblast_bot) >= 1) { // Replace with GetConVarBool
+	if (IsFakeClient(other) && sm_fortressblast_bot.BoolValue) {
 		// Get minimum and maximum times
 		float convar1 = GetConVarFloat(sm_fortressblast_bot_min);
 		if (convar1 < 0) {
@@ -777,21 +787,27 @@ public void UsePower(int client) {
 		// Blast - Create explosion at user
 		PowerupParticle(client, "rd_robot_explosion", 1.0);
 		EmitAmbientSound("fortressblast2/blast_use.mp3", vel, client);
+		TF2_RemoveCondition(client, TFCond_StealthedUserBuffFade);
+		TF2_RemoveCondition(client, TFCond_Cloaked);
+		TF2_RemovePlayerDisguise(client);
+		ClearTimer(TimeTravelHandle[client]);
+		TimeTravelHandle[client] = CreateTimer(0.0, RemoveTimeTravel, client); // Remove Time Travel instantly
+
 		float pos1[3];
 		GetClientAbsOrigin(client, pos1);
-		float pos2[3];
 		for (int client2 = 1 ; client2 <= MaxClients ; client2++ ) {
 			if (IsClientInGame(client2)) {
+				float pos2[3];
 				GetClientAbsOrigin(client2, pos2);
 				if (GetVectorDistance(pos1, pos2) <= 250.0 && GetClientTeam(client) != GetClientTeam(client2)) {
 					SDKHooks_TakeDamage(client2, 0, client, (150.0 - (GetVectorDistance(pos1, pos2) * 0.4)), 0, -1);
 				}
 			}
 		}
-		TF2_RemoveCondition(client, TFCond_StealthedUserBuffFade);
-		TF2_RemoveCondition(client, TFCond_Cloaked);
-		TF2_RemovePlayerDisguise(client);
-		TimeTravelHandle[client] = CreateTimer(0.0, Timer_RemoveTimeTravel, client); // Remove Time Travel instantly
+
+		BuildingDamage(client, "obj_sentrygun");
+		BuildingDamage(client, "obj_dispenser");
+		BuildingDamage(client, "obj_teleporter");
 	} else if (powerup[client] == 8) {
 		// Mega Mann - Giant and 4x health for 10 seconds
 		EmitAmbientSound("fortressblast2/megamann_use.mp3", vel, client);
@@ -810,9 +826,6 @@ public void UsePower(int client) {
 		GetEntPropVector(client, Prop_Send, "m_vecOrigin", coords);
 		coords[2] += 16.0;
 		TeleportEntity(client, coords, NULL_VECTOR, NULL_VECTOR);
-		MegaMannCoords[client][0] = coords[0];
-		MegaMannCoords[client][1] = coords[1];
-		MegaMannCoords[client][2] = coords[2];
 		MegaMann[client] = true;
 		MegaMannStuckComplete[client] = false;
 	} else if (powerup[client] == 9) {
@@ -864,6 +877,25 @@ public void UsePower(int client) {
 	powerup[client] = 0;
 }
 
+public void BuildingDamage(int client, const char[] class) {
+	float pos1[3];
+	GetClientAbsOrigin(client, pos1);
+	int entity = 0;
+	while ((entity = FindEntityByClassname(entity, class)) != -1) {
+		int bobthe = GetEntPropEnt(entity, Prop_Send, "m_hBuilder");
+		float pos2[3];
+		GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos2);
+		if (0 < bobthe <= MaxClients && IsClientInGame(bobthe) && GetClientTeam(bobthe) != GetClientTeam(client) && GetVectorDistance(pos1, pos2) <= 250.0) {
+			DebugText("%s ID %N at %f, %f, %f damaged by Blast powerup", class, entity, pos2[0], pos2[1], pos2[2]);
+			float expectedDamage = sm_fortressblast_blast_buildings.FloatValue / 100;
+			if (expectedDamage < 0) {
+				expectedDamage = 0.0;
+			}
+			SDKHooks_TakeDamage(entity, 0, client, ((150.0 - (GetVectorDistance(pos1, pos2) * 0.4)) * expectedDamage), 0, -1);
+		}
+	}
+}
+
 public Action Timer_BeginTeleporter(Handle timer, int client) {
 	TeleportationHandle[client] = INVALID_HANDLE;
 	if (MegaMann[client]) {
@@ -885,8 +917,10 @@ public Action Timer_BeginTeleporter(Handle timer, int client) {
 			if (countby == eli) {
 				float coords[3] = 69.420;
 				GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
+				float angles[3] = 69.420;
+				GetEntPropVector(entity, Prop_Data, "m_angRotation", angles); 
 				coords[2] += 24.00;
-				TeleportEntity(client, coords, NULL_VECTOR, NULL_VECTOR);
+				TeleportEntity(client, coords, angles, NULL_VECTOR);
 				break;
 			}
 			countby++;
@@ -936,7 +970,8 @@ public Action Timer_MegaMannStuckCheck(Handle timer, int client) {
 	// MegaMann[client] = false;
 	float coords[3] = 69.420;
 	GetEntPropVector(client, Prop_Send, "m_vecOrigin", coords);
-	if (MegaMannCoords[client][0] == coords[0] && MegaMannCoords[client][1] == coords[1] && MegaMannCoords[client][2] == coords[2]) {
+	DebugText("RTD says stuck: %b", IsEntityStuck(client));
+	if (IsEntityStuck(client)) {
 		TF2_RespawnPlayer(client);
 		CPrintToChat(client, "%s {red}You were respawned as you might have been stuck. Be sure to {yellow}use Mega Mann in open areas {red}and {yellow}move once it is active.", MESSAGE_PREFIX);
 	}
@@ -1350,7 +1385,7 @@ public void CollectedGift(int client) {
 			DebugText("BLU team has collected the required number of gifts", client);
 		}
 		for (int client2 = 1 ; client2 <= MaxClients ; client2++) {
-			if(IsClientInGame(client2)){
+			if (IsClientInGame(client2)) {
 				if (GetClientTeam(client2) == GetClientTeam(client)) {
 					EmitSoundToClient(client2, "fortressblast2/gifthunt_goal_playerteam.mp3", client2);
 				} else {
@@ -1379,7 +1414,10 @@ stock bool EntFire(char[] strTargetname, char[] strInput, char strParameter[] = 
 }
 
 public Action Timer_DeleteEdict(Handle timer, int entity) {
-	if(IsValidEdict(entity)) RemoveEdict(entity);
+	if(IsValidEdict(entity)) {
+		RemoveEdict(entity);
+	}
+
 	return Plugin_Stop;
 }
 
@@ -1394,12 +1432,10 @@ public bool PowerupIsEnabled(int id) {
 	} else if (bitfield == 512) {
 		PrintToServer("[Fortress Blast] Your powerup whitelist ConVar is set to Mystery only. Mystery requires at least one other powerup to work and cannot be used on its own. As a fallback, all powerups are allowed.");
 		return true;
-	} // The below statement might need to merged with an else
-	if (bitfield & Bitfieldify(id)) {
+	} else if (bitfield & Bitfieldify(id)) {
 		return true; // return bitfield & Bitfieldify(id) doesn't work
-	} else {
-		return false;
 	}
+	return false;
 }
 
 public int Bitfieldify(int bitter) {
@@ -1423,8 +1459,18 @@ public Action Command_SpawnPowerup(int client, int args){
 	return Plugin_Handled;
 }
 
-stock void GetCollisionPoint(int client, float pos[3])
-{
+public Action CoordsJson(int client, int args) {
+	if (client == 0) {
+		PrintToServer("[Fortress Blast] Because this command uses the crosshair, it cannot be executed from the server console.");
+		return Plugin_Handled;
+	}
+	float points[3];
+	GetCollisionPoint(client, points);
+	PrintToChat(client, "\"#-x\": \"%d\", \"#-y\": \"%d\", \"#-z\": \"%d\",", RoundFloat(points[0]), RoundFloat(points[1]), RoundFloat(points[2]));
+	return Plugin_Handled;
+}
+
+stock void GetCollisionPoint(int client, float pos[3]) {
 	float vOrigin[3];
 	float vAngles[3];
 
@@ -1462,4 +1508,23 @@ public Action TF2_OnPlayerTeleport(int client, int teleporter, bool& result) {
 		result = false; // Prevent players with Mega Mann from taking teleporters
 	}
 	return Plugin_Changed;
+}
+
+public bool IsEntityStuck(int iEntity) { // Roll the Dice function with new syntax
+	float flOrigin[3];
+	float flMins[3];
+	float flMaxs[3];
+	GetEntPropVector(iEntity, Prop_Send, "m_vecOrigin", flOrigin);
+	GetEntPropVector(iEntity, Prop_Send, "m_vecMins", flMins);
+	GetEntPropVector(iEntity, Prop_Send, "m_vecMaxs", flMaxs);
+	
+	TR_TraceHullFilter(flOrigin, flOrigin, flMins, flMaxs, MASK_SOLID, TraceFilterNotSelf, iEntity);
+	return TR_DidHit();
+}
+
+public bool TraceFilterNotSelf(int entity, int contentsMask, any client) {
+	if (entity == client) {
+		return false;
+	}
+	return true;
 }
