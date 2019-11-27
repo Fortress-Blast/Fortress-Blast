@@ -7,6 +7,17 @@
 #include <tf2_stocks>
 #include <advanced_motd>
 
+
+public Plugin myinfo =
+{
+	name = "Fortress Blast",
+	author = "Naleksuh + Jack5",
+	description = "Adds powerups from Marble Blast into TF2! Can easily be combined with custom gamemodes.",
+	version = "2.1",
+	url = "http://fortressblast.miraheze.org"
+};
+
+
 #pragma newdecls required
 
 #define	MAX_EDICT_BITS 11
@@ -35,7 +46,6 @@ bool FrostTouchFrozen[MAXPLAYERS + 1] = true;
 float OldSpeed[MAXPLAYERS + 1] = 0.0;
 float SuperSpeed[MAXPLAYERS + 1] = 0.0;
 float VerticalVelocity[MAXPLAYERS + 1];
-float MegaMannCoords[MAXPLAYERS + 1][3];
 Handle SuperBounceHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle ShockAbsorberHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle GyrocopterHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
@@ -65,6 +75,7 @@ ConVar sm_fortressblast_gifthunt_rate;
 ConVar sm_fortressblast_mannpower;
 ConVar sm_fortressblast_powerups;
 ConVar sm_fortressblast_spawnroom_kill;
+ConVar sm_fortressblast_building_blast_damage;
 
 /* Powerup IDs
 0 - No powerup if on player, gift if on powerup entity
@@ -117,6 +128,7 @@ public void OnPluginStart() {
 	sm_fortressblast_mannpower = CreateConVar("sm_fortressblast_mannpower", "2", "How to handle replacing Mannpower powerups.");
 	sm_fortressblast_powerups = CreateConVar("sm_fortressblast_powerups", "-1", "Bitfield of which powerups to enable, a number within 1 and 1023.");
 	sm_fortressblast_spawnroom_kill = CreateConVar("sm_fortressblast_spawnroom_kill", "1", "Disables or enables killing enemies inside spawnrooms due to Mega Mann exploit.");
+	sm_fortressblast_building_blast_damage = CreateConVar("sm_fortressblast_building_blast_damage", "100", "Percentage multiplier of building damage");
 
 	// HUDs
 	texthand = CreateHudSynchronizer();
@@ -768,21 +780,27 @@ public void UsePower(int client) {
 		// Blast - Create explosion at user
 		PowerupParticle(client, "rd_robot_explosion", 1.0);
 		EmitAmbientSound("fortressblast2/blast_use.mp3", vel, client);
+		TF2_RemoveCondition(client, TFCond_StealthedUserBuffFade);
+		TF2_RemoveCondition(client, TFCond_Cloaked);
+		TF2_RemovePlayerDisguise(client);
+		ClearTimer(TimeTravelHandle[client]);
+		TimeTravelHandle[client] = CreateTimer(0.0, RemoveTimeTravel, client); // Remove Time Travel instantly
+		
 		float pos1[3];
 		GetClientAbsOrigin(client, pos1);
-		float pos2[3];
 		for (int client2 = 1 ; client2 <= MaxClients ; client2++ ) {
 			if (IsClientInGame(client2)) {
+				float pos2[3];
 				GetClientAbsOrigin(client2, pos2);
 				if (GetVectorDistance(pos1, pos2) <= 250.0 && GetClientTeam(client) != GetClientTeam(client2)) {
 					SDKHooks_TakeDamage(client2, 0, client, (150.0 - (GetVectorDistance(pos1, pos2) * 0.4)), 0, -1);
 				}
 			}
 		}
-		TF2_RemoveCondition(client, TFCond_StealthedUserBuffFade);
-		TF2_RemoveCondition(client, TFCond_Cloaked);
-		TF2_RemovePlayerDisguise(client);
-		TimeTravelHandle[client] = CreateTimer(0.0, RemoveTimeTravel, client); // Remove Time Travel instantly
+		
+		BuildingDamage(client, "obj_sentrygun");
+		BuildingDamage(client, "obj_dispenser");
+		BuildingDamage(client, "obj_teleporter");
 	} else if (powerup[client] == 8) {
 		// Mega Mann - Giant and 4x health for 10 seconds
 		EmitAmbientSound("fortressblast2/megamann_use.mp3", vel, client);
@@ -801,9 +819,6 @@ public void UsePower(int client) {
 		GetEntPropVector(client, Prop_Send, "m_vecOrigin", coords);
 		coords[2] += 16.0;
 		TeleportEntity(client, coords, NULL_VECTOR, NULL_VECTOR);
-		MegaMannCoords[client][0] = coords[0];
-		MegaMannCoords[client][1] = coords[1];
-		MegaMannCoords[client][2] = coords[2];
 		MegaMann[client] = true;
 		MegaMannStuckComplete[client] = false;
 	} else if (powerup[client] == 9) {
@@ -855,6 +870,22 @@ public void UsePower(int client) {
 	powerup[client] = 0;
 }
 
+public void BuildingDamage(int client, const char[] class) {
+	float pos1[3];
+	GetClientAbsOrigin(client, pos1);
+	int entity = 0;
+	while ((entity = FindEntityByClassname(entity, class)) != -1) {
+		int bobthe = GetEntPropEnt(entity, Prop_Send, "m_hBuilder");
+		float pos2[3];
+		GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos2);
+		DebugText("Building %s built by %N is at %f %f %f", class, bobthe, pos2[0], pos2[1], pos2[2]);
+		if(0 < bobthe <= MaxClients && IsClientInGame(bobthe) && GetClientTeam(bobthe) != GetClientTeam(client) && GetVectorDistance(pos1, pos2) <= 250.0){
+			DebugText("Sending blast damage to building %d built by %N", entity, bobthe);
+			SDKHooks_TakeDamage(entity, 0, client, ((150.0 - (GetVectorDistance(pos1, pos2) * 0.4)) * (sm_fortressblast_building_blast_damage.FloatValue / 100)), 0, -1);
+		}
+	}
+}
+
 public Action BeginTeleporter(Handle timer, int client) {
 	TeleportationHandle[client] = INVALID_HANDLE;
 	if (MegaMann[client]) {
@@ -876,8 +907,10 @@ public Action BeginTeleporter(Handle timer, int client) {
 			if (countby == eli) {
 				float coords[3] = 69.420;
 				GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
+				float angles[3] = 69.420;
+				GetEntPropVector(entity, Prop_Data, "m_angRotation", angles); 
 				coords[2] += 24.00;
-				TeleportEntity(client, coords, NULL_VECTOR, NULL_VECTOR);
+				TeleportEntity(client, coords, angles, NULL_VECTOR);
 				break;
 			}
 			countby++;
@@ -927,9 +960,10 @@ public Action MegaMannStuckCheck(Handle timer, int client) {
 	// MegaMann[client] = false;
 	float coords[3] = 69.420;
 	GetEntPropVector(client, Prop_Send, "m_vecOrigin", coords);
-	if (MegaMannCoords[client][0] == coords[0] && MegaMannCoords[client][1] == coords[1] && MegaMannCoords[client][2] == coords[2]) {
+	DebugText("RTD says stuck: %b", IsEntityStuck(client));
+	if (IsEntityStuck(client)) {
 		TF2_RespawnPlayer(client);
-		CPrintToChat(client, "{orange}[Fortress Blast] {red}You were respawned as you might have been stuck. Be sure to {yellow}use Mega Mann in open areas {red}and {yellow}move once it is active.");
+		CPrintToChat(client, "{orange}[Fortress Blast] {red}You were respawned as you might have been stuck. Be sure to {yellow}use Mega Mann in open areas");
 	}
 }
 
@@ -1464,4 +1498,28 @@ public Action TF2_OnPlayerTeleport(int client, int teleporter, bool& result) {
 		result = false; // Prevent players with Mega Mann from taking teleporters
 	}
 	return Plugin_Changed;
+}
+
+public bool IsEntityStuck(int iEntity) // another function we stole from rtd
+{
+
+	float flOrigin[3];
+	float flMins[3];
+	float flMaxs[3];
+	GetEntPropVector(iEntity, Prop_Send, "m_vecOrigin", flOrigin);
+	GetEntPropVector(iEntity, Prop_Send, "m_vecMins", flMins);
+	GetEntPropVector(iEntity, Prop_Send, "m_vecMaxs", flMaxs);
+	
+	TR_TraceHullFilter(flOrigin, flOrigin, flMins, flMaxs, MASK_SOLID, TraceFilterNotSelf, iEntity);
+	return TR_DidHit();
+}
+
+public bool TraceFilterNotSelf(int entity, int contentsMask, any client)
+{
+	if(entity == client)
+	{
+		return false;
+	}
+	
+	return true;
 }
