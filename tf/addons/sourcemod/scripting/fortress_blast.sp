@@ -14,7 +14,7 @@
 #define	MAX_EDICTS (1<<MAX_EDICT_BITS)
 #define MAX_PARTICLES 10 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
 #define MESSAGE_PREFIX "{orange}[Fortress Blast]"
-#define PLUGIN_VERSION "2.2"
+#define PLUGIN_VERSION "2.2.1"
 
 public Plugin myinfo = {
 	name = "Fortress Blast",
