@@ -7,14 +7,6 @@
 #include <tf2_stocks>
 #include <advanced_motd>
 
-public Plugin myinfo = {
-	name = "Fortress Blast",
-	author = "Naleksuh & Jack5",
-	description = "Adds powerups from Marble Blast into TF2! Can easily be combined with custom gamemodes.",
-	version = "2.2",
-	url = "http://fortressblast.miraheze.org"
-};
-
 #pragma newdecls required
 
 // Defines
@@ -22,6 +14,15 @@ public Plugin myinfo = {
 #define	MAX_EDICTS (1<<MAX_EDICT_BITS)
 #define MAX_PARTICLES 10 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
 #define MESSAGE_PREFIX "{orange}[Fortress Blast]"
+#define PLUGIN_VERSION "2.2"
+
+public Plugin myinfo = {
+	name = "Fortress Blast",
+	author = "Naleksuh & Jack5",
+	description = "Adds powerups from Marble Blast into TF2! Can easily be combined with custom gamemodes.",
+	version = PLUGIN_VERSION,
+	url = "http://fortressblast.miraheze.org"
+};
 
 // Global Variables
 int NumberOfPowerups = 11; // Do not define this
@@ -427,7 +428,7 @@ public int NumberOfActiveGifts() {
 
 public Action Timer_PesterThisDude(Handle timer, int client) {
 	if (IsClientInGame(client)) { // Required because player might disconnect before this fires
-		CPrintToChat(client, "%s {haunted}This server is running {yellow}Fortress Blast v2.1! {haunted}If you would like to know more or are unsure what a powerup does, type the command {yellow}!fortressblast {haunted}into chat.", MESSAGE_PREFIX);
+		CPrintToChat(client, "%s {haunted}This server is running {yellow}Fortress Blast v%s! {haunted}If you would like to know more or are unsure what a powerup does, type the command {yellow}!fortressblast {haunted}into chat.", MESSAGE_PREFIX, PLUGIN_VERSION);
 	}
 }
 
@@ -791,7 +792,7 @@ public void UsePower(int client) {
 		TF2_RemoveCondition(client, TFCond_Cloaked);
 		TF2_RemovePlayerDisguise(client);
 		ClearTimer(TimeTravelHandle[client]);
-		TimeTravelHandle[client] = CreateTimer(0.0, RemoveTimeTravel, client); // Remove Time Travel instantly
+		TimeTravelHandle[client] = CreateTimer(0.0, Timer_RemoveTimeTravel, client); // Remove Time Travel instantly
 
 		float pos1[3];
 		GetClientAbsOrigin(client, pos1);
@@ -1035,7 +1036,7 @@ public Action Timer_RecalcSpeed(Handle timer, int client) {
 
 public void DoHudText(int client) {
 	if (powerup[client] != 0) {
-  		SetHudTextParams(0.9, 0.5, 0.25, 255, 255, 0, 255);
+  		SetHudTextParams(0.825, 0.5, 0.25, 255, 255, 0, 255);
   		if (powerup[client] == 1) {
 			ShowSyncHudText(client, texthand, "Collected powerup:\nSuper Bounce");
 		} else if (powerup[client] == 2) {
@@ -1333,6 +1334,12 @@ public int CreateRagdoll(int client) { // Roll the Dice function with new syntax
 		SetEntProp(iRag, Prop_Send, "m_iTeam", GetClientTeam(client));
 		SetEntProp(iRag, Prop_Send, "m_iClass", view_as<int>(TF2_GetPlayerClass(client)));
 		SetEntProp(iRag, Prop_Send, "m_bOnGround", 1);
+
+		// Fix oddly shaped statues
+		SetEntPropFloat(iRag, Prop_Send, "m_flHeadScale", GetEntPropFloat(client, Prop_Send, "m_flHeadScale"));
+		SetEntPropFloat(iRag, Prop_Send, "m_flTorsoScale", GetEntPropFloat(client, Prop_Send, "m_flTorsoScale"));
+		SetEntPropFloat(iRag, Prop_Send, "m_flHandScale", GetEntPropFloat(client, Prop_Send, "m_flHandScale"));
+
 		SetEntityMoveType(iRag, MOVETYPE_NONE);
 		DispatchSpawn(iRag);
 		ActivateEntity(iRag);
