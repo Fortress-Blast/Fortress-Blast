@@ -15,6 +15,7 @@
 #define MAX_PARTICLES 10 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
 #define MESSAGE_PREFIX "{orange}[Fortress Blast]"
 #define PLUGIN_VERSION "2.2.1"
+#define MOTD_VERSION "2.2"
 
 public Plugin myinfo = {
 	name = "Fortress Blast",
@@ -233,7 +234,7 @@ public Action FBMenu(int client, int args) {
 	char url[200];
 	char action[15];
 	sm_fortressblast_action_use.GetString(action, sizeof(action))
-	Format(url, sizeof(url), "http://fortress-blast.github.io/2.2?powerups-enabled=%d&action=%s", bitfield, action);
+	Format(url, sizeof(url), "http://fortress-blast.github.io/%s?powerups-enabled=%d&action=%s", MOTD_VERSION, bitfield, action);
 	AdvMOTD_ShowMOTDPanel(client, "How are you reading this?", url, MOTDPANEL_TYPE_URL, true, true, true, INVALID_FUNCTION);
 	CPrintToChat(client, "%s {haunted}Opening Fortress Blast manual... If nothing happens, open your developer console and {yellow}try setting cl_disablehtmlmotd to 0{haunted}, then try again.", MESSAGE_PREFIX);
 }
@@ -251,35 +252,35 @@ public Action Command_SetPowerup(int client, int args) {
 	if (StrEqual(arg, "@all")) {
 		for (int client2 = 1; client2 <= MaxClients; client2++) {
 			if (IsClientInGame(client2)) {
-				FakeClientCommand(client, "sm_Command_SetPowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
+				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
 			}
 		}
 		return;
 	} else if (StrEqual(arg, "@red")) {
 		for (int client2 = 1; client2 <= MaxClients; client2++) {
 			if (IsClientInGame(client2) && GetClientTeam(client2) == 2) {
-				FakeClientCommand(client, "sm_Command_SetPowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
+				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
 			}
 		}
 		return;
 	} else if (StrEqual(arg, "@blue")) {
 		for (int client2 = 1; client2 <= MaxClients; client2++) {
 			if (IsClientInGame(client2) && GetClientTeam(client2) == 3) {
-				FakeClientCommand(client, "sm_Command_SetPowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
+				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
 			}
 		}
 		return;
 	} else if (StrEqual(arg, "@bots")) {
 		for (int client2 = 1; client2 <= MaxClients; client2++) {
 			if (IsClientInGame(client2) && IsFakeClient(client2)) {
-				FakeClientCommand(client, "sm_Command_SetPowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
+				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
 			}
 		}
 		return;
 	} else if (StrEqual(arg, "@humans")) {
 		for (int client2 = 1; client2 <= MaxClients; client2++) {
 			if (IsClientInGame(client2) && !IsFakeClient(client2)) {
-				FakeClientCommand(client, "sm_Command_SetPowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
+				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
 			}
 		}
 		return;
