@@ -61,7 +61,7 @@ Handle TeleportationHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 
 // HUDs
 Handle texthand;
-Handle gemtext;
+Handle gifttext;
 
 // ConVars
 ConVar sm_fortressblast_action_use;
@@ -93,7 +93,8 @@ ConVar sm_fortressblast_spawnroom_kill;
 8 - Mega Mann
 9 - Frost Touch
 10 - Mystery
-11 - Teleportation */
+11 - Teleportation
+12 - Magnetism */
 
 public void OnPluginStart() {
 
@@ -138,7 +139,7 @@ public void OnPluginStart() {
 
 	// HUDs
 	texthand = CreateHudSynchronizer();
-	gemtext = CreateHudSynchronizer();
+	gifttext = CreateHudSynchronizer();
 }
 
 public void OnMapStart() {
@@ -168,6 +169,8 @@ public void OnMapStart() {
 	PrecacheSound("fortressblast2/mystery_pickup.mp3");
 	PrecacheSound("fortressblast2/teleportation_pickup.mp3");
 	PrecacheSound("fortressblast2/teleportation_use.mp3");
+	PrecacheSound("fortressblast2/magnetism_pickup.mp3");
+	PrecacheSound("fortressblast2/magnetism_use.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/superbounce_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/superbounce_use.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/shockabsorber_pickup.mp3");
@@ -191,6 +194,8 @@ public void OnMapStart() {
 	AddFileToDownloadsTable("sound/fortressblast2/mystery_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/teleportation_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/teleportation_use.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/magnetism_pickup.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/magnetism_use.mp3");
 
 	PrecacheSound("fortressblast2/gifthunt_gift_pickup.mp3");
 	PrecacheSound("fortressblast2/gifthunt_goal_enemyteam.mp3");
@@ -216,8 +221,7 @@ public void OnMapStart() {
 	Format(path, sizeof(path), "scripts/fortress_blast/powerup_spots/%s.json", map);
 	MapHasJsonFile = FileExists(path); // So we dont overload read-writes
 
-	// Timer check gifts
-	CreateTimer(0.1, Timer_CheckGifts, _, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE)
+	CreateTimer(0.1, Timer_CheckGifts, _, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE); // Timer to check gifts
 }
 
 public void TF2_OnConditionAdded(int client, TFCond condition) {
@@ -233,7 +237,7 @@ public Action FBMenu(int client, int args) {
 	}
 	char url[200];
 	char action[15];
-	sm_fortressblast_action_use.GetString(action, sizeof(action))
+	sm_fortressblast_action_use.GetString(action, sizeof(action));
 	Format(url, sizeof(url), "http://fortress-blast.github.io/%s?powerups-enabled=%d&action=%s", MOTD_VERSION, bitfield, action);
 	AdvMOTD_ShowMOTDPanel(client, "How are you reading this?", url, MOTDPANEL_TYPE_URL, true, true, true, INVALID_FUNCTION);
 	CPrintToChat(client, "%s {haunted}Opening Fortress Blast manual... If nothing happens, open your developer console and {yellow}try setting cl_disablehtmlmotd to 0{haunted}, then try again.", MESSAGE_PREFIX);
@@ -325,7 +329,7 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 			}
 		}
 	}
-	CalculateGemAmountForPlayers();
+	CalculateGiftAmountForPlayers();
 	for (int entity = 1; entity <= MAX_EDICTS ; entity++) { // Remove leftover powerups
 		if (IsValidEntity(entity)) {
 			char classname[60];
@@ -365,7 +369,7 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 	}
 }
 
-public void CalculateGemAmountForPlayers() {
+public void CalculateGiftAmountForPlayers() {
 	giftgoal = sm_fortressblast_gifthunt_goal.IntValue;
 	DebugText("Base gift goal is %d", giftgoal);
 	int steps = RoundToFloor((PlayersAmount - 1) / sm_fortressblast_gifthunt_players.FloatValue);
@@ -381,7 +385,7 @@ public void OnEntityDestroyed(int entity) {
 		ClearTimer(DestroyPowerupHandle[entity]); // This causes about half a second of lag when a new round starts. but not having it causes problems
 		char classname[60];
 		GetEntityClassname(entity, classname, sizeof(classname));
-		if(StrEqual(classname, "tf_halloween_pickup") && powerupid[entity] == 0){ // This is just an optimizer, the same thing would happen without this but slower
+		if (StrEqual(classname, "tf_halloween_pickup") && powerupid[entity] == 0) { // This is just an optimizer, the same thing would happen without this but slower
 			char giftidsandstuff[20];
 			Format(giftidsandstuff, sizeof(giftidsandstuff), "fb_giftid_%d", entity);
 			int entity2 = 0;
@@ -503,6 +507,8 @@ stock int SpawnPower(float location[3], bool respawn, int id = 0) {
 			SetEntityRenderColor(entity, 0, 0, 0, 255);
 		} else if (powerupid[entity] == 11) {
 			SetEntityRenderColor(entity, 255, 153, 153, 255);
+		} else if (powerupid[entity] == 12) {
+			SetEntityRenderColor(entity, 0, 102, 0, 255);
 		}
 		DispatchKeyValue(entity, "pickup_sound", "get_out_of_the_console_snoop");
 		DispatchKeyValue(entity, "pickup_particle", "get_out_of_the_console_snoop");
@@ -536,9 +542,8 @@ public int SpawnGift(float location[3]) {
 		SDKHook(entity, SDKHook_StartTouch, OnStartTouchDontRespawn);
 		powerupid[entity] = 0;
 		int entity2 = CreateEntityByName("env_sprite");
-		if(IsValidEntity(entity2)){
+		if (IsValidEntity(entity2)) {
 			DispatchKeyValue(entity2, "model", "sprites/fortressblast/gift_located_here.vmt");
-			//SetEntityFlags(entity2, 1);
 			DispatchKeyValue(entity2, "spawnflags", "1");
 			DispatchSpawn(entity2);
 			ActivateEntity(entity2);
@@ -674,6 +679,8 @@ public void PlayPowerupSound(int client) {
 		EmitSoundToClient(client, "fortressblast2/mystery_pickup.mp3", client);
 	} else if (powerup[client] == 11) {
 		EmitSoundToClient(client, "fortressblast2/teleportation_pickup.mp3", client);
+	} else if (powerup[client] == 12) {
+		EmitSoundToClient(client, "fortressblast2/magnetism_pickup.mp3", client);
 	}
 }
 
@@ -689,7 +696,6 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		CPrintToChat(client, "%s {red}Special attack is currerntly disabled on this server. You are required to {yellow}perform the '%s' action to use a powerup.", MESSAGE_PREFIX, button);
 	} else if (buttons & StringButtonInt() && IsPlayerAlive(client) && !FrostTouchFrozen[client]) {
 		UsePower(client);
-		// Only Super Speed should be blocked when carrying the PASS Time Jack
 	}
 	float vel2[3];
 	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel2);
@@ -875,6 +881,8 @@ public void UsePower(int client) {
 			BfWriteByte(message, color[3]);
 		}
 		EndMessage();
+	} else if (powerup[client] == 12) {
+		// Magnetism - Push or pull enemies depending on weapon for 5 seconds
 	}
 	powerup[client] = 0;
 }
@@ -969,10 +977,8 @@ public Action Timer_RemoveFrostTouch(Handle timer, int client) {
 public Action Timer_MegaMannStuckCheck(Handle timer, int client) {
 	MegaMannPreHandle[client] = INVALID_HANDLE;
 	MegaMannStuckComplete[client] = true;
-	// MegaMann[client] = false;
 	float coords[3] = 69.420;
 	GetEntPropVector(client, Prop_Send, "m_vecOrigin", coords);
-	DebugText("RTD says stuck: %b", IsEntityStuck(client));
 	if (IsEntityStuck(client)) {
 		TF2_RespawnPlayer(client);
 		CPrintToChat(client, "%s {red}You were respawned as you might have been stuck. Be sure to {yellow}use Mega Mann in open areas {red}and {yellow}move once it is active.", MESSAGE_PREFIX);
@@ -1060,11 +1066,13 @@ public void DoHudText(int client) {
 			ShowSyncHudText(client, texthand, "Collected powerup:\nMystery");
 		} else if (powerup[client] == 11) {
 			ShowSyncHudText(client, texthand, "Collected powerup:\nTeleportation");
+		} else if (powerup[client] == 12) {
+			ShowSyncHudText(client, texthand, "Collected powerup:\nMagnetism");
 		}
 	}
 	if (GiftHunt && !VictoryTime) {
   		SetHudTextParams(-1.0, 0.775, 0.25, 255, 255, 255, 255);
-  		ShowSyncHudText(client, gemtext, "BLU: %d | Playing to %d gifts | RED: %d", Gifts[3], giftgoal, Gifts[2]);
+  		ShowSyncHudText(client, gifttext, "BLU: %d | Playing to %d gifts | RED: %d", Gifts[3], giftgoal, Gifts[2]);
 	}
 }
 
@@ -1114,11 +1122,9 @@ public void GetPowerupPlacements() {
 			StrCat(query, sizeof(query), "-");
 			if (to == 0) {
 				StrCat(query, sizeof(query), "x");
-			}
-			if (to == 1) {
+			} else if (to == 1) {
 				StrCat(query, sizeof(query), "y");
-			}
-			if (to == 2) {
+			} else if (to == 2) {
 				StrCat(query, sizeof(query), "z");
 			}
 			if (HandleHasKey(handle, query)) {
@@ -1422,10 +1428,9 @@ stock bool EntFire(char[] strTargetname, char[] strInput, char strParameter[] = 
 }
 
 public Action Timer_DeleteEdict(Handle timer, int entity) {
-	if(IsValidEdict(entity)) {
+	if (IsValidEdict(entity)) {
 		RemoveEdict(entity);
 	}
-
 	return Plugin_Stop;
 }
 
