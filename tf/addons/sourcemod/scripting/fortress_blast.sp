@@ -14,7 +14,7 @@
 #define	MAX_EDICTS (1<<MAX_EDICT_BITS)
 #define MAX_PARTICLES 10 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
 #define MESSAGE_PREFIX "{orange}[Fortress Blast]"
-#define PLUGIN_VERSION "2.2.1"
+#define PLUGIN_VERSION "2.3 [UNRELEASED]"
 #define MOTD_VERSION "2.2"
 
 public Plugin myinfo = {
@@ -1479,7 +1479,7 @@ public Action CoordsJson(int client, int args) {
 	}
 	float points[3];
 	GetCollisionPoint(client, points);
-	PrintToChat(client, "\"#-x\": \"%d\", \"#-y\": \"%d\", \"#-z\": \"%d\",", RoundFloat(points[0]), RoundFloat(points[1]), RoundFloat(points[2]));
+	CPrintToChat(client, "{haunted}\"#-x\": \"%d\", \"#-y\": \"%d\", \"#-z\": \"%d\",", RoundFloat(points[0]), RoundFloat(points[1]), RoundFloat(points[2]));
 	return Plugin_Handled;
 }
 
