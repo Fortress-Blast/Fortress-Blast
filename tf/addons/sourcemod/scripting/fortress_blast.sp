@@ -207,7 +207,6 @@ public void OnMapStart() {
 	// Smissmas sound precaching
 	PrecacheSound("misc/jingle_bells/jingle_bells_nm_01.wav");
 	PrecacheSound("misc/jingle_bells/jingle_bells_nm_02.wav");
-	PrecacheSound("misc/jingle_bells/jingle_bells_nm_05.wav");
 
 	// Gift Hunt materials and sounds precaching and downloading
 	AddFileToDownloadsTable("materials/sprites/fortressblast/gift_located_here.vmt");
@@ -437,10 +436,9 @@ public int NumberOfActiveGifts() {
 
 public Action Timer_PesterThisDude(Handle timer, int client) {
 	if (IsClientInGame(client)) { // Required because player might disconnect before this fires
-		if(Smissmas()){
-			CPrintToChat(client, "%s {haunted}This server is running {salmon}F{limegreen}o{salmon}r{limegreen}t{salmon}r{limegreen}e{salmon}s{limegreen}s{salmon} B{limegreen}l{salmon}a{limegreen}s{salmon}t{yellow} v%s!", MESSAGE_PREFIX, PLUGIN_VERSION);
-		}
-		else{
+		if (Smissmas()) {
+			CPrintToChat(client, "%s {haunted}This server is running {salmon}F{limegreen}o{salmon}r{limegreen}t{salmon}r{limegreen}e{salmon}s{limegreen}s {salmon}B{limegreen}l{salmon}a{limegreen}s{salmon}t {yellow}v%s!", MESSAGE_PREFIX, PLUGIN_VERSION);
+		} else {
 			CPrintToChat(client, "%s {haunted}This server is running {yellow}Fortress Blast v%s!", MESSAGE_PREFIX, PLUGIN_VERSION);
 		}
 		CPrintToChat(client, "{haunted}If you would like to know more or are unsure what a powerup does, type the command {yellow}!fortressblast {haunted}into chat.");
@@ -782,10 +780,6 @@ public void UsePower(int client) {
 		}
 		TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vel);
 		EmitAmbientSound("fortressblast2/superjump_use.mp3", vel, client);
-		if (Smissmas()) {
-			PowerupParticle(client, "tada_sparklebits", 2.0);
-			EmitAmbientSound("misc/jingle_bells/jingle_bells_nm_05.wav", vel, client);
-		}
 	} else if (powerup[client] == 5) {
 		// Gyrocopter - 25% gravity for 5 seconds
 		SetEntityGravity(client, 0.25);
