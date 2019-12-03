@@ -207,7 +207,6 @@ public void OnMapStart() {
 	// Smissmas sound precaching
 	PrecacheSound("misc/jingle_bells/jingle_bells_nm_01.wav");
 	PrecacheSound("misc/jingle_bells/jingle_bells_nm_02.wav");
-	PrecacheSound("misc/jingle_bells/jingle_bells_nm_05.wav");
 
 	// Gift Hunt materials and sounds precaching and downloading
 	AddFileToDownloadsTable("materials/sprites/fortressblast/gift_located_here.vmt");
