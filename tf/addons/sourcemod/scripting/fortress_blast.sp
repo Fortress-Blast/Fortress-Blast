@@ -14,7 +14,7 @@
 #define	MAX_EDICTS (1<<MAX_EDICT_BITS)
 #define MAX_PARTICLES 10 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
 #define MESSAGE_PREFIX "{orange}[Fortress Blast]"
-#define PLUGIN_VERSION "2.3 [UNRELEASED]"
+#define PLUGIN_VERSION "2.2.1 [UNRELEASED]"
 #define MOTD_VERSION "2.2"
 
 public Plugin myinfo = {
@@ -148,11 +148,15 @@ public void OnMapStart() {
 	Gifts[2] = 0;
 	Gifts[3] = 0;
 	
-	PrecacheSound("misc/jingle_bells/jingle_bells_nm_02.wav");
-	PrecacheSound("misc/jingle_bells/jingle_bells_nm_05.wav");
-	
-	
-	
+	// Powerup sounds precaching and downloading
+	AddFileToDownloadsTable("materials/models/fortressblast/pickups/fb_pickup/pickup_fb.vmt");
+	AddFileToDownloadsTable("materials/models/fortressblast/pickups/fb_pickup/pickup_fb.vtf");
+	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.mdl");
+	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.dx80.vtx");
+	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.dx90.vtx");
+	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.phy");
+	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.sw.vtx");
+	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.vvd");
 	PrecacheSound("fortressblast2/superbounce_pickup.mp3");
 	PrecacheSound("fortressblast2/superbounce_use.mp3");
 	PrecacheSound("fortressblast2/shockabsorber_pickup.mp3");
@@ -199,24 +203,21 @@ public void OnMapStart() {
 	AddFileToDownloadsTable("sound/fortressblast2/mystery_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/teleportation_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/teleportation_use.mp3");
+	
+	// Smissmas sound precaching
+	PrecacheSound("misc/jingle_bells/jingle_bells_nm_01.wav");
+	PrecacheSound("misc/jingle_bells/jingle_bells_nm_02.wav");
+	PrecacheSound("misc/jingle_bells/jingle_bells_nm_05.wav");
 
+	// Gift Hunt materials and sounds precaching and downloading
+	AddFileToDownloadsTable("materials/sprites/fortressblast/gift_located_here.vmt");
+	AddFileToDownloadsTable("materials/sprites/fortressblast/gift_located_here.vtf");
 	PrecacheSound("fortressblast2/gifthunt_gift_pickup.mp3");
 	PrecacheSound("fortressblast2/gifthunt_goal_enemyteam.mp3");
 	PrecacheSound("fortressblast2/gifthunt_goal_playerteam.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/gifthunt_gift_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/gifthunt_goal_enemyteam.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/gifthunt_goal_playerteam.mp3");
-	AddFileToDownloadsTable("materials/sprites/fortressblast/gift_located_here.vmt");
-	AddFileToDownloadsTable("materials/sprites/fortressblast/gift_located_here.vtf");
-
-	AddFileToDownloadsTable("materials/models/fortressblast/pickups/fb_pickup/pickup_fb.vmt");
-	AddFileToDownloadsTable("materials/models/fortressblast/pickups/fb_pickup/pickup_fb.vtf");
-	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.mdl");
-	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.dx80.vtx");
-	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.dx90.vtx");
-	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.phy");
-	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.sw.vtx");
-	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.vvd");
 
 	char map[80];
 	GetCurrentMap(map, sizeof(map));
@@ -775,6 +776,10 @@ public void UsePower(int client) {
 		}
 		TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vel);
 		EmitAmbientSound("fortressblast2/superjump_use.mp3", vel, client);
+		if (Smissmas()) {
+			PowerupParticle(client, "tada_sparklebits", 2.0);
+			EmitAmbientSound("misc/jingle_bells/jingle_bells_nm_05.wav", vel, client);
+		}
 	} else if (powerup[client] == 5) {
 		// Gyrocopter - 25% gravity for 5 seconds
 		SetEntityGravity(client, 0.25);
@@ -795,7 +800,7 @@ public void UsePower(int client) {
 		PowerupParticle(client, "rd_robot_explosion", 1.0);
 		EmitAmbientSound("fortressblast2/blast_use.mp3", vel, client);
 		if (Smissmas()) {
-			PowerupParticle(client, "taunt_ornament_glitter_alt", 2.0);
+			PowerupParticle(client, "xmas_ornament_glitter_alt", 2.0);
 			EmitAmbientSound("misc/jingle_bells/jingle_bells_nm_02.wav", vel, client);
 		}
 		TF2_RemoveCondition(client, TFCond_StealthedUserBuffFade);
@@ -946,12 +951,12 @@ public Action Timer_BeginTeleporter(Handle timer, int client) {
 	TeleportXmasThingy(client);
 }
 
-public void TeleportXmasThingy(int client){
+public void TeleportXmasThingy(int client) {
 	if (Smissmas()) {
 		float vel[3];
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel);
 		PowerupParticle(client, "xms_snowburst_child01", 5.0);
-		EmitAmbientSound("misc/jingle_bells/jingle_bells_nm_05.wav", vel, client);
+		EmitAmbientSound("misc/jingle_bells/jingle_bells_nm_01.wav", vel, client);
 	}
 }
 
