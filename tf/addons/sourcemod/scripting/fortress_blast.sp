@@ -938,7 +938,7 @@ public Action Timer_BeginTeleporter(Handle timer, int client) {
 	}
 	if (Smissmas()) {
 		float vel[3];
-		GetEntPropVector(other, Prop_Data, "m_vecVelocity", vel);
+		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel);
 		PowerupParticle(client, "xms_snowburst_child01", 5.0);
 		EmitAmbientSound("misc/jingle_bells/jingle_bells_nm_05.wav", vel, client);
 	}
