@@ -776,10 +776,6 @@ public void UsePower(int client) {
 		}
 		TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vel);
 		EmitAmbientSound("fortressblast2/superjump_use.mp3", vel, client);
-		if (Smissmas()) {
-			PowerupParticle(client, "tada_sparklebits", 2.0);
-			EmitAmbientSound("misc/jingle_bells/jingle_bells_nm_05.wav", vel, client);
-		}
 	} else if (powerup[client] == 5) {
 		// Gyrocopter - 25% gravity for 5 seconds
 		SetEntityGravity(client, 0.25);
