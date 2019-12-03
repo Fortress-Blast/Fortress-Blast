@@ -14,7 +14,7 @@
 #define	MAX_EDICTS (1<<MAX_EDICT_BITS)
 #define MAX_PARTICLES 10 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
 #define MESSAGE_PREFIX "{orange}[Fortress Blast]"
-#define PLUGIN_VERSION "2.2.1"
+#define PLUGIN_VERSION "2.3 [UNRELEASED]"
 #define MOTD_VERSION "2.2"
 
 public Plugin myinfo = {
@@ -61,7 +61,7 @@ Handle TeleportationHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 
 // HUDs
 Handle texthand;
-Handle gemtext;
+Handle gifttext;
 
 // ConVars
 ConVar sm_fortressblast_action_use;
@@ -73,6 +73,7 @@ ConVar sm_fortressblast_debug;
 ConVar sm_fortressblast_drop;
 ConVar sm_fortressblast_drop_rate;
 ConVar sm_fortressblast_drop_teams;
+ConVar sm_fortressblast_event_xmas;
 ConVar sm_fortressblast_gifthunt_goal;
 ConVar sm_fortressblast_gifthunt_increment;
 ConVar sm_fortressblast_gifthunt_players;
@@ -128,6 +129,7 @@ public void OnPluginStart() {
 	sm_fortressblast_drop = CreateConVar("sm_fortressblast_drop", "1", "How to handle dropping powerups on death.");
 	sm_fortressblast_drop_rate = CreateConVar("sm_fortressblast_drop_rate", "10", "Chance out of 100 for a powerup to drop on death.");
 	sm_fortressblast_drop_teams = CreateConVar("sm_fortressblast_drop_teams", "1", "Teams that will drop powerups on death.");
+	sm_fortressblast_event_xmas = CreateConVar("sm_fortressblast_event_xmas", "1", "How to handle the TF2 Smissmas event.");
 	sm_fortressblast_gifthunt_goal = CreateConVar("sm_fortressblast_gifthunt_goal", "125", "Base number of gifts required to unlock the objective in Gift Hunt.");
 	sm_fortressblast_gifthunt_increment = CreateConVar("sm_fortressblast_gifthunt_increment", "25", "Amount to increase the gift goal per extra group of players.");
 	sm_fortressblast_gifthunt_players = CreateConVar("sm_fortressblast_gifthunt_players", "4", "Number of players in a group, any more and the gift goal increases.");
@@ -138,7 +140,7 @@ public void OnPluginStart() {
 
 	// HUDs
 	texthand = CreateHudSynchronizer();
-	gemtext = CreateHudSynchronizer();
+	gifttext = CreateHudSynchronizer();
 }
 
 public void OnMapStart() {
@@ -216,8 +218,7 @@ public void OnMapStart() {
 	Format(path, sizeof(path), "scripts/fortress_blast/powerup_spots/%s.json", map);
 	MapHasJsonFile = FileExists(path); // So we dont overload read-writes
 
-	// Timer check gifts
-	CreateTimer(0.1, Timer_CheckGifts, _, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE)
+	CreateTimer(0.1, Timer_CheckGifts, _, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE); // Timer to check gifts
 }
 
 public void TF2_OnConditionAdded(int client, TFCond condition) {
@@ -233,7 +234,7 @@ public Action FBMenu(int client, int args) {
 	}
 	char url[200];
 	char action[15];
-	sm_fortressblast_action_use.GetString(action, sizeof(action))
+	sm_fortressblast_action_use.GetString(action, sizeof(action));
 	Format(url, sizeof(url), "http://fortress-blast.github.io/%s?powerups-enabled=%d&action=%s", MOTD_VERSION, bitfield, action);
 	AdvMOTD_ShowMOTDPanel(client, "How are you reading this?", url, MOTDPANEL_TYPE_URL, true, true, true, INVALID_FUNCTION);
 	CPrintToChat(client, "%s {haunted}Opening Fortress Blast manual... If nothing happens, open your developer console and {yellow}try setting cl_disablehtmlmotd to 0{haunted}, then try again.", MESSAGE_PREFIX);
@@ -325,7 +326,7 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 			}
 		}
 	}
-	CalculateGemAmountForPlayers();
+	CalculateGiftAmountForPlayers();
 	for (int entity = 1; entity <= MAX_EDICTS ; entity++) { // Remove leftover powerups
 		if (IsValidEntity(entity)) {
 			char classname[60];
@@ -365,7 +366,7 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 	}
 }
 
-public void CalculateGemAmountForPlayers() {
+public void CalculateGiftAmountForPlayers() {
 	giftgoal = sm_fortressblast_gifthunt_goal.IntValue;
 	DebugText("Base gift goal is %d", giftgoal);
 	int steps = RoundToFloor((PlayersAmount - 1) / sm_fortressblast_gifthunt_players.FloatValue);
@@ -381,7 +382,7 @@ public void OnEntityDestroyed(int entity) {
 		ClearTimer(DestroyPowerupHandle[entity]); // This causes about half a second of lag when a new round starts. but not having it causes problems
 		char classname[60];
 		GetEntityClassname(entity, classname, sizeof(classname));
-		if(StrEqual(classname, "tf_halloween_pickup") && powerupid[entity] == 0){ // This is just an optimizer, the same thing would happen without this but slower
+		if (StrEqual(classname, "tf_halloween_pickup") && powerupid[entity] == 0) { // This is just an optimizer, the same thing would happen without this but slower
 			char giftidsandstuff[20];
 			Format(giftidsandstuff, sizeof(giftidsandstuff), "fb_giftid_%d", entity);
 			int entity2 = 0;
@@ -536,9 +537,8 @@ public int SpawnGift(float location[3]) {
 		SDKHook(entity, SDKHook_StartTouch, OnStartTouchDontRespawn);
 		powerupid[entity] = 0;
 		int entity2 = CreateEntityByName("env_sprite");
-		if(IsValidEntity(entity2)){
+		if (IsValidEntity(entity2)) {
 			DispatchKeyValue(entity2, "model", "sprites/fortressblast/gift_located_here.vmt");
-			//SetEntityFlags(entity2, 1);
 			DispatchKeyValue(entity2, "spawnflags", "1");
 			DispatchSpawn(entity2);
 			ActivateEntity(entity2);
@@ -689,7 +689,6 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		CPrintToChat(client, "%s {red}Special attack is currerntly disabled on this server. You are required to {yellow}perform the '%s' action to use a powerup.", MESSAGE_PREFIX, button);
 	} else if (buttons & StringButtonInt() && IsPlayerAlive(client) && !FrostTouchFrozen[client]) {
 		UsePower(client);
-		// Only Super Speed should be blocked when carrying the PASS Time Jack
 	}
 	float vel2[3];
 	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel2);
@@ -787,12 +786,12 @@ public void UsePower(int client) {
 		EmitAmbientSound("fortressblast2/timetravel_use_3sec.mp3", vel, client);
 	} else if (powerup[client] == 7) {
 		// Blast - Create explosion at user
-		if(Smissmas()){
-			PowerupParticle(client, "taunt_ornament_glitter_alt", 2.0);
-			EmitAmbientSound("sound\misc\jingle_bells\jingle_bells_nm_02.wav", vel, client);
-		}
 		PowerupParticle(client, "rd_robot_explosion", 1.0);
 		EmitAmbientSound("fortressblast2/blast_use.mp3", vel, client);
+		if (Smissmas()) {
+			PowerupParticle(client, "taunt_ornament_glitter_alt", 2.0);
+			EmitAmbientSound("misc/jingle_bells/jingle_bells_nm_02.wav", vel, client);
+		}
 		TF2_RemoveCondition(client, TFCond_StealthedUserBuffFade);
 		TF2_RemoveCondition(client, TFCond_Cloaked);
 		TF2_RemovePlayerDisguise(client);
@@ -814,8 +813,6 @@ public void UsePower(int client) {
 		BuildingDamage(client, "obj_sentrygun");
 		BuildingDamage(client, "obj_dispenser");
 		BuildingDamage(client, "obj_teleporter");
-		
-		
 	} else if (powerup[client] == 8) {
 		// Mega Mann - Giant and 4x health for 10 seconds
 		EmitAmbientSound("fortressblast2/megamann_use.mp3", vel, client);
@@ -939,9 +936,9 @@ public Action Timer_BeginTeleporter(Handle timer, int client) {
 	} else if (TF2_GetClientTeam(client) == TFTeam_Blue) {
 		PowerupParticle(client, "teleportedin_blue", 1.0);
 	}
-	if(Smissmas()){
+	if (Smissmas()) {
 		PowerupParticle(client, "xms_snowburst_child01", 5.0);
-		EmitAmbientSound("sound sound\misc\jingle_bells\jingle_bells_nm_05.wav", vel, client);
+		EmitAmbientSound("misc/jingle_bells/jingle_bells_nm_05.wav", vel, client);
 	}
 }
 
@@ -979,10 +976,8 @@ public Action Timer_RemoveFrostTouch(Handle timer, int client) {
 public Action Timer_MegaMannStuckCheck(Handle timer, int client) {
 	MegaMannPreHandle[client] = INVALID_HANDLE;
 	MegaMannStuckComplete[client] = true;
-	// MegaMann[client] = false;
 	float coords[3] = 69.420;
 	GetEntPropVector(client, Prop_Send, "m_vecOrigin", coords);
-	DebugText("RTD says stuck: %b", IsEntityStuck(client));
 	if (IsEntityStuck(client)) {
 		TF2_RespawnPlayer(client);
 		CPrintToChat(client, "%s {red}You were respawned as you might have been stuck. Be sure to {yellow}use Mega Mann in open areas {red}and {yellow}move once it is active.", MESSAGE_PREFIX);
@@ -1074,7 +1069,7 @@ public void DoHudText(int client) {
 	}
 	if (GiftHunt && !VictoryTime) {
   		SetHudTextParams(-1.0, 0.775, 0.25, 255, 255, 255, 255);
-  		ShowSyncHudText(client, gemtext, "BLU: %d | Playing to %d gifts | RED: %d", Gifts[3], giftgoal, Gifts[2]);
+  		ShowSyncHudText(client, gifttext, "BLU: %d | Playing to %d gifts | RED: %d", Gifts[3], giftgoal, Gifts[2]);
 	}
 }
 
@@ -1124,11 +1119,9 @@ public void GetPowerupPlacements() {
 			StrCat(query, sizeof(query), "-");
 			if (to == 0) {
 				StrCat(query, sizeof(query), "x");
-			}
-			if (to == 1) {
+			} else if (to == 1) {
 				StrCat(query, sizeof(query), "y");
-			}
-			if (to == 2) {
+			} else if (to == 2) {
 				StrCat(query, sizeof(query), "z");
 			}
 			if (HandleHasKey(handle, query)) {
@@ -1432,10 +1425,9 @@ stock bool EntFire(char[] strTargetname, char[] strInput, char strParameter[] = 
 }
 
 public Action Timer_DeleteEdict(Handle timer, int entity) {
-	if(IsValidEdict(entity)) {
+	if (IsValidEdict(entity)) {
 		RemoveEdict(entity);
 	}
-
 	return Plugin_Stop;
 }
 
@@ -1484,7 +1476,7 @@ public Action CoordsJson(int client, int args) {
 	}
 	float points[3];
 	GetCollisionPoint(client, points);
-	PrintToChat(client, "\"#-x\": \"%d\", \"#-y\": \"%d\", \"#-z\": \"%d\",", RoundFloat(points[0]), RoundFloat(points[1]), RoundFloat(points[2]));
+	CPrintToChat(client, "{haunted}\"#-x\": \"%d\", \"#-y\": \"%d\", \"#-z\": \"%d\",", RoundFloat(points[0]), RoundFloat(points[1]), RoundFloat(points[2]));
 	return Plugin_Handled;
 }
 
@@ -1547,12 +1539,11 @@ public bool TraceFilterNotSelf(int entity, int contentsMask, any client) {
 	return true;
 }
 
-public bool Smissmas(){
+public bool Smissmas() {
 	int FeelsLikeTheVeryFirst = sm_fortressblast_event_xmas.IntValue;
-	if(FeelsLikeTheVeryFirst == 0){
+	if (FeelsLikeTheVeryFirst == 0) {
 		return false;
-	}
-	if(FeelsLikeTheVeryFirst == 1){
+	} else if (FeelsLikeTheVeryFirst == 1) {
 		return TF2_IsHolidayActive(TFHoliday_Christmas);
 	}
 	return true;
