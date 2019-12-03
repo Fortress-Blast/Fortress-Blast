@@ -247,7 +247,7 @@ public Action FBMenu(int client, int args) {
 }
 
 public Action Command_SetPowerup(int client, int args) {
-	if (!CheckCommandAccess(client, "", ADMFLAG_ROOT) && sm_fortressblast_debug.BoolValue) {
+	if (!CheckCommandAccess(client, "", ADMFLAG_ROOT) && !sm_fortressblast_debug.BoolValue) {
 		CPrintToChat(client, "%s {red}You do not have permission to use this command.", MESSAGE_PREFIX);
 		return;
 	}
