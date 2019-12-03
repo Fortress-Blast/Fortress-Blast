@@ -147,6 +147,12 @@ public void OnMapStart() {
 	GiftHunt = false;
 	Gifts[2] = 0;
 	Gifts[3] = 0;
+	
+	PrecacheSound("misc/jingle_bells/jingle_bells_nm_02.wav");
+	PrecacheSound("misc/jingle_bells/jingle_bells_nm_05.wav");
+	
+	
+	
 	PrecacheSound("fortressblast2/superbounce_pickup.mp3");
 	PrecacheSound("fortressblast2/superbounce_use.mp3");
 	PrecacheSound("fortressblast2/shockabsorber_pickup.mp3");
@@ -911,6 +917,7 @@ public Action Timer_BeginTeleporter(Handle timer, int client) {
 	if (teles == 0) {
 		CPrintToChat(client, "%s {haunted}You were respawned as there are no active Teleporter exits on your team.", MESSAGE_PREFIX);
 		TF2_RespawnPlayer(client);
+		TeleportXmasThingy(client);
 		return;
 	}
 	int eli = GetRandomInt(1, teles);
@@ -936,6 +943,10 @@ public Action Timer_BeginTeleporter(Handle timer, int client) {
 	} else if (TF2_GetClientTeam(client) == TFTeam_Blue) {
 		PowerupParticle(client, "teleportedin_blue", 1.0);
 	}
+	TeleportXmasThingy(client);
+}
+
+public void TeleportXmasThingy(int client){
 	if (Smissmas()) {
 		float vel[3];
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel);
