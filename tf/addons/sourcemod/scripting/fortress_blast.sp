@@ -95,7 +95,8 @@ ConVar sm_fortressblast_spawnroom_kill;
 8 - Mega Mann
 9 - Frost Touch
 10 - Mystery
-11 - Teleportation */
+11 - Teleportation
+12 - Magnetism/Time Dilation (planned) */
 
 public void OnPluginStart() {
 
@@ -1090,21 +1091,24 @@ public void DoHudText(int client) {
 }
 
 public void GetPowerupPlacements(bool UsingGiftHunt) {
-	if (!MapHasJsonFile) {
+	if (!UsingGiftHunt && !MapHasJsonFile) {
 		PrintToServer("[Fortress Blast] No powerup locations .json file for this map! You can download pre-made files from the official maps repository:");
 		PrintToServer("https://github.com/Fortress-Blast/Fortress-Blast-Maps");
 		return;
-	}
-	if (UsingGiftHunt && !MapHasGiftJsonFile) {
+	} else if (UsingGiftHunt && !MapHasGiftJsonFile) {
 		PrintToServer("[Fortress Blast] No gift locations .json file for this map! You can download pre-made files from the official maps repository:");
 		PrintToServer("https://github.com/Fortress-Blast/Fortress-Blast-Maps");
 		return;
 	}
-	// Get symmetry specifications from powerup locations .json
+	// Get symmetry specifications from locations .json
 	char map[80];
 	GetCurrentMap(map, sizeof(map));
 	char path[PLATFORM_MAX_PATH + 1];
-	Format(path, sizeof(path), "scripts/fortress_blast/powerup_spots/%s.json", map);
+	if (!UsingGiftHunt) {
+		Format(path, sizeof(path), "scripts/fortress_blast/powerup_spots/%s.json", map);
+	} else {
+		Format(path, sizeof(path), "scripts/fortress_blast/gift_spots/%s.json", map);
+	}
 	JSONObject handle = JSONObject.FromFile(path);
 	bool flipx = false;
 	bool flipy = false;
@@ -1126,11 +1130,6 @@ public void GetPowerupPlacements(bool UsingGiftHunt) {
 			handle.GetString("centery", cent, sizeof(cent));
 			centery = StringToFloat(cent);
 		}
-	}
-	// Switch to gift locations .json if required
-	if (UsingGiftHunt) {
-		Format(path, sizeof(path), "scripts/fortress_blast/gift_spots/%s.json", map);
-		handle = JSONObject.FromFile(path);
 	}
 	// Iterate through .json file to get coordinates
 	int itemloop = 1;
