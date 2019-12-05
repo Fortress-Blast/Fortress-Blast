@@ -14,7 +14,7 @@
 #define	MAX_EDICTS (1<<MAX_EDICT_BITS)
 #define MAX_PARTICLES 10 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
 #define MESSAGE_PREFIX "{orange}[Fortress Blast]"
-#define PLUGIN_VERSION "2.2.1"
+#define PLUGIN_VERSION "USE RELEASES NOT MASTER DUMMY"
 #define MOTD_VERSION "2.2"
 
 public Plugin myinfo = {
@@ -135,7 +135,7 @@ public void OnPluginStart() {
 	sm_fortressblast_gifthunt_players = CreateConVar("sm_fortressblast_gifthunt_players", "4", "Number of players in a group, any more and the gift goal increases.");
 	sm_fortressblast_gifthunt_rate = CreateConVar("sm_fortressblast_gifthunt_rate", "20", "Chance out of 100 for each gift to spawn once all gifts are collected.");
 	sm_fortressblast_mannpower = CreateConVar("sm_fortressblast_mannpower", "2", "How to handle replacing Mannpower powerups.");
-	sm_fortressblast_powerups = CreateConVar("sm_fortressblast_powerups", "-1", "Bitfield of which powerups to enable, a number within 1 and 1023.");
+	sm_fortressblast_powerups = CreateConVar("sm_fortressblast_powerups", "-1", "Bitfield of which powerups to enable, a number within 1 and 2047.");
 	sm_fortressblast_spawnroom_kill = CreateConVar("sm_fortressblast_spawnroom_kill", "1", "Disables or enables killing enemies inside spawnrooms due to Mega Mann exploit.");
 
 	// HUDs
@@ -363,7 +363,7 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 			}
 		}
 	}
-	GetPowerupPlacements();
+	GetPowerupPlacements(false);
 	Gifts[2] = 0;
 	Gifts[3] = 0;
 	int spawnrooms;
@@ -405,23 +405,11 @@ public void OnEntityDestroyed(int entity) {
 
 public Action Timer_CheckGifts(Handle timer, any data) {
 	if (NumberOfActiveGifts() == 0) {
-		RestockRandomBatch();
+		GetPowerupPlacements(true);
 	}
 }
 
-public void RestockRandomBatch() {
-	int entity = 0;
-	while ((entity = FindEntityByClassname(entity, "info_target")) != -1) {
-		char name2[50];
-		GetEntPropString(entity, Prop_Data, "m_iName", name2, sizeof(name2));
-		if (StrEqual(name2, "fb_giftspawn") && GetRandomInt(0, 99) < sm_fortressblast_gifthunt_rate.IntValue) {
-			float coords[3];
-			GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
-			coords[2] += 8.0;
-			SpawnGift(coords);
-		}
-	}
-}
+
 
 public int NumberOfActiveGifts() {
 	int totalgifts;
@@ -577,6 +565,7 @@ public Action OnStartTouchFrozen(int entity, int other) {
 				SetClientViewEntity(other, iRagDoll);
 				SetThirdPerson(other, true);
 			}
+			SetEntityMoveType(iRagDoll, MOVETYPE_NONE);
 			ClearTimer(Timer_FrostTouchUnfreezeHandle[other]);
 			Timer_FrostTouchUnfreezeHandle[other] = CreateTimer(3.0, Timer_FrostTouchUnfreeze, other);
 			FrostTouchFrozen[other] = true;
@@ -743,6 +732,12 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
 	}
 	if (SuperBounce[victim] && attacker == 0 && damage < 100.0) {
 		return Plugin_Handled;
+	}
+	if(FrostTouchFrozen[victim]){
+		damage = damage * 0.1;
+		damageForce[0] = 0.0;
+		damageForce[1] = 0.0;
+		damageForce[2] = 0.0;
 	}
 	return Plugin_Changed;
 }
@@ -914,6 +909,9 @@ public void BuildingDamage(int client, const char[] class) {
 
 public Action Timer_BeginTeleporter(Handle timer, int client) {
 	TeleportationHandle[client] = INVALID_HANDLE;
+	if(!IsPlayerAlive(client)){
+		return;
+	}
 	if (MegaMann[client]) {
 		ClearTimer(MegaMannHandle[client]);
 		MegaMannHandle[client] = CreateTimer(0.0, Timer_RemoveMegaMann, client);
@@ -998,7 +996,7 @@ public Action Timer_MegaMannStuckCheck(Handle timer, int client) {
 	GetEntPropVector(client, Prop_Send, "m_vecOrigin", coords);
 	if (IsEntityStuck(client)) {
 		TF2_RespawnPlayer(client);
-		CPrintToChat(client, "%s {red}You were respawned as you might have been stuck. Be sure to {yellow}use Mega Mann in open areas {red}and {yellow}move once it is active.", MESSAGE_PREFIX);
+		CPrintToChat(client, "%s {red}You were respawned as you might have been stuck. Be sure to {yellow}use Mega Mann in open areas", MESSAGE_PREFIX);
 	}
 }
 
@@ -1091,7 +1089,7 @@ public void DoHudText(int client) {
 	}
 }
 
-public void GetPowerupPlacements() {
+public void GetPowerupPlacements(bool UsingGiftHunt) {
 	if (!MapHasJsonFile) {
 		PrintToServer("[Fortress Blast] No .json file for this map! You can download pre-made files from our GitHub map repository:");
 		PrintToServer("https://github.com/Fortress-Blast/Fortress-Blast-Maps");
@@ -1100,7 +1098,12 @@ public void GetPowerupPlacements() {
 	char map[80];
 	GetCurrentMap(map, sizeof(map));
 	char path[PLATFORM_MAX_PATH + 1];
-	Format(path, sizeof(path), "scripts/fortress_blast/powerup_spots/%s.json", map);
+	if(UsingGiftHunt){
+		Format(path, sizeof(path), "scripts/fortress_blast/gift_spots/%s.json", map);
+	}
+	else{
+		Format(path, sizeof(path), "scripts/fortress_blast/powerup_spots/%s.json", map);
+	}
 	JSONObject handle = JSONObject.FromFile(path);
 	int itemloop = 1;
 	char stringamount[80];
@@ -1149,15 +1152,28 @@ public void GetPowerupPlacements() {
 				spcontinue = false;
 			}
 		}
+		if(UsingGiftHunt && (GetRandomInt(0, 99) < sm_fortressblast_gifthunt_rate.IntValue)){
+			return;
+		}
 		DebugText("Created powerup at %f, %f, %f", coords[0], coords[1], coords[2]);
 		if (coords[0] != 0.001) {
-			SpawnPower(coords, true);
+			if(UsingGiftHunt){
+				SpawnGift(coords);
+			}
+			else{
+				SpawnPower(coords, true);
+			}
 			if (flipx && flipy) {
 				if (coords[0] != centerx || coords[1] != centery) {
 					coords[0] = coords[0] - ((coords[0] - centerx) * 2);
 					coords[1] = coords[1] - ((coords[1] - centery) * 2);
 					DebugText("Flipping both axes, new powerup created at %f %f %f", coords[0], coords[1], coords[2]);
-					SpawnPower(coords, true);
+					if(UsingGiftHunt){
+						SpawnGift(coords);
+					}
+					else{
+						SpawnPower(coords, true);
+					}
 				} else {
 					DebugText("Powerup is at the center and will not be flipped");
    	 			}
@@ -1165,7 +1181,12 @@ public void GetPowerupPlacements() {
 				if (coords[0] != centerx) {
 					coords[0] = coords[0] - ((coords[0] - centerx) * 2);
 					DebugText("Flipping X axis, new powerup created at %f, %f, %f", coords[0], coords[1], coords[2]);
-					SpawnPower(coords, true);
+					if(UsingGiftHunt){
+						SpawnGift(coords);
+					}
+					else{
+						SpawnPower(coords, true);
+					}
 				} else {
 					DebugText("Powerup is at the X axis center and will not be flipped");
     			}
@@ -1173,7 +1194,12 @@ public void GetPowerupPlacements() {
 				if (coords[1] != centery) {
 					coords[1] = coords[1] - ((coords[1] - centery) * 2);
 					DebugText("Flipping Y axis, new powerup created at %f, %f, %f", coords[0], coords[1], coords[2]);
-					SpawnPower(coords, true);
+					if(UsingGiftHunt){
+						SpawnGift(coords);
+					}
+					else{
+						SpawnPower(coords, true);
+					}
 				} else {
 					DebugText("Powerup is at the Y axis center and will not be flipped");
 				}
@@ -1184,6 +1210,7 @@ public void GetPowerupPlacements() {
 	}
 	return;
 }
+
 
 public bool HandleHasKey(JSONObject handle, char key[80]) {
 	char acctest[10000];
