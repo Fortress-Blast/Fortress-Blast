@@ -14,7 +14,7 @@
 #define	MAX_EDICTS (1<<MAX_EDICT_BITS)
 #define MAX_PARTICLES 10 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
 #define MESSAGE_PREFIX "{orange}[Fortress Blast]"
-#define PLUGIN_VERSION "USE RELEASES NOT MASTER DUMMY"
+#define PLUGIN_VERSION "[DO NOT DOWNLOAD FROM MASTER]"
 #define MOTD_VERSION "2.2"
 
 public Plugin myinfo = {
@@ -37,6 +37,7 @@ int SpeedRotationsLeft[MAXPLAYERS + 1] = 80;
 bool PreviousAttack3[MAXPLAYERS + 1] = false;
 bool VictoryTime = false;
 bool MapHasJsonFile = false;
+bool MapHasGiftJsonFile = false;
 bool GiftHunt = false;
 bool SuperBounce[MAXPLAYERS + 1] = false;
 bool ShockAbsorber[MAXPLAYERS + 1] = false;
@@ -94,7 +95,8 @@ ConVar sm_fortressblast_spawnroom_kill;
 8 - Mega Mann
 9 - Frost Touch
 10 - Mystery
-11 - Teleportation */
+11 - Teleportation
+12 - Magnetism/Time Dilation (planned) */
 
 public void OnPluginStart() {
 
@@ -135,7 +137,7 @@ public void OnPluginStart() {
 	sm_fortressblast_gifthunt_players = CreateConVar("sm_fortressblast_gifthunt_players", "4", "Number of players in a group, any more and the gift goal increases.");
 	sm_fortressblast_gifthunt_rate = CreateConVar("sm_fortressblast_gifthunt_rate", "20", "Chance out of 100 for each gift to spawn once all gifts are collected.");
 	sm_fortressblast_mannpower = CreateConVar("sm_fortressblast_mannpower", "2", "How to handle replacing Mannpower powerups.");
-	sm_fortressblast_powerups = CreateConVar("sm_fortressblast_powerups", "-1", "Bitfield of which powerups to enable, a number within 1 and 2047.");
+	sm_fortressblast_powerups = CreateConVar("sm_fortressblast_powerups", "-1", "Bitfield of which powerups to enable.");
 	sm_fortressblast_spawnroom_kill = CreateConVar("sm_fortressblast_spawnroom_kill", "1", "Disables or enables killing enemies inside spawnrooms due to Mega Mann exploit.");
 
 	// HUDs
@@ -221,8 +223,11 @@ public void OnMapStart() {
 	char map[80];
 	GetCurrentMap(map, sizeof(map));
 	char path[PLATFORM_MAX_PATH + 1];
+	// So we dont overload read-writes
 	Format(path, sizeof(path), "scripts/fortress_blast/powerup_spots/%s.json", map);
-	MapHasJsonFile = FileExists(path); // So we dont overload read-writes
+	MapHasJsonFile = FileExists(path);
+	Format(path, sizeof(path), "scripts/fortress_blast/gift_spots/%s.json", map);
+	MapHasGiftJsonFile = FileExists(path);
 
 	CreateTimer(0.1, Timer_CheckGifts, _, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE); // Timer to check gifts
 }
@@ -408,8 +413,6 @@ public Action Timer_CheckGifts(Handle timer, any data) {
 		GetPowerupPlacements(true);
 	}
 }
-
-
 
 public int NumberOfActiveGifts() {
 	int totalgifts;
@@ -724,20 +727,18 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 }
 
 public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3]) {
-	if (ShockAbsorber[victim]) {
-		damage = damage * 0.25;
+	if (ShockAbsorber[victim] || FrostTouchFrozen[victim]) {
+		if (FrostTouchFrozen[victim]) {
+			damage = damage * 0.1;
+		} else {
+			damage = damage * 0.25;
+		}
 		damageForce[0] = 0.0;
 		damageForce[1] = 0.0;
 		damageForce[2] = 0.0;
 	}
 	if (SuperBounce[victim] && attacker == 0 && damage < 100.0) {
 		return Plugin_Handled;
-	}
-	if(FrostTouchFrozen[victim]){
-		damage = damage * 0.1;
-		damageForce[0] = 0.0;
-		damageForce[1] = 0.0;
-		damageForce[2] = 0.0;
 	}
 	return Plugin_Changed;
 }
@@ -909,8 +910,8 @@ public void BuildingDamage(int client, const char[] class) {
 
 public Action Timer_BeginTeleporter(Handle timer, int client) {
 	TeleportationHandle[client] = INVALID_HANDLE;
-	if(!IsPlayerAlive(client)){
-		return;
+	if (!IsPlayerAlive(client)) {
+		return; // Do not teleport dead player
 	}
 	if (MegaMann[client]) {
 		ClearTimer(MegaMannHandle[client]);
@@ -1090,23 +1091,25 @@ public void DoHudText(int client) {
 }
 
 public void GetPowerupPlacements(bool UsingGiftHunt) {
-	if (!MapHasJsonFile) {
-		PrintToServer("[Fortress Blast] No .json file for this map! You can download pre-made files from our GitHub map repository:");
+	if (!UsingGiftHunt && !MapHasJsonFile) {
+		PrintToServer("[Fortress Blast] No powerup locations .json file for this map! You can download pre-made files from the official maps repository:");
+		PrintToServer("https://github.com/Fortress-Blast/Fortress-Blast-Maps");
+		return;
+	} else if (UsingGiftHunt && !MapHasGiftJsonFile) {
+		PrintToServer("[Fortress Blast] No gift locations .json file for this map! You can download pre-made files from the official maps repository:");
 		PrintToServer("https://github.com/Fortress-Blast/Fortress-Blast-Maps");
 		return;
 	}
+	// Get symmetry specifications from locations .json
 	char map[80];
 	GetCurrentMap(map, sizeof(map));
 	char path[PLATFORM_MAX_PATH + 1];
-	if(UsingGiftHunt){
+	if (!UsingGiftHunt) {
+		Format(path, sizeof(path), "scripts/fortress_blast/powerup_spots/%s.json", map);
+	} else {
 		Format(path, sizeof(path), "scripts/fortress_blast/gift_spots/%s.json", map);
 	}
-	else{
-		Format(path, sizeof(path), "scripts/fortress_blast/powerup_spots/%s.json", map);
-	}
 	JSONObject handle = JSONObject.FromFile(path);
-	int itemloop = 1;
-	char stringamount[80];
 	bool flipx = false;
 	bool flipy = false;
 	float centerx = 0.0;
@@ -1128,6 +1131,9 @@ public void GetPowerupPlacements(bool UsingGiftHunt) {
 			centery = StringToFloat(cent);
 		}
 	}
+	// Iterate through .json file to get coordinates
+	int itemloop = 1;
+	char stringamount[80];
 	IntToString(itemloop, stringamount, sizeof(stringamount));
 	bool spcontinue = true;
 	while (spcontinue) {
@@ -1152,15 +1158,14 @@ public void GetPowerupPlacements(bool UsingGiftHunt) {
 				spcontinue = false;
 			}
 		}
-		if(UsingGiftHunt && (GetRandomInt(0, 99) < sm_fortressblast_gifthunt_rate.IntValue)){
+		if (UsingGiftHunt && (GetRandomInt(0, 99) < sm_fortressblast_gifthunt_rate.IntValue)) {
 			return;
 		}
 		DebugText("Created powerup at %f, %f, %f", coords[0], coords[1], coords[2]);
 		if (coords[0] != 0.001) {
-			if(UsingGiftHunt){
+			if (UsingGiftHunt) {
 				SpawnGift(coords);
-			}
-			else{
+			} else {
 				SpawnPower(coords, true);
 			}
 			if (flipx && flipy) {
@@ -1168,10 +1173,9 @@ public void GetPowerupPlacements(bool UsingGiftHunt) {
 					coords[0] = coords[0] - ((coords[0] - centerx) * 2);
 					coords[1] = coords[1] - ((coords[1] - centery) * 2);
 					DebugText("Flipping both axes, new powerup created at %f %f %f", coords[0], coords[1], coords[2]);
-					if(UsingGiftHunt){
+					if (UsingGiftHunt) {
 						SpawnGift(coords);
-					}
-					else{
+					} else {
 						SpawnPower(coords, true);
 					}
 				} else {
@@ -1181,10 +1185,9 @@ public void GetPowerupPlacements(bool UsingGiftHunt) {
 				if (coords[0] != centerx) {
 					coords[0] = coords[0] - ((coords[0] - centerx) * 2);
 					DebugText("Flipping X axis, new powerup created at %f, %f, %f", coords[0], coords[1], coords[2]);
-					if(UsingGiftHunt){
+					if (UsingGiftHunt) {
 						SpawnGift(coords);
-					}
-					else{
+					} else {
 						SpawnPower(coords, true);
 					}
 				} else {
@@ -1194,10 +1197,9 @@ public void GetPowerupPlacements(bool UsingGiftHunt) {
 				if (coords[1] != centery) {
 					coords[1] = coords[1] - ((coords[1] - centery) * 2);
 					DebugText("Flipping Y axis, new powerup created at %f, %f, %f", coords[0], coords[1], coords[2]);
-					if(UsingGiftHunt){
+					if (UsingGiftHunt) {
 						SpawnGift(coords);
-					}
-					else{
+					} else {
 						SpawnPower(coords, true);
 					}
 				} else {
@@ -1210,7 +1212,6 @@ public void GetPowerupPlacements(bool UsingGiftHunt) {
 	}
 	return;
 }
-
 
 public bool HandleHasKey(JSONObject handle, char key[80]) {
 	char acctest[10000];
