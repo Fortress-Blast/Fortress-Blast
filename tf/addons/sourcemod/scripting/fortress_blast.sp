@@ -143,6 +143,8 @@ public void OnPluginStart() {
 	// HUDs
 	texthand = CreateHudSynchronizer();
 	gifttext = CreateHudSynchronizer();
+	
+	InsertPluginTag();
 }
 
 public void OnMapStart() {
@@ -249,6 +251,18 @@ public Action FBMenu(int client, int args) {
 	Format(url, sizeof(url), "http://fortress-blast.github.io/%s?powerups-enabled=%d&action=%s", MOTD_VERSION, bitfield, action);
 	AdvMOTD_ShowMOTDPanel(client, "How are you reading this?", url, MOTDPANEL_TYPE_URL, true, true, true, INVALID_FUNCTION);
 	CPrintToChat(client, "%s {haunted}Opening Fortress Blast manual... If nothing happens, open your developer console and {yellow}try setting cl_disablehtmlmotd to 0{haunted}, then try again.", MESSAGE_PREFIX);
+}
+
+public void InsertPluginTag() {
+	ConVar tags = FindConVar("sv_tags");
+	if (tags != null) {
+		char serverTags[258];
+		tags.GetString(serverTags, sizeof(serverTags));
+		if (StrContains(serverTags, "fortressblast", true) == -1) {
+			Format(serverTags, sizeof(serverTags), "%s%s", serverTags, ",fortressblast");
+			tags.SetString(serverTags);
+		}
+	}
 }
 
 public Action Command_SetPowerup(int client, int args) {
