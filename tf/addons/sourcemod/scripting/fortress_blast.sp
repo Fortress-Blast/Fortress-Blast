@@ -26,7 +26,7 @@ public Plugin myinfo = {
 };
 
 // Global Variables
-int NumberOfPowerups = 11; // Do not define this
+int NumberOfPowerups = 12; // Do not define this
 int PlayersAmount;
 int giftgoal;
 int Gifts[4] = 0;
@@ -37,7 +37,6 @@ int SpeedRotationsLeft[MAXPLAYERS + 1] = 80;
 bool PreviousAttack3[MAXPLAYERS + 1] = false;
 bool VictoryTime = false;
 bool MapHasJsonFile = false;
-bool MapHasGiftJsonFile = false;
 bool GiftHunt = false;
 bool SuperBounce[MAXPLAYERS + 1] = false;
 bool ShockAbsorber[MAXPLAYERS + 1] = false;
@@ -46,6 +45,7 @@ bool MegaMann[MAXPLAYERS + 1] = false;
 bool MegaMannStuckComplete[MAXPLAYERS + 1] = true;
 bool FrostTouch[MAXPLAYERS + 1] = false;
 bool FrostTouchFrozen[MAXPLAYERS + 1] = true;
+bool Magnetism[MAXPLAYERS + 1] = false;
 float OldSpeed[MAXPLAYERS + 1] = 0.0;
 float SuperSpeed[MAXPLAYERS + 1] = 0.0;
 float VerticalVelocity[MAXPLAYERS + 1];
@@ -59,6 +59,7 @@ Handle FrostTouchHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle Timer_FrostTouchUnfreezeHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle DestroyPowerupHandle[MAX_EDICTS + 1] = INVALID_HANDLE;
 Handle TeleportationHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
+Handle MagnetismHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 
 // HUDs
 Handle texthand;
@@ -96,7 +97,7 @@ ConVar sm_fortressblast_spawnroom_kill;
 9 - Frost Touch
 10 - Mystery
 11 - Teleportation
-12 - Magnetism/Time Dilation (planned) */
+12 - Magnetism*/
 
 public void OnPluginStart() {
 
@@ -143,12 +144,9 @@ public void OnPluginStart() {
 	// HUDs
 	texthand = CreateHudSynchronizer();
 	gifttext = CreateHudSynchronizer();
-	
-	InsertPluginTag();
 }
 
 public void OnMapStart() {
-	GiftHunt = false;
 	Gifts[2] = 0;
 	Gifts[3] = 0;
 	
@@ -184,6 +182,8 @@ public void OnMapStart() {
 	PrecacheSound("fortressblast2/mystery_pickup.mp3");
 	PrecacheSound("fortressblast2/teleportation_pickup.mp3");
 	PrecacheSound("fortressblast2/teleportation_use.mp3");
+	PrecacheSound("fortressblast2/magnetism_pickup.mp3");
+	PrecacheSound("fortressblast2/magnetism_use.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/superbounce_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/superbounce_use.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/shockabsorber_pickup.mp3");
@@ -207,6 +207,8 @@ public void OnMapStart() {
 	AddFileToDownloadsTable("sound/fortressblast2/mystery_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/teleportation_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/teleportation_use.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/magnetism_pickup.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/magnetism_use.mp3");
 	
 	// Smissmas sound precaching
 	PrecacheSound("misc/jingle_bells/jingle_bells_nm_01.wav");
@@ -229,7 +231,7 @@ public void OnMapStart() {
 	Format(path, sizeof(path), "scripts/fortress_blast/powerup_spots/%s.json", map);
 	MapHasJsonFile = FileExists(path);
 	Format(path, sizeof(path), "scripts/fortress_blast/gift_spots/%s.json", map);
-	MapHasGiftJsonFile = FileExists(path);
+	GiftHunt = FileExists(path);
 
 	CreateTimer(0.1, Timer_CheckGifts, _, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE); // Timer to check gifts
 }
@@ -251,18 +253,6 @@ public Action FBMenu(int client, int args) {
 	Format(url, sizeof(url), "http://fortress-blast.github.io/%s?powerups-enabled=%d&action=%s", MOTD_VERSION, bitfield, action);
 	AdvMOTD_ShowMOTDPanel(client, "How are you reading this?", url, MOTDPANEL_TYPE_URL, true, true, true, INVALID_FUNCTION);
 	CPrintToChat(client, "%s {haunted}Opening Fortress Blast manual... If nothing happens, open your developer console and {yellow}try setting cl_disablehtmlmotd to 0{haunted}, then try again.", MESSAGE_PREFIX);
-}
-
-public void InsertPluginTag() {
-	ConVar tags = FindConVar("sv_tags");
-	if (tags != null) {
-		char serverTags[258];
-		tags.GetString(serverTags, sizeof(serverTags));
-		if (StrContains(serverTags, "fortressblast", true) == -1) {
-			Format(serverTags, sizeof(serverTags), "%s%s", serverTags, ",fortressblast");
-			tags.SetString(serverTags);
-		}
-	}
 }
 
 public Action Command_SetPowerup(int client, int args) {
@@ -520,6 +510,8 @@ stock int SpawnPower(float location[3], bool respawn, int id = 0) {
 			SetEntityRenderColor(entity, 0, 0, 0, 255);
 		} else if (powerupid[entity] == 11) {
 			SetEntityRenderColor(entity, 255, 153, 153, 255);
+		} else if (powerupid[entity] == 12) {
+			SetEntityRenderColor(entity, 0, 68, 0, 255);
 		}
 		DispatchKeyValue(entity, "pickup_sound", "get_out_of_the_console_snoop");
 		DispatchKeyValue(entity, "pickup_particle", "get_out_of_the_console_snoop");
@@ -691,6 +683,8 @@ public void PlayPowerupSound(int client) {
 		EmitSoundToClient(client, "fortressblast2/mystery_pickup.mp3", client);
 	} else if (powerup[client] == 11) {
 		EmitSoundToClient(client, "fortressblast2/teleportation_pickup.mp3", client);
+	} else if (powerup[client] == 12) {
+		EmitSoundToClient(client, "fortressblast2/magnetism_pickup.mp3", client);
 	}
 }
 
@@ -736,6 +730,79 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	if (IsValidEntity(GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon"))) {
 		if (GetEntProp(GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon"), Prop_Send, "m_iItemDefinitionIndex") == 28 && !MegaMannStuckComplete[client] && MegaMann[client]) {
 			buttons &= ~IN_ATTACK;
+		}
+	}
+	/*for (int weapon2 = 0; weapon2 <= 5 ; weapon2++) {
+		if (GetPlayerWeaponSlot(client, weapon2) != -1) {
+				if((GetGameTime() > TimeNextAttackPoint[client][weapon2] || GetGameTime() > TimeNextSecondAttackPoint[client][weapon2]) && buttons & IN_ATTACK){
+					TFNextAttackPoint[client][weapon2] = GetEntPropFloat(GetPlayerWeaponSlot(client, weapon2), Prop_Send, "m_flNextPrimaryAttack");
+					TFNextSecondAttackPoint[client][weapon2] = GetEntPropFloat(GetPlayerWeaponSlot(client, weapon2), Prop_Send, "m_flNextSecondaryAttack");
+					if(TFNextAttackPoint[client][weapon2] > GetGameTime()){
+						TFNextAttackPoint[client][weapon2] = GetGameTime();
+					}
+					if(TFNextSecondAttackPoint[client][weapon2] > GetGameTime()){
+						TFNextSecondAttackPoint[client][weapon2] = GetGameTime();
+					}
+					PrintCenterTextAll("Updating %N's firepoints in %d to %f and %f", client, weapon2, TFNextAttackPoint[client][weapon2], TFNextSecondAttackPoint[client][weapon2]);
+				}
+		}
+	}*/
+	/*if(Magnetism[client]){
+		float pos1[3];
+		GetClientAbsOrigin(client, pos1);
+		for (int client2 = 1 ; client2 <= MaxClients ; client2++ ) {
+			if(IsClientInGame(client2) && TF2_GetClientTeam(client2) != TF2_GetClientTeam(client)){
+				float pos2[3];
+				GetClientAbsOrigin(client2, pos2);
+				float closeness = (1000 - GetVectorDistance(pos1, pos2));
+				if(closeness > 0){
+					for (int weapon2 = 0; weapon2 <= 5 ; weapon2++) {
+						if (GetPlayerWeaponSlot(client2, weapon2) != -1) {
+							//TimeNextAttackPoint[client2][weapon2] = (TFNextAttackPoint[client][weapon2] * (closeness / 100));
+							//TimeNextSecondAttackPoint[client2][weapon2] = (TFNextSecondAttackPoint[client][weapon2] * (closeness / 100));
+							TimeNextAttackPoint[client2][weapon2] = GetGameTime() + ((TFNextAttackPoint[client2][weapon2] - GetGameTime()) * (closeness / 100));
+							TimeNextSecondAttackPoint[client2][weapon2] = GetGameTime() + ((TFNextSecondAttackPoint[client2][weapon2] - GetGameTime()) * (closeness / 100));
+							SetEntPropFloat(GetPlayerWeaponSlot(client2, weapon2), Prop_Send, "m_flNextPrimaryAttack", TimeNextAttackPoint[client2][weapon2]);
+							SetEntPropFloat(GetPlayerWeaponSlot(client2, weapon2), Prop_Send, "m_flNextSecondaryAttack", TimeNextSecondAttackPoint[client2][weapon2]);
+							PrintCenterTextAll("Current %f, gave %N (slot %d), %f and %f to %f and %f", GetGameTime(), client2, weapon2, TFNextAttackPoint[client2][weapon2], TFNextSecondAttackPoint[client2][weapon2], TimeNextAttackPoint[client2][weapon2], TimeNextSecondAttackPoint[client2][weapon2]);
+						}
+					}
+				}
+			}
+		}
+	}*/
+	
+	if(Magnetism[client] && IsPlayerAlive(client)){
+		float pos1[3];
+		GetClientAbsOrigin(client, pos1);
+		for (int client2 = 1 ; client2 <= MaxClients ; client2++ ) {
+			if(IsClientInGame(client2) && TF2_GetClientTeam(client2) != TF2_GetClientTeam(client) && IsPlayerAlive(client2)){
+				float pos2[3];
+				GetClientAbsOrigin(client2, pos2);
+				float closeness = (1024 - GetVectorDistance(pos1, pos2));
+				if(closeness > 0){
+					SetEntPropEnt(client2, Prop_Data, "m_hGroundEntity", -1);
+					float direction[3];
+					SubtractVectors(pos1, pos2, direction);
+					NormalizeVector(direction, direction);
+					float playerVel[3];
+					GetEntPropVector(client2, Prop_Data, "m_vecVelocity", playerVel);
+					NegateVector(direction);
+					float multiplier = Pow((((1024 - GetVectorDistance(pos1, pos2)) / 1024) * 4), 2.0);
+					if(GetEntPropEnt(client, Prop_Data, "m_hActiveWeapon") != GetPlayerWeaponSlot(client, 2)){
+						multiplier = multiplier * -1.25;
+					}
+					//direction[0] = direction[0] * 10;
+					//direction[1] = direction[1] * 10;
+					direction[0] = direction[0] * multiplier;
+					direction[1] = direction[1] * multiplier;
+					/*direction[0] = Pow(((1024 - direction[0]) / 1024 * 12), 2.0);
+					direction[1] = Pow(((1024 - direction[1]) / 1024 * 12), 2.0);
+					direction[2] = Pow(((1024 - direction[2]) / 1024 * 12), 2.0);*/
+					SubtractVectors(playerVel, direction, direction);
+					TeleportEntity(client2, NULL_VECTOR, NULL_VECTOR, direction);
+				}
+			}
 		}
 	}
 }
@@ -899,8 +966,31 @@ public void UsePower(int client) {
 			BfWriteByte(message, color[3]);
 		}
 		EndMessage();
+	} else if (powerup[client] == 12) {
+		EmitAmbientSound("fortressblast2/magnetism_use.mp3", vel, client);
+		Magnetism[client] = true;
+		ClearTimer(MagnetismHandle[client]);
+		MagnetismHandle[client] = CreateTimer(5.0, Timer_RemoveMagnetism, client);
+		float timeport = 0.1;
+		PowerupParticle(client, "ping_circle", 0.5);
+		for (int timepoint = 0 ; timepoint <= 50 ; timepoint++) {
+			CreateTimer(timeport, AnotherPingThingy, client);
+			timeport = timeport + 0.1;
+		}
+		
 	}
 	powerup[client] = 0;
+}
+
+public Action AnotherPingThingy(Handle timer, int client){
+	if(IsClientInGame(client) && IsPlayerAlive(client) && Magnetism[client]){
+		PowerupParticle(client, "ping_circle", 0.5);
+	}
+}
+
+public Action Timer_RemoveMagnetism(Handle timer, int client){
+	MagnetismHandle[client] = INVALID_HANDLE;
+	Magnetism[client] = false;
 }
 
 public void BuildingDamage(int client, const char[] class) {
@@ -1096,6 +1186,8 @@ public void DoHudText(int client) {
 			ShowSyncHudText(client, texthand, "Collected powerup:\nMystery");
 		} else if (powerup[client] == 11) {
 			ShowSyncHudText(client, texthand, "Collected powerup:\nTeleportation");
+		} else if (powerup[client] == 12) {
+			ShowSyncHudText(client, texthand, "Collected powerup:\nMagnetism");
 		}
 	}
 	if (GiftHunt && !VictoryTime) {
@@ -1109,9 +1201,7 @@ public void GetPowerupPlacements(bool UsingGiftHunt) {
 		PrintToServer("[Fortress Blast] No powerup locations .json file for this map! You can download pre-made files from the official maps repository:");
 		PrintToServer("https://github.com/Fortress-Blast/Fortress-Blast-Maps");
 		return;
-	} else if (UsingGiftHunt && !MapHasGiftJsonFile) {
-		PrintToServer("[Fortress Blast] No gift locations .json file for this map! You can download pre-made files from the official maps repository:");
-		PrintToServer("https://github.com/Fortress-Blast/Fortress-Blast-Maps");
+	} else if (UsingGiftHunt && !GiftHunt) {
 		return;
 	}
 	// Get symmetry specifications from locations .json
@@ -1172,56 +1262,58 @@ public void GetPowerupPlacements(bool UsingGiftHunt) {
 				spcontinue = false;
 			}
 		}
-		if (UsingGiftHunt && (GetRandomInt(0, 99) < sm_fortressblast_gifthunt_rate.IntValue)) {
-			return;
+		if (UsingGiftHunt && (GetRandomInt(0, 99) >= sm_fortressblast_gifthunt_rate.IntValue)) {
+			DebugText("NOT spawning a gift at %f %f %f because it fails the random", coords[0], coords[1], coords[2]);
 		}
-		DebugText("Created powerup at %f, %f, %f", coords[0], coords[1], coords[2]);
-		if (coords[0] != 0.001) {
-			if (UsingGiftHunt) {
-				SpawnGift(coords);
-			} else {
-				SpawnPower(coords, true);
-			}
-			if (flipx && flipy) {
-				if (coords[0] != centerx || coords[1] != centery) {
-					coords[0] = coords[0] - ((coords[0] - centerx) * 2);
-					coords[1] = coords[1] - ((coords[1] - centery) * 2);
-					DebugText("Flipping both axes, new powerup created at %f %f %f", coords[0], coords[1], coords[2]);
-					if (UsingGiftHunt) {
-						SpawnGift(coords);
-					} else {
-						SpawnPower(coords, true);
-					}
+		else{
+			DebugText("Created powerup at %f, %f, %f", coords[0], coords[1], coords[2]);
+			if (coords[0] != 0.001) {
+				if (UsingGiftHunt) {
+					SpawnGift(coords);
 				} else {
-					DebugText("Powerup is at the center and will not be flipped");
-   	 			}
-			} else if (flipx) {
-				if (coords[0] != centerx) {
-					coords[0] = coords[0] - ((coords[0] - centerx) * 2);
-					DebugText("Flipping X axis, new powerup created at %f, %f, %f", coords[0], coords[1], coords[2]);
-					if (UsingGiftHunt) {
-						SpawnGift(coords);
-					} else {
-						SpawnPower(coords, true);
-					}
-				} else {
-					DebugText("Powerup is at the X axis center and will not be flipped");
-    			}
-			} else if (flipy) {
-				if (coords[1] != centery) {
-					coords[1] = coords[1] - ((coords[1] - centery) * 2);
-					DebugText("Flipping Y axis, new powerup created at %f, %f, %f", coords[0], coords[1], coords[2]);
-					if (UsingGiftHunt) {
-						SpawnGift(coords);
-					} else {
-						SpawnPower(coords, true);
-					}
-				} else {
-					DebugText("Powerup is at the Y axis center and will not be flipped");
+					SpawnPower(coords, true);
 				}
+				if (flipx && flipy) {
+					if (coords[0] != centerx || coords[1] != centery) {
+						coords[0] = coords[0] - ((coords[0] - centerx) * 2);
+						coords[1] = coords[1] - ((coords[1] - centery) * 2);
+						DebugText("Flipping both axes, new powerup created at %f %f %f", coords[0], coords[1], coords[2]);
+						if (UsingGiftHunt) {
+							SpawnGift(coords);
+						} else {
+							SpawnPower(coords, true);
+						}
+					} else {
+						DebugText("Powerup is at the center and will not be flipped");
+   	 				}
+				} else if (flipx) {
+					if (coords[0] != centerx) {
+						coords[0] = coords[0] - ((coords[0] - centerx) * 2);
+						DebugText("Flipping X axis, new powerup created at %f, %f, %f", coords[0], coords[1], coords[2]);
+						if (UsingGiftHunt) {
+							SpawnGift(coords);
+						} else {
+							SpawnPower(coords, true);
+						}
+					} else {
+						DebugText("Powerup is at the X axis center and will not be flipped");
+    				}
+				} else if (flipy) {
+					if (coords[1] != centery) {
+						coords[1] = coords[1] - ((coords[1] - centery) * 2);
+						DebugText("Flipping Y axis, new powerup created at %f, %f, %f", coords[0], coords[1], coords[2]);
+						if (UsingGiftHunt) {
+							SpawnGift(coords);
+						} else {
+							SpawnPower(coords, true);
+						}
+					} else {
+						DebugText("Powerup is at the Y axis center and will not be flipped");
+					}
+				}
+				itemloop++;
+				IntToString(itemloop, stringamount, sizeof(stringamount));
 			}
-			itemloop++;
-			IntToString(itemloop, stringamount, sizeof(stringamount));
 		}
 	}
 	return;
