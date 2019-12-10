@@ -324,6 +324,18 @@ public Action Command_SetPowerup(int client, int args) {
 public Action teamplay_round_start(Event event, const char[] name, bool dontBroadcast) {
 	VictoryTime = false;
 	EntFire("fb_warningmessage", "Kill");
+	if(GiftHunt){
+		EntFire("trigger_capture_area", "SetTeamCanCap", "2 0");
+		EntFire("trigger_capture_area", "SetTeamCanCap", "3 0");
+		int flag;
+		while ((flag = FindEntityByClassname(flag, "item_teamflag")) != -1) {
+			DispatchKeyValue(flag, "VisibleWhenDisabled", "1");
+			AcceptEntityInput(flag, "Disable");
+		}
+		if(FindEntityByClassname(1, "tf_logic_arena") != -1){
+			DispatchKeyValue(FindEntityByClassname(1, "tf_logic_arena"), "CapEnableDelay", "0");
+		}
+	}
 	PlayersAmount = 0;
 	if (!GameRules_GetProp("m_bInWaitingForPlayers")) {
 		for (int client = 1; client <= MaxClients; client++) {
@@ -1023,8 +1035,28 @@ public Action Timer_BeginTeleporter(Handle timer, int client) {
 	}
 	int teles = GetTeamTeleporters(TF2_GetClientTeam(client));
 	if (teles == 0) {
-		CPrintToChat(client, "%s {haunted}You were respawned as there are no active Teleporter exits on your team.", MESSAGE_PREFIX);
-		TF2_RespawnPlayer(client);
+		CPrintToChat(client, "%s {haunted}You were teleported to your spawn as there are no active Teleporter exits on your team.", MESSAGE_PREFIX);
+		int spawn;
+		int spawnsleft = GetRandomInt(0, NumberOfSpawns(GetClientTeam(client)));
+		DebugText("Put at %d spawn", spawnsleft);
+		while ((spawn = FindEntityByClassname(spawn, "info_player_teamspawn")) != -1) {
+			if (GetEntProp(spawn, Prop_Send, "m_iTeamNum") == GetClientTeam(client)){
+				if(spawnsleft < 1){
+					DebugText("Found a spawn - sending %N to spawn %d", client, spawn);
+					float coords[3] = 69.420;
+					GetEntPropVector(spawn, Prop_Send, "m_vecOrigin", coords);
+					float angles[3] = 69.420;
+					GetEntPropVector(spawn, Prop_Data, "m_angRotation", angles); 
+					coords[2] += 24.00;
+					TeleportEntity(client, coords, angles, NULL_VECTOR);
+					return;
+				}
+				else{
+					spawnsleft--;
+					DebugText("Now there are %d spawn", spawnsleft);
+				}
+			}
+		}
 		TeleportXmasThingy(client);
 		return;
 	}
@@ -1053,6 +1085,18 @@ public Action Timer_BeginTeleporter(Handle timer, int client) {
 	}
 	TeleportXmasThingy(client);
 }
+
+public int NumberOfSpawns(int team){
+	int count;
+	int spawn;
+	while ((spawn = FindEntityByClassname(spawn, "info_player_teamspawn")) != -1) {
+		if (GetEntProp(spawn, Prop_Send, "m_iTeamNum") == team){
+			count++;
+		}
+	}
+	return count;
+}
+
 
 public void TeleportXmasThingy(int client) {
 	if (Smissmas()) {
@@ -1532,6 +1576,7 @@ public void BlockAttacking(int client, float time) { // Roll the Dice function w
 }
 
 public void CollectedGift(int client) {
+	int flag;
 	DebugText("%N has collected a gift", client);
 	float vel[3];
 	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel);
@@ -1539,13 +1584,25 @@ public void CollectedGift(int client) {
 	Gifts[GetClientTeam(client)]++;
 	if (Gifts[GetClientTeam(client)] == giftgoal) {
 		if (GetClientTeam(client) == 2) {
-			EntFire("fb_giftscollected_red", "Trigger");
+			EntFire("trigger_capture_area", "SetTeamCanCap", "2 1");
 			PrintCenterTextAll("RED team has collected the required number of gifts!");
 			DebugText("RED team has collected the required number of gifts", client);
+			flag = 0;
+			while ((flag = FindEntityByClassname(flag, "item_teamflag")) != -1) {
+				if(GetEntProp(flag, Prop_Send, "m_iTeamNum") == 3){
+					AcceptEntityInput(flag, "Enable");
+				}
+			}
 		} else if (GetClientTeam(client) == 3) {
-			EntFire("fb_giftscollected_blu", "Trigger");
+			EntFire("trigger_capture_area", "SetTeamCanCap", "3 1");
 			PrintCenterTextAll("BLU team has collected the required number of gifts!");
 			DebugText("BLU team has collected the required number of gifts", client);
+			flag = 0;
+			while ((flag = FindEntityByClassname(flag, "item_teamflag")) != -1) {
+				if(GetEntProp(flag, Prop_Send, "m_iTeamNum") == 2){
+					AcceptEntityInput(flag, "Enable");
+				}
+			}
 		}
 		for (int client2 = 1 ; client2 <= MaxClients ; client2++) {
 			if (IsClientInGame(client2)) {
