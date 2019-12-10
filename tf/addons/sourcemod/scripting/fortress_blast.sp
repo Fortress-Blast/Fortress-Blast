@@ -15,7 +15,7 @@
 #define MAX_PARTICLES 10 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
 #define MESSAGE_PREFIX "{orange}[Fortress Blast]"
 #define PLUGIN_VERSION "[DO NOT DOWNLOAD FROM MASTER]"
-#define MOTD_VERSION "2.2"
+#define MOTD_VERSION "3.0"
 
 public Plugin myinfo = {
 	name = "Fortress Blast",
@@ -1262,58 +1262,58 @@ public void GetPowerupPlacements(bool UsingGiftHunt) {
 				spcontinue = false;
 			}
 		}
-		if (UsingGiftHunt && (GetRandomInt(0, 99) >= sm_fortressblast_gifthunt_rate.IntValue)) {
-			DebugText("NOT spawning a gift at %f %f %f because it fails the random", coords[0], coords[1], coords[2]);
-		}
-		else{
-			DebugText("Created powerup at %f, %f, %f", coords[0], coords[1], coords[2]);
-			if (coords[0] != 0.001) {
+		if (coords[0] != 0.001) {
+			if (UsingGiftHunt && (GetRandomInt(0, 99) >= sm_fortressblast_gifthunt_rate.IntValue)) {
+				DebugText("Not spawning gift %d because it failed random", itemloop);
+			} else {
 				if (UsingGiftHunt) {
+					DebugText("Spawning gift %d at %f, %f, %f", itemloop, coords[0], coords[1], coords[2]);
 					SpawnGift(coords);
 				} else {
+					DebugText("Spawning powerup %d at %f, %f, %f", itemloop, coords[0], coords[1], coords[2]);
 					SpawnPower(coords, true);
 				}
 				if (flipx && flipy) {
 					if (coords[0] != centerx || coords[1] != centery) {
 						coords[0] = coords[0] - ((coords[0] - centerx) * 2);
 						coords[1] = coords[1] - ((coords[1] - centery) * 2);
-						DebugText("Flipping both axes, new powerup created at %f %f %f", coords[0], coords[1], coords[2]);
+						DebugText("Flipping both axes, new entity created at %f, %f, %f", coords[0], coords[1], coords[2]);
 						if (UsingGiftHunt) {
 							SpawnGift(coords);
 						} else {
 							SpawnPower(coords, true);
 						}
 					} else {
-						DebugText("Powerup is at the center and will not be flipped");
+						DebugText("Entity is at the center and will not be flipped");
    	 				}
 				} else if (flipx) {
 					if (coords[0] != centerx) {
 						coords[0] = coords[0] - ((coords[0] - centerx) * 2);
-						DebugText("Flipping X axis, new powerup created at %f, %f, %f", coords[0], coords[1], coords[2]);
+						DebugText("Flipping X axis, new entity created at %f, %f, %f", coords[0], coords[1], coords[2]);
 						if (UsingGiftHunt) {
 							SpawnGift(coords);
 						} else {
 							SpawnPower(coords, true);
 						}
 					} else {
-						DebugText("Powerup is at the X axis center and will not be flipped");
+						DebugText("Entity is at the X axis center and will not be flipped");
     				}
 				} else if (flipy) {
 					if (coords[1] != centery) {
 						coords[1] = coords[1] - ((coords[1] - centery) * 2);
-						DebugText("Flipping Y axis, new powerup created at %f, %f, %f", coords[0], coords[1], coords[2]);
+						DebugText("Flipping Y axis, new entity created at %f, %f, %f", coords[0], coords[1], coords[2]);
 						if (UsingGiftHunt) {
 							SpawnGift(coords);
 						} else {
 							SpawnPower(coords, true);
 						}
 					} else {
-						DebugText("Powerup is at the Y axis center and will not be flipped");
+						DebugText("Entity is at the Y axis center and will not be flipped");
 					}
 				}
-				itemloop++;
-				IntToString(itemloop, stringamount, sizeof(stringamount));
 			}
+			itemloop++;
+			IntToString(itemloop, stringamount, sizeof(stringamount));
 		}
 	}
 	return;
