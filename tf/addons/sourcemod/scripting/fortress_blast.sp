@@ -14,7 +14,7 @@
 #define	MAX_EDICTS (1<<MAX_EDICT_BITS)
 #define MAX_PARTICLES 10 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
 #define MESSAGE_PREFIX "{orange}[Fortress Blast]"
-#define PLUGIN_VERSION "[DO NOT DOWNLOAD FROM MASTER]"
+#define PLUGIN_VERSION "3.0"
 #define MOTD_VERSION "3.0"
 
 public Plugin myinfo = {
@@ -98,7 +98,7 @@ ConVar sm_fortressblast_spawnroom_kill;
 9 - Frost Touch
 10 - Mystery
 11 - Teleportation
-12 - Magnetism*/
+12 - Magnetism */
 
 public void OnPluginStart() {
 
@@ -134,7 +134,7 @@ public void OnPluginStart() {
 	sm_fortressblast_drop_rate = CreateConVar("sm_fortressblast_drop_rate", "10", "Chance out of 100 for a powerup to drop on death.");
 	sm_fortressblast_drop_teams = CreateConVar("sm_fortressblast_drop_teams", "1", "Teams that will drop powerups on death.");
 	sm_fortressblast_event_xmas = CreateConVar("sm_fortressblast_event_xmas", "1", "How to handle the TF2 Smissmas event.");
-	sm_fortressblast_gifthunt = CreateConVar("sm_fortressblast_gifthunt", "0", "Whether or not to enable Gift Hunt");
+	sm_fortressblast_gifthunt = CreateConVar("sm_fortressblast_gifthunt", "0", "Disables or enables Gift Hunt on maps with Gift Hunt .json files.");
 	sm_fortressblast_gifthunt_goal = CreateConVar("sm_fortressblast_gifthunt_goal", "125", "Base number of gifts required to unlock the objective in Gift Hunt.");
 	sm_fortressblast_gifthunt_increment = CreateConVar("sm_fortressblast_gifthunt_increment", "25", "Amount to increase the gift goal per extra group of players.");
 	sm_fortressblast_gifthunt_players = CreateConVar("sm_fortressblast_gifthunt_players", "4", "Number of players in a group, any more and the gift goal increases.");
@@ -225,8 +225,6 @@ public void OnMapStart() {
 	AddFileToDownloadsTable("sound/fortressblast2/gifthunt_gift_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/gifthunt_goal_enemyteam.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/gifthunt_goal_playerteam.mp3");
-
-	
 
 	CreateTimer(0.1, Timer_CheckGifts, _, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE); // Timer to check gifts
 }
@@ -323,24 +321,26 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 	// So we dont overload read-writes
 	Format(path, sizeof(path), "scripts/fortress_blast/powerup_spots/%s.json", map);
 	MapHasJsonFile = FileExists(path);
-	if(sm_fortressblast_gifthunt.BoolValue){
+	if (sm_fortressblast_gifthunt.BoolValue) {
 		Format(path, sizeof(path), "scripts/fortress_blast/gift_spots/%s.json", map);
 		GiftHunt = FileExists(path);
-	}
-	else{
+	} else {
 		GiftHunt = false;
 	}
 	VictoryTime = false;
-	EntFire("fb_warningmessage", "Kill");
-	if(GiftHunt){
+	// Gift Hunt map logic changes
+	if (GiftHunt) {
+		// Disable capturing control points
 		EntFire("trigger_capture_area", "SetTeamCanCap", "2 0");
 		EntFire("trigger_capture_area", "SetTeamCanCap", "3 0");
+		// Disable collecting intelligences
 		int flag;
 		while ((flag = FindEntityByClassname(flag, "item_teamflag")) != -1) {
 			DispatchKeyValue(flag, "VisibleWhenDisabled", "1");
 			AcceptEntityInput(flag, "Disable");
 		}
-		if(FindEntityByClassname(1, "tf_logic_arena") != -1){
+		// Disable Arena control point cooldown
+		if (FindEntityByClassname(1, "tf_logic_arena") != -1) {
 			DispatchKeyValue(FindEntityByClassname(1, "tf_logic_arena"), "CapEnableDelay", "0");
 		}
 	}
@@ -498,7 +498,6 @@ stock int SpawnPower(float location[3], bool respawn, int id = 0) {
 	// First check if there is a powerup already here, in the case that a duplicate has spawned
 	int entity = CreateEntityByName("tf_halloween_pickup");
 	DispatchKeyValue(entity, "powerup_model", "models/fortressblast/pickups/fb_pickup.mdl");
-	DebugText("Spawning powerup entity %d at %f, %f, %f", entity, location[0], location[1], location[2]);
 	if (IsValidEdict(entity)) {
 		if (id == 0) {
 			powerupid[entity] = GetRandomInt(1, NumberOfPowerups);
@@ -752,47 +751,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			buttons &= ~IN_ATTACK;
 		}
 	}
-	/*for (int weapon2 = 0; weapon2 <= 5 ; weapon2++) {
-		if (GetPlayerWeaponSlot(client, weapon2) != -1) {
-				if((GetGameTime() > TimeNextAttackPoint[client][weapon2] || GetGameTime() > TimeNextSecondAttackPoint[client][weapon2]) && buttons & IN_ATTACK){
-					TFNextAttackPoint[client][weapon2] = GetEntPropFloat(GetPlayerWeaponSlot(client, weapon2), Prop_Send, "m_flNextPrimaryAttack");
-					TFNextSecondAttackPoint[client][weapon2] = GetEntPropFloat(GetPlayerWeaponSlot(client, weapon2), Prop_Send, "m_flNextSecondaryAttack");
-					if(TFNextAttackPoint[client][weapon2] > GetGameTime()){
-						TFNextAttackPoint[client][weapon2] = GetGameTime();
-					}
-					if(TFNextSecondAttackPoint[client][weapon2] > GetGameTime()){
-						TFNextSecondAttackPoint[client][weapon2] = GetGameTime();
-					}
-					PrintCenterTextAll("Updating %N's firepoints in %d to %f and %f", client, weapon2, TFNextAttackPoint[client][weapon2], TFNextSecondAttackPoint[client][weapon2]);
-				}
-		}
-	}*/
-	/*if(Magnetism[client]){
-		float pos1[3];
-		GetClientAbsOrigin(client, pos1);
-		for (int client2 = 1 ; client2 <= MaxClients ; client2++ ) {
-			if(IsClientInGame(client2) && TF2_GetClientTeam(client2) != TF2_GetClientTeam(client)){
-				float pos2[3];
-				GetClientAbsOrigin(client2, pos2);
-				float closeness = (1000 - GetVectorDistance(pos1, pos2));
-				if(closeness > 0){
-					for (int weapon2 = 0; weapon2 <= 5 ; weapon2++) {
-						if (GetPlayerWeaponSlot(client2, weapon2) != -1) {
-							//TimeNextAttackPoint[client2][weapon2] = (TFNextAttackPoint[client][weapon2] * (closeness / 100));
-							//TimeNextSecondAttackPoint[client2][weapon2] = (TFNextSecondAttackPoint[client][weapon2] * (closeness / 100));
-							TimeNextAttackPoint[client2][weapon2] = GetGameTime() + ((TFNextAttackPoint[client2][weapon2] - GetGameTime()) * (closeness / 100));
-							TimeNextSecondAttackPoint[client2][weapon2] = GetGameTime() + ((TFNextSecondAttackPoint[client2][weapon2] - GetGameTime()) * (closeness / 100));
-							SetEntPropFloat(GetPlayerWeaponSlot(client2, weapon2), Prop_Send, "m_flNextPrimaryAttack", TimeNextAttackPoint[client2][weapon2]);
-							SetEntPropFloat(GetPlayerWeaponSlot(client2, weapon2), Prop_Send, "m_flNextSecondaryAttack", TimeNextSecondAttackPoint[client2][weapon2]);
-							PrintCenterTextAll("Current %f, gave %N (slot %d), %f and %f to %f and %f", GetGameTime(), client2, weapon2, TFNextAttackPoint[client2][weapon2], TFNextSecondAttackPoint[client2][weapon2], TimeNextAttackPoint[client2][weapon2], TimeNextSecondAttackPoint[client2][weapon2]);
-						}
-					}
-				}
-			}
-		}
-	}*/
-	
-	if(Magnetism[client] && IsPlayerAlive(client)){
+	if (Magnetism[client] && IsPlayerAlive(client)) {
 		float pos1[3];
 		GetClientAbsOrigin(client, pos1);
 		for (int client2 = 1 ; client2 <= MaxClients ; client2++ ) {
@@ -800,7 +759,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 				float pos2[3];
 				GetClientAbsOrigin(client2, pos2);
 				float closeness = (1024 - GetVectorDistance(pos1, pos2));
-				if(closeness > 0){
+				if (closeness > 0) {
 					SetEntPropEnt(client2, Prop_Data, "m_hGroundEntity", -1);
 					float direction[3];
 					SubtractVectors(pos1, pos2, direction);
@@ -809,16 +768,11 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 					GetEntPropVector(client2, Prop_Data, "m_vecVelocity", playerVel);
 					NegateVector(direction);
 					float multiplier = Pow((((1024 - GetVectorDistance(pos1, pos2)) / 1024) * 4), 2.0);
-					if(GetEntPropEnt(client, Prop_Data, "m_hActiveWeapon") != GetPlayerWeaponSlot(client, 2)){
+					if (GetEntPropEnt(client, Prop_Data, "m_hActiveWeapon") != GetPlayerWeaponSlot(client, 2)) {
 						multiplier = multiplier * -1.25;
 					}
-					//direction[0] = direction[0] * 10;
-					//direction[1] = direction[1] * 10;
 					direction[0] = direction[0] * multiplier;
 					direction[1] = direction[1] * multiplier;
-					/*direction[0] = Pow(((1024 - direction[0]) / 1024 * 12), 2.0);
-					direction[1] = Pow(((1024 - direction[1]) / 1024 * 12), 2.0);
-					direction[2] = Pow(((1024 - direction[2]) / 1024 * 12), 2.0);*/
 					SubtractVectors(playerVel, direction, direction);
 					TeleportEntity(client2, NULL_VECTOR, NULL_VECTOR, direction);
 				}
@@ -905,7 +859,6 @@ public void UsePower(int client) {
 		TF2_RemovePlayerDisguise(client);
 		ClearTimer(TimeTravelHandle[client]);
 		TimeTravelHandle[client] = CreateTimer(0.0, Timer_RemoveTimeTravel, client); // Remove Time Travel instantly
-
 		float pos1[3];
 		GetClientAbsOrigin(client, pos1);
 		for (int client2 = 1 ; client2 <= MaxClients ; client2++ ) {
@@ -917,7 +870,6 @@ public void UsePower(int client) {
 				}
 			}
 		}
-
 		BuildingDamage(client, "obj_sentrygun");
 		BuildingDamage(client, "obj_dispenser");
 		BuildingDamage(client, "obj_teleporter");
@@ -987,23 +939,24 @@ public void UsePower(int client) {
 		}
 		EndMessage();
 	} else if (powerup[client] == 12) {
+		// Magnetism - Repel or attract enemies depending on weapon slot
 		EmitAmbientSound("fortressblast2/magnetism_use.mp3", vel, client);
 		Magnetism[client] = true;
 		ClearTimer(MagnetismHandle[client]);
 		MagnetismHandle[client] = CreateTimer(5.0, Timer_RemoveMagnetism, client);
+		// Repeatedly produce Magnetism particle
 		float timeport = 0.1;
 		PowerupParticle(client, "ping_circle", 0.5);
 		for (int timepoint = 0 ; timepoint <= 50 ; timepoint++) {
 			CreateTimer(timeport, AnotherPingThingy, client);
 			timeport = timeport + 0.1;
 		}
-		
 	}
 	powerup[client] = 0;
 }
 
 public Action AnotherPingThingy(Handle timer, int client){
-	if(IsClientInGame(client) && IsPlayerAlive(client) && Magnetism[client]){
+	if (IsClientInGame(client) && IsPlayerAlive(client) && Magnetism[client]) {
 		PowerupParticle(client, "ping_circle", 0.5);
 	}
 }
@@ -1046,11 +999,10 @@ public Action Timer_BeginTeleporter(Handle timer, int client) {
 		CPrintToChat(client, "%s {haunted}You were teleported to your spawn as there are no active Teleporter exits on your team.", MESSAGE_PREFIX);
 		int spawn;
 		int spawnsleft = GetRandomInt(0, NumberOfSpawns(GetClientTeam(client)));
-		DebugText("Put at %d spawn", spawnsleft);
 		while ((spawn = FindEntityByClassname(spawn, "info_player_teamspawn")) != -1) {
-			if (GetEntProp(spawn, Prop_Send, "m_iTeamNum") == GetClientTeam(client)){
-				if(spawnsleft < 1){
-					DebugText("Found a spawn - sending %N to spawn %d", client, spawn);
+			if (GetEntProp(spawn, Prop_Send, "m_iTeamNum") == GetClientTeam(client)) {
+				if (spawnsleft < 1) {
+					DebugText("%N was teleported to spawn %d", client, spawn);
 					float coords[3] = 69.420;
 					GetEntPropVector(spawn, Prop_Send, "m_vecOrigin", coords);
 					float angles[3] = 69.420;
@@ -1058,10 +1010,8 @@ public Action Timer_BeginTeleporter(Handle timer, int client) {
 					coords[2] += 24.00;
 					TeleportEntity(client, coords, angles, NULL_VECTOR);
 					return;
-				}
-				else{
+				} else {
 					spawnsleft--;
-					DebugText("Now there are %d spawn", spawnsleft);
 				}
 			}
 		}
@@ -1094,17 +1044,16 @@ public Action Timer_BeginTeleporter(Handle timer, int client) {
 	TeleportXmasThingy(client);
 }
 
-public int NumberOfSpawns(int team){
+public int NumberOfSpawns(int team) {
 	int count;
 	int spawn;
 	while ((spawn = FindEntityByClassname(spawn, "info_player_teamspawn")) != -1) {
-		if (GetEntProp(spawn, Prop_Send, "m_iTeamNum") == team){
+		if (GetEntProp(spawn, Prop_Send, "m_iTeamNum") == team) {
 			count++;
 		}
 	}
 	return count;
 }
-
 
 public void TeleportXmasThingy(int client) {
 	if (Smissmas()) {
@@ -1591,24 +1540,27 @@ public void CollectedGift(int client) {
 	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel);
 	EmitAmbientSound("fortressblast2/gifthunt_gift_pickup.mp3", vel, client);
 	Gifts[GetClientTeam(client)]++;
+	// A team has reached the gift goal
 	if (Gifts[GetClientTeam(client)] == giftgoal) {
 		if (GetClientTeam(client) == 2) {
-			EntFire("trigger_capture_area", "SetTeamCanCap", "2 1");
 			PrintCenterTextAll("RED team has collected the required number of gifts!");
 			DebugText("RED team has collected the required number of gifts", client);
 			flag = 0;
+			EntFire("trigger_capture_area", "SetTeamCanCap", "2 1"); // Allow capturing control points
+			// Allow collecting enemy intelligences
 			while ((flag = FindEntityByClassname(flag, "item_teamflag")) != -1) {
-				if(GetEntProp(flag, Prop_Send, "m_iTeamNum") == 3){
+				if (GetEntProp(flag, Prop_Send, "m_iTeamNum") == 3) {
 					AcceptEntityInput(flag, "Enable");
 				}
 			}
 		} else if (GetClientTeam(client) == 3) {
-			EntFire("trigger_capture_area", "SetTeamCanCap", "3 1");
 			PrintCenterTextAll("BLU team has collected the required number of gifts!");
 			DebugText("BLU team has collected the required number of gifts", client);
 			flag = 0;
+			EntFire("trigger_capture_area", "SetTeamCanCap", "3 1"); // Allow capturing control points
+			// Allow collecting enemy intelligences
 			while ((flag = FindEntityByClassname(flag, "item_teamflag")) != -1) {
-				if(GetEntProp(flag, Prop_Send, "m_iTeamNum") == 2){
+				if (GetEntProp(flag, Prop_Send, "m_iTeamNum") == 2) {
 					AcceptEntityInput(flag, "Enable");
 				}
 			}
