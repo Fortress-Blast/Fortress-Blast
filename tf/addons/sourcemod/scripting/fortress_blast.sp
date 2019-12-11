@@ -146,6 +146,20 @@ public void OnPluginStart() {
 	// HUDs
 	texthand = CreateHudSynchronizer();
 	gifttext = CreateHudSynchronizer();
+	
+	InsertPluginTag();
+}
+
+public void InsertPluginTag() {
+	ConVar tags = FindConVar("sv_tags");
+	if (tags != null) {
+		char serverTags[258];
+		tags.GetString(serverTags, sizeof(serverTags));
+		if (StrContains(serverTags, "fortressblast", true) == -1) {
+			Format(serverTags, sizeof(serverTags), "%s%s", serverTags, ",fortressblast");
+			tags.SetString(serverTags);
+		}
+	}
 }
 
 public void OnMapStart() {
