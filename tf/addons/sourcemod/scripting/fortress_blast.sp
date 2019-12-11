@@ -156,7 +156,7 @@ public void InsertPluginTag() {
 		char serverTags[258];
 		tags.GetString(serverTags, sizeof(serverTags));
 		if (StrContains(serverTags, "fortressblast", true) == -1) {
-			Format(serverTags, sizeof(serverTags), "%s%s", serverTags, ",fortressblast");
+			Format(serverTags, sizeof(serverTags), "fortressblast,%s", serverTags);
 			tags.SetString(serverTags);
 		}
 	}
