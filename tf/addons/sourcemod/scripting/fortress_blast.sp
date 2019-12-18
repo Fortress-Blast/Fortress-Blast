@@ -14,7 +14,7 @@
 #define	MAX_EDICTS (1<<MAX_EDICT_BITS)
 #define MAX_PARTICLES 10 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
 #define MESSAGE_PREFIX "{orange}[Fortress Blast]"
-#define PLUGIN_VERSION "3.0.1 [DOWNLOAD RELEASE NOT MASTER]"
+#define PLUGIN_VERSION "3.0.1"
 #define MOTD_VERSION "3.0"
 
 public Plugin myinfo = {
@@ -369,7 +369,7 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 		for (int client = 1; client <= MaxClients; client++) {
 			powerup[client] = 0;
 			if (IsClientInGame(client)) {
-				if(!IsFakeClient(client) || sm_fortressblast_gifthunt_countbots){
+				if (!IsFakeClient(client) || sm_fortressblast_gifthunt_countbots.BoolValue) {
 					PlayersAmount++;
 				}
 				CreateTimer(3.0, Timer_PesterThisDude, client);
@@ -1019,21 +1019,7 @@ public Action Timer_BeginTeleporter(Handle timer, int client) {
 		ClearTimer(MegaMannHandle[client]);
 		MegaMannHandle[client] = CreateTimer(0.0, Timer_RemoveMegaMann, client);
 	}
-	FakeClientCommand(client, "dropitem"); // drop flag
-	/*int dropjack = CreateEntityByName("func_passtime_no_ball_zone");
-	float clycoords[3] = 69.420;
-	GetEntPropVector(client, Prop_Send, "m_vecOrigin", clycoords);
-	TeleportEntity(dropjack, clycoords, NULL_VECTOR, NULL_VECTOR);
-	SetEntityModel(dropjack, "models/fortressblast/pickups/fb_pickup.mdl");
-	float flMins[3];
-	float flMaxs[3];
-	GetEntPropVector(client, Prop_Send, "m_vecMins", flMins);
-	GetEntPropVector(client, Prop_Send, "m_vecMaxs", flMaxs);
-	SetEntPropVector(dropjack, Prop_Send, "m_vecMins", flMins);
-	SetEntPropVector(dropjack, Prop_Send, "m_vecMaxs",flMaxs);
-	SetEntProp(dropjack, Prop_Send, "m_nSolidType", 2);
-	DispatchSpawn(dropjack);
-	ActivateEntity(dropjack);*/
+	FakeClientCommand(client, "dropitem"); // Force player to drop intelligence
 	int teles = GetTeamTeleporters(TF2_GetClientTeam(client));
 	if (teles == 0) {
 		CPrintToChat(client, "%s {haunted}You were teleported to your spawn as there are no active Teleporter exits on your team.", MESSAGE_PREFIX);
@@ -1050,16 +1036,13 @@ public Action Timer_BeginTeleporter(Handle timer, int client) {
 					coords[2] += 24.00;
 					TeleportEntity(client, coords, angles, NULL_VECTOR);
 					TeleportXmasThingy(client);
-					//RemoveEntity(dropjack);
 					return;
 				} else {
 					spawnsleft--;
-					DebugText("Spawns left are %d", spawnsleft);
 				}
 			}
 		}
 		TeleportXmasThingy(client);
-		//RemoveEntity(dropjack);
 		return;
 	}
 	int eli = GetRandomInt(1, teles);
