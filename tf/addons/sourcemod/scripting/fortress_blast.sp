@@ -14,7 +14,7 @@
 #define	MAX_EDICTS (1<<MAX_EDICT_BITS)
 #define MAX_PARTICLES 10 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
 #define MESSAGE_PREFIX "{orange}[Fortress Blast]"
-#define PLUGIN_VERSION "3.0"
+#define PLUGIN_VERSION "3.0.1 [DOWNLOAD RELEASE NOT MASTER]"
 #define MOTD_VERSION "3.0"
 
 public Plugin myinfo = {
@@ -77,6 +77,7 @@ ConVar sm_fortressblast_drop_rate;
 ConVar sm_fortressblast_drop_teams;
 ConVar sm_fortressblast_event_xmas;
 ConVar sm_fortressblast_gifthunt;
+ConVar sm_fortressblast_gifthunt_countbots;
 ConVar sm_fortressblast_gifthunt_goal;
 ConVar sm_fortressblast_gifthunt_increment;
 ConVar sm_fortressblast_gifthunt_players;
@@ -135,6 +136,7 @@ public void OnPluginStart() {
 	sm_fortressblast_drop_teams = CreateConVar("sm_fortressblast_drop_teams", "1", "Teams that will drop powerups on death.");
 	sm_fortressblast_event_xmas = CreateConVar("sm_fortressblast_event_xmas", "1", "How to handle the TF2 Smissmas event.");
 	sm_fortressblast_gifthunt = CreateConVar("sm_fortressblast_gifthunt", "0", "Disables or enables Gift Hunt on maps with Gift Hunt .json files.");
+	sm_fortressblast_gifthunt_countbots = CreateConVar("sm_fortressblast_gifthunt_countbots", "0", "Disables or enables counting bots as players when increasing the gift goal.");
 	sm_fortressblast_gifthunt_goal = CreateConVar("sm_fortressblast_gifthunt_goal", "125", "Base number of gifts required to unlock the objective in Gift Hunt.");
 	sm_fortressblast_gifthunt_increment = CreateConVar("sm_fortressblast_gifthunt_increment", "25", "Amount to increase the gift goal per extra group of players.");
 	sm_fortressblast_gifthunt_players = CreateConVar("sm_fortressblast_gifthunt_players", "4", "Number of players in a group, any more and the gift goal increases.");
@@ -147,16 +149,16 @@ public void OnPluginStart() {
 	texthand = CreateHudSynchronizer();
 	gifttext = CreateHudSynchronizer();
 	
-	InsertPluginTag();
+	InsertServerTag("fortressblast");
 }
 
-public void InsertPluginTag() {
+public void InsertServerTag(string insertThisTag) {
 	ConVar tags = FindConVar("sv_tags");
 	if (tags != null) {
 		char serverTags[258];
 		tags.GetString(serverTags, sizeof(serverTags));
-		if (StrContains(serverTags, "fortressblast", true) == -1) {
-			Format(serverTags, sizeof(serverTags), "fortressblast,%s", serverTags);
+		if (StrContains(serverTags, insertThisTag, true) == -1) {
+			Format(serverTags, sizeof(serverTags), "%s,%s", serverTags, insertThisTag);
 			tags.SetString(serverTags);
 		}
 	}
@@ -344,6 +346,7 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 	VictoryTime = false;
 	// Gift Hunt map logic changes
 	if (GiftHunt) {
+		InsertServerTag("gifthunt");
 		// Disable capturing control points
 		EntFire("trigger_capture_area", "SetTeamCanCap", "2 0");
 		EntFire("trigger_capture_area", "SetTeamCanCap", "3 0");
@@ -353,9 +356,12 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 			DispatchKeyValue(flag, "VisibleWhenDisabled", "1");
 			AcceptEntityInput(flag, "Disable");
 		}
-		// Disable Arena control point cooldown
+		// Disable Arena and King of the Hill control point cooldown
 		if (FindEntityByClassname(1, "tf_logic_arena") != -1) {
 			DispatchKeyValue(FindEntityByClassname(1, "tf_logic_arena"), "CapEnableDelay", "0");
+		} else if (FindEntityByClassname(1, "tf_logic_koth") != -1) {
+			DispatchKeyValue(FindEntityByClassname(1, "tf_logic_koth"), "timer_length", "0");
+			DispatchKeyValue(FindEntityByClassname(1, "tf_logic_koth"), "unlock_point", "0");
 		}
 		EntFire("team_round_timer", "SetTime", "0.1");
 	}
@@ -419,6 +425,9 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 public void CalculateGiftAmountForPlayers() {
 	giftgoal = sm_fortressblast_gifthunt_goal.IntValue;
 	DebugText("Base gift goal is %d", giftgoal);
+	if (!sm_fortressblast_gifthunt_countbots.BoolValue) {
+		// Add something here to count the number of bots and not include them
+	}
 	int steps = RoundToFloor((PlayersAmount - 1) / sm_fortressblast_gifthunt_players.FloatValue);
 	if (steps < 0) {
 		steps = 0;
@@ -770,11 +779,11 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		float pos1[3];
 		GetClientAbsOrigin(client, pos1);
 		for (int client2 = 1 ; client2 <= MaxClients ; client2++ ) {
-			if(IsClientInGame(client2) && TF2_GetClientTeam(client2) != TF2_GetClientTeam(client) && IsPlayerAlive(client2)){
+			if (IsClientInGame(client2) && TF2_GetClientTeam(client2) != TF2_GetClientTeam(client) && IsPlayerAlive(client2)) {
 				float pos2[3];
 				GetClientAbsOrigin(client2, pos2);
-				float closeness = (1024 - GetVectorDistance(pos1, pos2));
-				if (closeness > 0) {
+				float distanceScale = (1024 - GetVectorDistance(pos1, pos2)) / 1024;
+				if (distanceScale > 0) {
 					SetEntPropEnt(client2, Prop_Data, "m_hGroundEntity", -1);
 					float direction[3];
 					SubtractVectors(pos1, pos2, direction);
@@ -782,7 +791,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 					float playerVel[3];
 					GetEntPropVector(client2, Prop_Data, "m_vecVelocity", playerVel);
 					NegateVector(direction);
-					float multiplier = Pow((((1024 - GetVectorDistance(pos1, pos2)) / 1024) * 4), 2.0);
+					float multiplier = Pow(distanceScale * 4, 2.0);
 					if (GetEntPropEnt(client, Prop_Data, "m_hActiveWeapon") != GetPlayerWeaponSlot(client, 2)) {
 						multiplier = multiplier * -1.25;
 					}
