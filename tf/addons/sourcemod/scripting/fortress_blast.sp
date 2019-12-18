@@ -152,7 +152,7 @@ public void OnPluginStart() {
 	InsertServerTag("fortressblast");
 }
 
-public void InsertServerTag(string insertThisTag) {
+public void InsertServerTag(const char[] insertThisTag) {
 	ConVar tags = FindConVar("sv_tags");
 	if (tags != null) {
 		char serverTags[258];
