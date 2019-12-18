@@ -357,6 +357,7 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 		if (FindEntityByClassname(1, "tf_logic_arena") != -1) {
 			DispatchKeyValue(FindEntityByClassname(1, "tf_logic_arena"), "CapEnableDelay", "0");
 		}
+		EntFire("team_round_timer", "SetTime", "0.1");
 	}
 	PlayersAmount = 0;
 	if (!GameRules_GetProp("m_bInWaitingForPlayers")) {
@@ -989,7 +990,7 @@ public void BuildingDamage(int client, const char[] class) {
 		float pos2[3];
 		GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos2);
 		if (0 < bobthe <= MaxClients && IsClientInGame(bobthe) && GetClientTeam(bobthe) != GetClientTeam(client) && GetVectorDistance(pos1, pos2) <= 250.0) {
-			DebugText("%s ID %N at %f, %f, %f damaged by Blast powerup", class, entity, pos2[0], pos2[1], pos2[2]);
+			DebugText("%s ID %d at %f, %f, %f damaged by Blast powerup", class, entity, pos2[0], pos2[1], pos2[2]);
 			float expectedDamage = sm_fortressblast_blast_buildings.FloatValue / 100;
 			if (expectedDamage < 0) {
 				expectedDamage = 0.0;
@@ -1008,14 +1009,29 @@ public Action Timer_BeginTeleporter(Handle timer, int client) {
 		ClearTimer(MegaMannHandle[client]);
 		MegaMannHandle[client] = CreateTimer(0.0, Timer_RemoveMegaMann, client);
 	}
+	FakeClientCommand(client, "dropitem"); // drop flag
+	/*int dropjack = CreateEntityByName("func_passtime_no_ball_zone");
+	float clycoords[3] = 69.420;
+	GetEntPropVector(client, Prop_Send, "m_vecOrigin", clycoords);
+	TeleportEntity(dropjack, clycoords, NULL_VECTOR, NULL_VECTOR);
+	SetEntityModel(dropjack, "models/fortressblast/pickups/fb_pickup.mdl");
+	float flMins[3];
+	float flMaxs[3];
+	GetEntPropVector(client, Prop_Send, "m_vecMins", flMins);
+	GetEntPropVector(client, Prop_Send, "m_vecMaxs", flMaxs);
+	SetEntPropVector(dropjack, Prop_Send, "m_vecMins", flMins);
+	SetEntPropVector(dropjack, Prop_Send, "m_vecMaxs",flMaxs);
+	SetEntProp(dropjack, Prop_Send, "m_nSolidType", 2);
+	DispatchSpawn(dropjack);
+	ActivateEntity(dropjack);*/
 	int teles = GetTeamTeleporters(TF2_GetClientTeam(client));
 	if (teles == 0) {
 		CPrintToChat(client, "%s {haunted}You were teleported to your spawn as there are no active Teleporter exits on your team.", MESSAGE_PREFIX);
-		int spawn;
-		int spawnsleft = GetRandomInt(0, NumberOfSpawns(GetClientTeam(client)));
+		int spawn = 1;
+		int spawnsleft = GetRandomInt(1, NumberOfSpawns(GetClientTeam(client)));
 		while ((spawn = FindEntityByClassname(spawn, "info_player_teamspawn")) != -1) {
 			if (GetEntProp(spawn, Prop_Send, "m_iTeamNum") == GetClientTeam(client)) {
-				if (spawnsleft < 1) {
+				if (spawnsleft < 2) {
 					DebugText("%N was teleported to spawn %d", client, spawn);
 					float coords[3] = 69.420;
 					GetEntPropVector(spawn, Prop_Send, "m_vecOrigin", coords);
@@ -1023,13 +1039,17 @@ public Action Timer_BeginTeleporter(Handle timer, int client) {
 					GetEntPropVector(spawn, Prop_Data, "m_angRotation", angles); 
 					coords[2] += 24.00;
 					TeleportEntity(client, coords, angles, NULL_VECTOR);
+					TeleportXmasThingy(client);
+					//RemoveEntity(dropjack);
 					return;
 				} else {
 					spawnsleft--;
+					DebugText("Spawns left are %d", spawnsleft);
 				}
 			}
 		}
 		TeleportXmasThingy(client);
+		//RemoveEntity(dropjack);
 		return;
 	}
 	int eli = GetRandomInt(1, teles);
