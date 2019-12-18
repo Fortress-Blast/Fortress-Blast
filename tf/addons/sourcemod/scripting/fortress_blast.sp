@@ -363,14 +363,15 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 			DispatchKeyValue(FindEntityByClassname(1, "tf_logic_koth"), "timer_length", "0");
 			DispatchKeyValue(FindEntityByClassname(1, "tf_logic_koth"), "unlock_point", "0");
 		}
-		EntFire("team_round_timer", "SetTime", "0.1");
 	}
 	PlayersAmount = 0;
 	if (!GameRules_GetProp("m_bInWaitingForPlayers")) {
 		for (int client = 1; client <= MaxClients; client++) {
 			powerup[client] = 0;
 			if (IsClientInGame(client)) {
-				PlayersAmount++;
+				if(!IsFakeClient(client) || sm_fortressblast_gifthunt_countbots){
+					PlayersAmount++;
+				}
 				CreateTimer(3.0, Timer_PesterThisDude, client);
 				// Remove powerup effects on round start
 				SetEntityGravity(client, 1.0);
