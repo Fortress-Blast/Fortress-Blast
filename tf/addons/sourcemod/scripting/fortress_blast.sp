@@ -85,6 +85,7 @@ ConVar sm_fortressblast_gifthunt_rate;
 ConVar sm_fortressblast_mannpower;
 ConVar sm_fortressblast_powerups;
 ConVar sm_fortressblast_spawnroom_kill;
+ConVar sm_fortressblast_admin_flag;
 
 /* Powerup IDs
 0 - No powerup if on player, gift if on powerup entity
@@ -120,7 +121,7 @@ public void OnPluginStart() {
 	RegConsoleCmd("sm_fortressblast", FBMenu);
 	RegConsoleCmd("sm_coordsjson", CoordsJson);
 	RegConsoleCmd("sm_setpowerup", Command_SetPowerup);
-	RegAdminCmd("sm_spawnpowerup", Command_SpawnPowerup, ADMFLAG_ROOT);
+	RegConsoleCmd("sm_spawnpowerup", Command_SpawnPowerup);
 
 	LoadTranslations("common.phrases");
 
@@ -144,7 +145,7 @@ public void OnPluginStart() {
 	sm_fortressblast_mannpower = CreateConVar("sm_fortressblast_mannpower", "2", "How to handle replacing Mannpower powerups.");
 	sm_fortressblast_powerups = CreateConVar("sm_fortressblast_powerups", "-1", "Bitfield of which powerups to enable.");
 	sm_fortressblast_spawnroom_kill = CreateConVar("sm_fortressblast_spawnroom_kill", "1", "Disables or enables killing enemies inside spawnrooms due to Mega Mann exploit.");
-
+	sm_fortressblast_admin_flag = CreateConVar("sm_fortressblast_admin_flag", "z", "What flag to use for admin-restricted commands (and server is not in debug mode)");
 	// HUDs
 	texthand = CreateHudSynchronizer();
 	gifttext = CreateHudSynchronizer();
@@ -265,7 +266,7 @@ public Action FBMenu(int client, int args) {
 }
 
 public Action Command_SetPowerup(int client, int args) {
-	if (!CheckCommandAccess(client, "", ADMFLAG_ROOT) && !sm_fortressblast_debug.BoolValue) {
+	if (!CheckCommandAccess(client, "", AdminFlagInt()) && !sm_fortressblast_debug.BoolValue) {
 		CPrintToChat(client, "%s {red}You do not have permission to use this command.", MESSAGE_PREFIX);
 		return;
 	}
@@ -1361,16 +1362,6 @@ stock void ClearTimer(Handle Timer) { // From SourceMod forums
     }
 }
 
-public void SwitchPrimary(int client) {
-	int weapon = GetPlayerWeaponSlot(client, 0);
-	if (IsValidEdict(weapon)) {
-		char class[MAX_NAME_LENGTH * 2];
-		GetEdictClassname(weapon, class, sizeof(class));
-		FakeClientCommand(client, "use %s", class);
-		SetEntPropEnt(client, Prop_Data, "m_hActiveWeapon", weapon);
-	}
-}
-
 public void PowerupParticle(int client, char particlename[80], float time) {
 	int particle = CreateEntityByName("info_particle_system");
 	DispatchKeyValue(particle, "effect_name", particlename);
@@ -1421,9 +1412,10 @@ public void DebugText(const char[] text, any ...) {
 
 public int StringButtonInt() {
 	char button[40];
-	sm_fortressblast_action_use.GetString(button, sizeof(button))
+	sm_fortressblast_action_use.GetString(button, sizeof(button));
 	if (StrEqual(button, "attack")) {
-		return 1;
+		return 1; // maybe consider overhauling this to say stuff like IN_ATTACK instead of 1. it might not be obvious
+		//		what its purpose is then, but at least there won't be as much confusion if it's wrong
 	} else if (StrEqual(button, "jump")) {
 		return 2;
 	} else if (StrEqual(button, "duck")) {
@@ -1475,6 +1467,72 @@ public int StringButtonInt() {
 	} else { // Special attack
 		return 33554432;
 	}
+}
+
+public int AdminFlagInt(){
+	char flag[40];
+	sm_fortressblast_admin_flag.GetString(flag, sizeof(flag));
+	if(StrEqual(flag, "a")){
+		return ADMFLAG_RESERVATION;
+	}
+	if(StrEqual(flag, "b")){
+		return ADMFLAG_GENERIC;
+	}
+	if(StrEqual(flag, "c")){
+		return ADMFLAG_KICK;
+	}
+	if(StrEqual(flag, "d")){
+		return ADMFLAG_BAN;
+	}
+	if(StrEqual(flag, "e")){
+		return ADMFLAG_UNBAN;
+	}
+	if(StrEqual(flag, "f")){
+		return ADMFLAG_SLAY;
+	}
+	if(StrEqual(flag, "g")){
+		return ADMFLAG_CHANGEMAP;
+	}
+	if(StrEqual(flag, "h")){
+		return ADMFLAG_CONVARS;
+	}
+	if(StrEqual(flag, "i")){
+		return ADMFLAG_CONFIG;
+	}
+	if(StrEqual(flag, "j")){
+		return ADMFLAG_CHAT;
+	}
+	if(StrEqual(flag, "k")){
+		return ADMFLAG_VOTE;
+	}
+	if(StrEqual(flag, "l")){
+		return ADMFLAG_PASSWORD;
+	}
+	if(StrEqual(flag, "m")){
+		return ADMFLAG_RCON;
+	}
+	if(StrEqual(flag, "n")){
+		return ADMFLAG_CHEATS;
+	}
+	if(StrEqual(flag, "o")){
+		return ADMFLAG_CUSTOM1;
+	}
+	if(StrEqual(flag, "p")){
+		return ADMFLAG_CUSTOM2;
+	}
+	if(StrEqual(flag, "q")){
+		return ADMFLAG_CUSTOM3;
+	}
+	if(StrEqual(flag, "r")){
+		return ADMFLAG_CUSTOM4;
+	}
+	if(StrEqual(flag, "s")){
+		return ADMFLAG_CUSTOM5;
+	}
+	if(StrEqual(flag, "t")){
+		return ADMFLAG_CUSTOM6;
+	}
+	return ADMFLAG_ROOT;
 }
 
 stock int TF2_GetPlayerMaxHealth(int client) {
@@ -1553,10 +1611,6 @@ public void BlockAttacking(int client, float time) { // Roll the Dice function w
 			SetEntPropFloat(GetPlayerWeaponSlot(client, weapon), Prop_Send, "m_flNextPrimaryAttack", GetGameTime() + time);
 			SetEntPropFloat(GetPlayerWeaponSlot(client, weapon), Prop_Send, "m_flNextSecondaryAttack", GetGameTime() + time);
 		}
-	}
-	// Cancel active grappling hook
-	if (GetEntPropEnt(client, Prop_Data, "m_hActiveWeapon") == GetPlayerWeaponSlot(client, 5)) {
-		SwitchPrimary(client);
 	}
 }
 
@@ -1654,6 +1708,10 @@ public int Bitfieldify(int bitter) {
 }
 
 public Action Command_SpawnPowerup(int client, int args){
+	if (!CheckCommandAccess(client, "", AdminFlagInt()) && !sm_fortressblast_debug.BoolValue) {
+		CPrintToChat(client, "%s {red}You do not have permission to use this command.", MESSAGE_PREFIX);
+		return;
+	}
 	if (client == 0) {
 		PrintToServer("[Fortress Blast] Because this command uses the crosshair, it cannot be executed from the server console.");
 		return Plugin_Handled;
