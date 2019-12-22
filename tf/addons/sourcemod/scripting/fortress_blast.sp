@@ -14,7 +14,7 @@
 #define	MAX_EDICTS (1<<MAX_EDICT_BITS)
 #define MAX_PARTICLES 10 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
 #define MESSAGE_PREFIX "{orange}[Fortress Blast]"
-#define PLUGIN_VERSION "3.0.1"
+#define PLUGIN_VERSION "3.0.2"
 #define MOTD_VERSION "3.0"
 
 public Plugin myinfo = {
@@ -126,6 +126,7 @@ public void OnPluginStart() {
 	LoadTranslations("common.phrases");
 
 	// ConVars
+	sm_fortressblast_admin_flag = CreateConVar("sm_fortressblast_admin_flag", "z", "Which flag to use for admin-restricted commands outside of debug mode.");
 	sm_fortressblast_action_use = CreateConVar("sm_fortressblast_action_use", "attack3", "Which action to watch for in order to use powerups.");
 	sm_fortressblast_blast_buildings = CreateConVar("sm_fortressblast_blast_buildings", "100", "Percentage of Blast player damage to inflict on enemy buildings.");
 	sm_fortressblast_bot = CreateConVar("sm_fortressblast_bot", "1", "Disables or enables bots using powerups.");
@@ -145,7 +146,7 @@ public void OnPluginStart() {
 	sm_fortressblast_mannpower = CreateConVar("sm_fortressblast_mannpower", "2", "How to handle replacing Mannpower powerups.");
 	sm_fortressblast_powerups = CreateConVar("sm_fortressblast_powerups", "-1", "Bitfield of which powerups to enable.");
 	sm_fortressblast_spawnroom_kill = CreateConVar("sm_fortressblast_spawnroom_kill", "1", "Disables or enables killing enemies inside spawnrooms due to Mega Mann exploit.");
-	sm_fortressblast_admin_flag = CreateConVar("sm_fortressblast_admin_flag", "z", "What flag to use for admin-restricted commands (and server is not in debug mode)");
+	
 	// HUDs
 	texthand = CreateHudSynchronizer();
 	gifttext = CreateHudSynchronizer();
@@ -1412,10 +1413,9 @@ public void DebugText(const char[] text, any ...) {
 
 public int StringButtonInt() {
 	char button[40];
-	sm_fortressblast_action_use.GetString(button, sizeof(button));
+	sm_fortressblast_action_use.GetString(button, sizeof(button))
 	if (StrEqual(button, "attack")) {
-		return 1; // maybe consider overhauling this to say stuff like IN_ATTACK instead of 1. it might not be obvious
-		//		what its purpose is then, but at least there won't be as much confusion if it's wrong
+		return 1;
 	} else if (StrEqual(button, "jump")) {
 		return 2;
 	} else if (StrEqual(button, "duck")) {
@@ -1464,72 +1464,52 @@ public int StringButtonInt() {
 		return 8388608;
 	} else if (StrEqual(button, "grenade2")) {
 		return 16777216;
-	} else { // Special attack
-		return 33554432;
 	}
+	return 33554432; // Special attack
 }
 
-public int AdminFlagInt(){
+public int AdminFlagInt() {
 	char flag[40];
 	sm_fortressblast_admin_flag.GetString(flag, sizeof(flag));
-	if(StrEqual(flag, "a")){
+	if (StrEqual(flag, "a")) {
 		return ADMFLAG_RESERVATION;
-	}
-	if(StrEqual(flag, "b")){
+	} else if (StrEqual(flag, "b")) {
 		return ADMFLAG_GENERIC;
-	}
-	if(StrEqual(flag, "c")){
+	} else if (StrEqual(flag, "c")) {
 		return ADMFLAG_KICK;
-	}
-	if(StrEqual(flag, "d")){
+	} else if (StrEqual(flag, "d")) {
 		return ADMFLAG_BAN;
-	}
-	if(StrEqual(flag, "e")){
+	} else if (StrEqual(flag, "e")) {
 		return ADMFLAG_UNBAN;
-	}
-	if(StrEqual(flag, "f")){
+	} else if (StrEqual(flag, "f")) {
 		return ADMFLAG_SLAY;
-	}
-	if(StrEqual(flag, "g")){
+	} else if (StrEqual(flag, "g")) {
 		return ADMFLAG_CHANGEMAP;
-	}
-	if(StrEqual(flag, "h")){
+	} else if (StrEqual(flag, "h")) {
 		return ADMFLAG_CONVARS;
-	}
-	if(StrEqual(flag, "i")){
+	} else if (StrEqual(flag, "i")) {
 		return ADMFLAG_CONFIG;
-	}
-	if(StrEqual(flag, "j")){
+	} else if (StrEqual(flag, "j")) {
 		return ADMFLAG_CHAT;
-	}
-	if(StrEqual(flag, "k")){
+	} else if (StrEqual(flag, "k")) {
 		return ADMFLAG_VOTE;
-	}
-	if(StrEqual(flag, "l")){
+	} else if (StrEqual(flag, "l")) {
 		return ADMFLAG_PASSWORD;
-	}
-	if(StrEqual(flag, "m")){
+	} else if (StrEqual(flag, "m")) {
 		return ADMFLAG_RCON;
-	}
-	if(StrEqual(flag, "n")){
+	} else if (StrEqual(flag, "n")) {
 		return ADMFLAG_CHEATS;
-	}
-	if(StrEqual(flag, "o")){
+	} else if (StrEqual(flag, "o")) {
 		return ADMFLAG_CUSTOM1;
-	}
-	if(StrEqual(flag, "p")){
+	} else if (StrEqual(flag, "p")) {
 		return ADMFLAG_CUSTOM2;
-	}
-	if(StrEqual(flag, "q")){
+	} else if (StrEqual(flag, "q")) {
 		return ADMFLAG_CUSTOM3;
-	}
-	if(StrEqual(flag, "r")){
+	} else if (StrEqual(flag, "r")) {
 		return ADMFLAG_CUSTOM4;
-	}
-	if(StrEqual(flag, "s")){
+	} else if (StrEqual(flag, "s")) {
 		return ADMFLAG_CUSTOM5;
-	}
-	if(StrEqual(flag, "t")){
+	} else if (StrEqual(flag, "t")) {
 		return ADMFLAG_CUSTOM6;
 	}
 	return ADMFLAG_ROOT;
