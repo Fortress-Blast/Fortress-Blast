@@ -126,7 +126,7 @@ public void OnPluginStart() {
 	LoadTranslations("common.phrases");
 
 	// ConVars
-	sm_fortressblast_admin_flag = CreateConVar("sm_fortressblast_admin_flag", "root", "Which flag to use for admin-restricted commands outside of debug mode.");
+	sm_fortressblast_admin_flag = CreateConVar("sm_fortressblast_admin_flag", "z", "Which flag to use for admin-restricted commands outside of debug mode.");
 	sm_fortressblast_action_use = CreateConVar("sm_fortressblast_action_use", "attack3", "Which action to watch for in order to use powerups.");
 	sm_fortressblast_blast_buildings = CreateConVar("sm_fortressblast_blast_buildings", "100", "Percentage of Blast player damage to inflict on enemy buildings.");
 	sm_fortressblast_bot = CreateConVar("sm_fortressblast_bot", "1", "Disables or enables bots using powerups.");
@@ -1471,45 +1471,45 @@ public int StringButtonInt() {
 public int AdminFlagInt() {
 	char flag[40];
 	sm_fortressblast_admin_flag.GetString(flag, sizeof(flag));
-	if (StrEqual(flag, "reservation")) {
+	if (StrEqual(flag, "a")) {
 		return ADMFLAG_RESERVATION;
-	} else if (StrEqual(flag, "generic")) {
+	} else if (StrEqual(flag, "b")) {
 		return ADMFLAG_GENERIC;
-	} else if (StrEqual(flag, "kick")) {
+	} else if (StrEqual(flag, "c")) {
 		return ADMFLAG_KICK;
-	} else if (StrEqual(flag, "ban")) {
+	} else if (StrEqual(flag, "d")) {
 		return ADMFLAG_BAN;
-	} else if (StrEqual(flag, "unban")) {
+	} else if (StrEqual(flag, "e")) {
 		return ADMFLAG_UNBAN;
-	} else if (StrEqual(flag, "slay")) {
+	} else if (StrEqual(flag, "f")) {
 		return ADMFLAG_SLAY;
-	} else if (StrEqual(flag, "changemap")) {
+	} else if (StrEqual(flag, "g")) {
 		return ADMFLAG_CHANGEMAP;
-	} else if (StrEqual(flag, "convars")) {
+	} else if (StrEqual(flag, "h")) {
 		return ADMFLAG_CONVARS;
-	} else if (StrEqual(flag, "config")) {
+	} else if (StrEqual(flag, "i")) {
 		return ADMFLAG_CONFIG;
-	} else if (StrEqual(flag, "chat")) {
+	} else if (StrEqual(flag, "j")) {
 		return ADMFLAG_CHAT;
-	} else if (StrEqual(flag, "vote")) {
+	} else if (StrEqual(flag, "k")) {
 		return ADMFLAG_VOTE;
-	} else if (StrEqual(flag, "password")) {
+	} else if (StrEqual(flag, "l")) {
 		return ADMFLAG_PASSWORD;
-	} else if (StrEqual(flag, "rcon")) {
+	} else if (StrEqual(flag, "m")) {
 		return ADMFLAG_RCON;
-	} else if (StrEqual(flag, "cheats")) {
+	} else if (StrEqual(flag, "n")) {
 		return ADMFLAG_CHEATS;
-	} else if (StrEqual(flag, "custom1")) {
+	} else if (StrEqual(flag, "o")) {
 		return ADMFLAG_CUSTOM1;
-	} else if (StrEqual(flag, "custom2")) {
+	} else if (StrEqual(flag, "p")) {
 		return ADMFLAG_CUSTOM2;
-	} else if (StrEqual(flag, "custom3")) {
+	} else if (StrEqual(flag, "q")) {
 		return ADMFLAG_CUSTOM3;
-	} else if (StrEqual(flag, "custom4")) {
+	} else if (StrEqual(flag, "r")) {
 		return ADMFLAG_CUSTOM4;
-	} else if (StrEqual(flag, "custom5")) {
+	} else if (StrEqual(flag, "s")) {
 		return ADMFLAG_CUSTOM5;
-	} else if (StrEqual(flag, "custom6")) {
+	} else if (StrEqual(flag, "t")) {
 		return ADMFLAG_CUSTOM6;
 	}
 	return ADMFLAG_ROOT;
