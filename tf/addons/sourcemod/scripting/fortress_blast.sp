@@ -1690,7 +1690,7 @@ public int Bitfieldify(int bitter) {
 public Action Command_SpawnPowerup(int client, int args){
 	if (!CheckCommandAccess(client, "", AdminFlagInt()) && !sm_fortressblast_debug.BoolValue) {
 		CPrintToChat(client, "%s {red}You do not have permission to use this command.", MESSAGE_PREFIX);
-		return;
+		return Plugin_Handled;
 	}
 	if (client == 0) {
 		PrintToServer("[Fortress Blast] Because this command uses the crosshair, it cannot be executed from the server console.");
