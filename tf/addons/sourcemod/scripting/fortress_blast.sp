@@ -14,7 +14,7 @@
 #define	MAX_EDICTS (1<<MAX_EDICT_BITS)
 #define MAX_PARTICLES 10 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
 #define MESSAGE_PREFIX "{orange}[Fortress Blast]"
-#define PLUGIN_VERSION "3.0.2"
+#define PLUGIN_VERSION "3.0.3"
 #define MOTD_VERSION "3.0"
 
 public Plugin myinfo = {
@@ -146,11 +146,11 @@ public void OnPluginStart() {
 	sm_fortressblast_mannpower = CreateConVar("sm_fortressblast_mannpower", "2", "How to handle replacing Mannpower powerups.");
 	sm_fortressblast_powerups = CreateConVar("sm_fortressblast_powerups", "-1", "Bitfield of which powerups to enable.");
 	sm_fortressblast_spawnroom_kill = CreateConVar("sm_fortressblast_spawnroom_kill", "1", "Disables or enables killing enemies inside spawnrooms due to Mega Mann exploit.");
-	
+
 	// HUDs
 	texthand = CreateHudSynchronizer();
 	gifttext = CreateHudSynchronizer();
-	
+
 	InsertServerTag("fortressblast");
 }
 
@@ -169,7 +169,7 @@ public void InsertServerTag(const char[] insertThisTag) {
 public void OnMapStart() {
 	Gifts[2] = 0;
 	Gifts[3] = 0;
-	
+
 	// Powerup sounds precaching and downloading
 	AddFileToDownloadsTable("materials/models/fortressblast/pickups/fb_pickup/pickup_fb.vmt");
 	AddFileToDownloadsTable("materials/models/fortressblast/pickups/fb_pickup/pickup_fb.vtf");
@@ -229,7 +229,7 @@ public void OnMapStart() {
 	AddFileToDownloadsTable("sound/fortressblast2/teleportation_use.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/magnetism_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/magnetism_use.mp3");
-	
+
 	// Smissmas sound precaching
 	PrecacheSound("misc/jingle_bells/jingle_bells_nm_01.wav");
 	PrecacheSound("misc/jingle_bells/jingle_bells_nm_02.wav");
@@ -1025,26 +1025,17 @@ public Action Timer_BeginTeleporter(Handle timer, int client) {
 	int teles = GetTeamTeleporters(TF2_GetClientTeam(client));
 	if (teles == 0) {
 		CPrintToChat(client, "%s {haunted}You were teleported to your spawn as there are no active Teleporter exits on your team.", MESSAGE_PREFIX);
-		int spawn = 1;
-		int spawnsleft = GetRandomInt(1, NumberOfSpawns(GetClientTeam(client)));
-		while ((spawn = FindEntityByClassname(spawn, "info_player_teamspawn")) != -1) {
-			if (GetEntProp(spawn, Prop_Send, "m_iTeamNum") == GetClientTeam(client)) {
-				if (spawnsleft < 2) {
-					DebugText("%N was teleported to spawn %d", client, spawn);
-					float coords[3] = 69.420;
-					GetEntPropVector(spawn, Prop_Send, "m_vecOrigin", coords);
-					float angles[3] = 69.420;
-					GetEntPropVector(spawn, Prop_Data, "m_angRotation", angles); 
-					coords[2] += 24.00;
-					TeleportEntity(client, coords, angles, NULL_VECTOR);
-					TeleportXmasThingy(client);
-					return;
-				} else {
-					spawnsleft--;
-				}
-			}
+		int preregenhealth = GetClientHealth(client);
+		int ammo[4];
+		for (int i = 0; i <= 3; i++) {
+			ammo[i] = GetEntProp(client, Prop_Data, "m_iAmmo", 4, i);
 		}
-		TeleportXmasThingy(client);
+		TF2_RespawnPlayer(client);
+		SetEntityHealth(client, preregenhealth);
+		for (int i = 0; i <= 3; i++) {
+			SetEntProp(client, Prop_Data, "m_iAmmo", ammo[i], 4, i);
+		}
+		TeleportXmasParticles(client);
 		return;
 	}
 	int eli = GetRandomInt(1, teles);
@@ -1057,7 +1048,7 @@ public Action Timer_BeginTeleporter(Handle timer, int client) {
 				float coords[3] = 69.420;
 				GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
 				float angles[3] = 69.420;
-				GetEntPropVector(entity, Prop_Data, "m_angRotation", angles); 
+				GetEntPropVector(entity, Prop_Data, "m_angRotation", angles);
 				coords[2] += 24.00;
 				TeleportEntity(client, coords, angles, NULL_VECTOR);
 				break;
@@ -1070,21 +1061,11 @@ public Action Timer_BeginTeleporter(Handle timer, int client) {
 	} else if (TF2_GetClientTeam(client) == TFTeam_Blue) {
 		PowerupParticle(client, "teleportedin_blue", 1.0);
 	}
-	TeleportXmasThingy(client);
+	TeleportXmasParticles(client);
 }
 
-public int NumberOfSpawns(int team) {
-	int count;
-	int spawn;
-	while ((spawn = FindEntityByClassname(spawn, "info_player_teamspawn")) != -1) {
-		if (GetEntProp(spawn, Prop_Send, "m_iTeamNum") == team) {
-			count++;
-		}
-	}
-	return count;
-}
 
-public void TeleportXmasThingy(int client) {
+public void TeleportXmasParticles(int client) {
 	if (Smissmas()) {
 		float vel[3];
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel);
@@ -1762,7 +1743,7 @@ public bool IsEntityStuck(int iEntity) { // Roll the Dice function with new synt
 	GetEntPropVector(iEntity, Prop_Send, "m_vecOrigin", flOrigin);
 	GetEntPropVector(iEntity, Prop_Send, "m_vecMins", flMins);
 	GetEntPropVector(iEntity, Prop_Send, "m_vecMaxs", flMaxs);
-	
+
 	TR_TraceHullFilter(flOrigin, flOrigin, flMins, flMaxs, MASK_SOLID, TraceFilterNotSelf, iEntity);
 	return TR_DidHit();
 }
