@@ -1230,18 +1230,18 @@ public void GetPowerupPlacements(bool UsingGiftHunt) {
 	float centerx = 0.0;
 	float centery = 0.0;
 	char cent[80];
-	if (HandleHasKey(handle, "flipx")) {
+	if (handle.HasKey("flipx")) {
 		flipx = handle.GetBool("flipx");
 	}
-	if (HandleHasKey(handle, "flipy")) {
+	if (handle.HasKey("flipy")) {
 		flipy = handle.GetBool("flipy");
 	}
 	if (flipx || flipy) {
-		if (HandleHasKey(handle, "centerx")) {
+		if (handle.HasKey("centerx")) {
 			handle.GetString("centerx", cent, sizeof(cent));
 			centerx = StringToFloat(cent);
 		}
-		if (HandleHasKey(handle, "centery")) {
+		if (handle.HasKey("centery")) {
 			handle.GetString("centery", cent, sizeof(cent));
 			centery = StringToFloat(cent);
 		}
@@ -1266,7 +1266,7 @@ public void GetPowerupPlacements(bool UsingGiftHunt) {
 			} else if (to == 2) {
 				StrCat(query, sizeof(query), "z");
 			}
-			if (HandleHasKey(handle, query)) {
+			if (handle.HasKey(query)) {
 				handle.GetString(query, string, sizeof(string));
 				coords[to] = StringToFloat(string);
 			} else {
@@ -1331,11 +1331,7 @@ public void GetPowerupPlacements(bool UsingGiftHunt) {
 	return;
 }
 
-public bool HandleHasKey(JSONObject handle, char key[80]) {
-	char acctest[10000];
-	handle.ToString(acctest, sizeof(acctest));
-	return (StrContains(acctest, key, true) != -1);
-}
+
 
 stock void ClearTimer(Handle Timer) { // From SourceMod forums
     if (Timer != INVALID_HANDLE) {
