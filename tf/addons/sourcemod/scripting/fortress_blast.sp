@@ -163,6 +163,11 @@ public void InsertServerTag(const char[] insertThisTag) {
 			Format(serverTags, sizeof(serverTags), "%s,%s", serverTags, insertThisTag);
 			tags.SetString(serverTags);
 		}
+		tags.GetString(serverTags, sizeof(serverTags));
+		if (StrContains(serverTags, insertThisTag, true) == -1) {
+			Format(serverTags, sizeof(serverTags), "%s,%s", insertThisTag, serverTags);
+			tags.SetString(serverTags);
+		}
 	}
 }
 
