@@ -42,7 +42,6 @@ bool SuperBounce[MAXPLAYERS + 1] = false;
 bool ShockAbsorber[MAXPLAYERS + 1] = false;
 bool TimeTravel[MAXPLAYERS + 1] = false;
 bool MegaMann[MAXPLAYERS + 1] = false;
-bool MegaMannStuckComplete[MAXPLAYERS + 1] = true;
 bool FrostTouch[MAXPLAYERS + 1] = false;
 bool FrostTouchFrozen[MAXPLAYERS + 1] = true;
 bool Magnetism[MAXPLAYERS + 1] = false;
@@ -53,7 +52,6 @@ Handle SuperBounceHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle ShockAbsorberHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle GyrocopterHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle TimeTravelHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
-Handle MegaMannPreHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle MegaMannHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle FrostTouchHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle Timer_FrostTouchUnfreezeHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
@@ -146,11 +144,11 @@ public void OnPluginStart() {
 	sm_fortressblast_mannpower = CreateConVar("sm_fortressblast_mannpower", "2", "How to handle replacing Mannpower powerups.");
 	sm_fortressblast_powerups = CreateConVar("sm_fortressblast_powerups", "-1", "Bitfield of which powerups to enable.");
 	sm_fortressblast_spawnroom_kill = CreateConVar("sm_fortressblast_spawnroom_kill", "1", "Disables or enables killing enemies inside spawnrooms due to Mega Mann exploit.");
-	
+
 	// HUDs
 	texthand = CreateHudSynchronizer();
 	gifttext = CreateHudSynchronizer();
-	
+
 	InsertServerTag("fortressblast");
 }
 
@@ -176,7 +174,7 @@ public void InsertServerTag(const char[] insertThisTag) {
 public void OnMapStart() {
 	Gifts[2] = 0;
 	Gifts[3] = 0;
-	
+
 	// Powerup sounds precaching and downloading
 	AddFileToDownloadsTable("materials/models/fortressblast/pickups/fb_pickup/pickup_fb.vmt");
 	AddFileToDownloadsTable("materials/models/fortressblast/pickups/fb_pickup/pickup_fb.vtf");
@@ -240,7 +238,7 @@ public void OnMapStart() {
 	AddFileToDownloadsTable("sound/fortressblast2/magnetism_use.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/effectburst_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/effectburst_use.mp3");
-	
+
 	// Smissmas sound precaching
 	PrecacheSound("misc/jingle_bells/jingle_bells_nm_01.wav");
 	PrecacheSound("misc/jingle_bells/jingle_bells_nm_02.wav");
@@ -256,12 +254,6 @@ public void OnMapStart() {
 	AddFileToDownloadsTable("sound/fortressblast2/gifthunt_goal_playerteam.mp3");
 
 	CreateTimer(0.1, Timer_CheckGifts, _, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE); // Timer to check gifts
-}
-
-public void TF2_OnConditionAdded(int client, TFCond condition) {
-	if (condition == TFCond_HalloweenKart) {
-		powerup[client] = 0;
-	}
 }
 
 public Action FBMenu(int client, int args) {
@@ -795,12 +787,6 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		buttons &= ~IN_ATTACK;
 		buttons &= ~IN_ATTACK2;
 	}
-	// Block placing buildings until Mega Mann stuck-check is complete
-	if (IsValidEntity(GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon"))) {
-		if (GetEntProp(GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon"), Prop_Send, "m_iItemDefinitionIndex") == 28 && !MegaMannStuckComplete[client] && MegaMann[client]) {
-			buttons &= ~IN_ATTACK;
-		}
-	}
 	if (Magnetism[client] && IsPlayerAlive(client)) {
 		float pos1[3];
 		GetClientAbsOrigin(client, pos1);
@@ -934,15 +920,12 @@ public void UsePower(int client) {
 			SetEntityHealth(client, TF2_GetPlayerMaxHealth(client) * 4);
 		}
 		ClearTimer(MegaMannHandle[client]);
-		ClearTimer(MegaMannPreHandle[client]);
-		MegaMannPreHandle[client] = CreateTimer(1.0, Timer_MegaMannStuckCheck, client);
 		MegaMannHandle[client] = CreateTimer(10.0, Timer_RemoveMegaMann, client);
 		float coords[3] = 69.420;
 		GetEntPropVector(client, Prop_Send, "m_vecOrigin", coords);
 		coords[2] += 16.0;
 		TeleportEntity(client, coords, NULL_VECTOR, NULL_VECTOR);
 		MegaMann[client] = true;
-		MegaMannStuckComplete[client] = false;
 	} else if (powerup[client] == 9) {
 		// Frost Touch - Freeze touched players for 3 seconds within 8 seconds
 		EmitAmbientSound("fortressblast2/frosttouch_use.mp3", vel, client);
@@ -1152,21 +1135,11 @@ public Action Timer_RemoveFrostTouch(Handle timer, int client) {
 	FrostTouch[client] = false;
 }
 
-public Action Timer_MegaMannStuckCheck(Handle timer, int client) {
-	MegaMannPreHandle[client] = INVALID_HANDLE;
-	MegaMannStuckComplete[client] = true;
-	float coords[3] = 69.420;
-	GetEntPropVector(client, Prop_Send, "m_vecOrigin", coords);
-	if (IsEntityStuck(client)) {
-		TF2_RespawnPlayer(client);
-		CPrintToChat(client, "%s {red}You were respawned as you might have been stuck. Be sure to {yellow}use Mega Mann in open areas", MESSAGE_PREFIX);
-	}
-}
+
 
 public Action Timer_RemoveMegaMann(Handle timer, int client) {
 	MegaMannHandle[client] = INVALID_HANDLE;
 	MegaMann[client] = false;
-	MegaMannStuckComplete[client] = true;
 	if (IsClientInGame(client)) {
 		SetVariantString("1 0");
 		AcceptEntityInput(client, "SetModelScale");
@@ -1791,7 +1764,7 @@ public bool IsEntityStuck(int iEntity) { // Roll the Dice function with new synt
 	GetEntPropVector(iEntity, Prop_Send, "m_vecOrigin", flOrigin);
 	GetEntPropVector(iEntity, Prop_Send, "m_vecMins", flMins);
 	GetEntPropVector(iEntity, Prop_Send, "m_vecMaxs", flMaxs);
-	
+
 	TR_TraceHullFilter(flOrigin, flOrigin, flMins, flMaxs, MASK_SOLID, TraceFilterNotSelf, iEntity);
 	return TR_DidHit();
 }
@@ -1821,10 +1794,12 @@ public bool BlockPowerup(int client) {
 	} else if (FrostTouchFrozen[client]) {
 		return true;
 	// Player lost or is in a stalemate
+	} if (TF2_IsPlayerInCondition(client, TFCond_HalloweenKart) || TF2_IsPlayerInCondition(client, TFCond_Taunting)){
+		return true;
 	} else if ((VictoryTeam != -1 && VictoryTeam != GetClientTeam(client))) {
 		return true;
 	// Mega Mann pre-stuck checking
-	} else if(powerup[client] == 8) {
+	} else if(powerup[client] == 8 && !MegaMann[client]) {
 		SetVariantString("1.75 0");
 		AcceptEntityInput(client, "SetModelScale");
 		float coords[3] = 69.420;
