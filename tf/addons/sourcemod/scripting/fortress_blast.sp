@@ -48,6 +48,7 @@ bool FrostTouch[MAXPLAYERS + 1] = false;
 bool FrostTouchFrozen[MAXPLAYERS + 1] = true;
 bool NegativeDizzy[MAXPLAYERS+1] = false;
 bool Magnetism[MAXPLAYERS + 1] = false;
+bool UltraPowerup[MAXPLAYERS+1] = false;
 float OldSpeed[MAXPLAYERS + 1] = 0.0;
 float SuperSpeed[MAXPLAYERS + 1] = 0.0;
 float VerticalVelocity[MAXPLAYERS + 1];
@@ -62,6 +63,7 @@ Handle Timer_FrostTouchUnfreezeHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle DestroyPowerupHandle[MAX_EDICTS + 1] = INVALID_HANDLE;
 Handle TeleportationHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle MagnetismHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
+Handle UltraPowerupHandle[MAXPLAYERS+1] = INVALID_HANDLE;
 
 // HUDs
 Handle texthand;
@@ -90,8 +92,10 @@ ConVar sm_fortressblast_spawnroom_kill;
 ConVar sm_fortressblast_admin_flag;
 ConVar sm_fortressblast_dizzy_states;
 ConVar sm_fortressblast_dizzy_length;
+ConVar sm_fortressblast_ultra_spawnchance;
 
 /* Powerup IDs
+-1 - ULTRA POWERUP!!
 0 - No powerup if on player, gift if on powerup entity
 1 - Super Bounce
 2 - Shock Absorber
@@ -104,7 +108,9 @@ ConVar sm_fortressblast_dizzy_length;
 9 - Frost Touch
 10 - Mystery
 11 - Teleportation
-12 - Magnetism */
+12 - Magnetism
+13 - Effect Burst
+14 - Dizzy Bomb */
 
 public void OnPluginStart() {
 
@@ -153,6 +159,7 @@ public void OnPluginStart() {
 	sm_fortressblast_spawnroom_kill = CreateConVar("sm_fortressblast_spawnroom_kill", "1", "Disables or enables killing enemies inside spawnrooms due to Mega Mann exploit.");
 	sm_fortressblast_dizzy_states = CreateConVar("sm_fortressblast_dizzy_states", "5", "Number of states to use in the Dizzy Bomb");
 	sm_fortressblast_dizzy_length = CreateConVar("sm_fortressblast_dizzy_length", "5", "Length of time the Dizzy Bomb lasts");
+	sm_fortressblast_ultra_spawnchance = CreateConVar("sm_fortressblast_ultra_spawnchance", "1", "Chance of ULTRA POWERUP!! spawning");
 
 	// HUDs
 	texthand = CreateHudSynchronizer();
@@ -193,6 +200,8 @@ public void OnMapStart() {
 	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.phy");
 	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.sw.vtx");
 	AddFileToDownloadsTable("models/fortressblast/pickups/fb_pickup.vvd");
+	PrecacheSound("fortressblast2/ultrapowerup_pickup.mp3");
+	PrecacheSound("fortressblast2/ultrapowerup_use.mp3");
 	PrecacheSound("fortressblast2/superbounce_pickup.mp3");
 	PrecacheSound("fortressblast2/superbounce_use.mp3");
 	PrecacheSound("fortressblast2/shockabsorber_pickup.mp3");
@@ -223,6 +232,8 @@ public void OnMapStart() {
 	PrecacheSound("fortressblast2/dizzybomb_pickup.mp3");
 	PrecacheSound("fortressblast2/dizzybomb_use.mp3");
 	PrecacheSound("fortressblast2/dizzybomb_dizzy.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/ultrapowerup_pickup.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/ultrapowerup_use.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/superbounce_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/superbounce_use.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/shockabsorber_pickup.mp3");
@@ -404,7 +415,7 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 				ShockAbsorber[client] = false;
 				TimeTravel[client] = false;
 				SpeedRotationsLeft[client] = 0;
-				SetEntPropFloat(client, Prop_Send, "m_flMaxspeed", 0.1);
+				SetEntPropFloat(client, Prop_Send, "m_flMaxspeed", 1.0);
 			}
 		}
 	}
@@ -487,25 +498,37 @@ public Action Timer_CheckGifts(Handle timer, any data) {
 		GetPowerupPlacements(true);
 	}
 	for (int client = 1 ; client <= MaxClients ; client++ ) {
-		if(IsClientInGame(client) && DizzyProgress[client] <= (10 * sm_fortressblast_dizzy_length.FloatValue) && DizzyProgress[client] != -1){
-			float angles[3];
-			GetClientAbsAngles(client, angles);
-			if(!TF2_IsPlayerInCondition(client, TFCond_Taunting)){
-				float ang = Sine((3.16159265 * sm_fortressblast_dizzy_states.FloatValue * DizzyProgress[client]) / (10 * sm_fortressblast_dizzy_length.FloatValue)) * ((10 * sm_fortressblast_dizzy_length.FloatValue) - DizzyProgress[client]);
-				if(NegativeDizzy[client]){
-					angles[2] = (ang * -1);
+		if(IsClientInGame(client)){
+			if (SpeedRotationsLeft[client] > 0) {
+				if (IsPlayerAlive(client)) {
+					if (GetEntPropFloat(client, Prop_Send, "m_flMaxspeed") != SuperSpeed[client]) { // If TF2 changed the speed
+						OldSpeed[client] = GetEntPropFloat(client, Prop_Send, "m_flMaxspeed");
+					}
+					SuperSpeed[client] = OldSpeed[client] + (SpeedRotationsLeft[client] * 2);
+					SetEntPropFloat(client, Prop_Send, "m_flMaxspeed", SuperSpeed[client]);
+				}
+			}
+			SpeedRotationsLeft[client]--;
+			if(DizzyProgress[client] <= (10 * sm_fortressblast_dizzy_length.FloatValue) && DizzyProgress[client] != -1){
+				float angles[3];
+				GetClientAbsAngles(client, angles);
+				if(!TF2_IsPlayerInCondition(client, TFCond_Taunting)){
+					float ang = Sine((3.16159265 * sm_fortressblast_dizzy_states.FloatValue * DizzyProgress[client]) / (10 * sm_fortressblast_dizzy_length.FloatValue)) * ((10 * sm_fortressblast_dizzy_length.FloatValue) - DizzyProgress[client]);
+					if(NegativeDizzy[client]){
+						angles[2] = (ang * -1);
+					}
+					else{
+						angles[2] = ang;
+					}
+					//angles[2] = Sine(DizzyProgress[client]);
+					DebugText("New angle 2 is %f progress %d", angles[2], DizzyProgress[client]);
 				}
 				else{
-					angles[2] = ang;
+					angles[2] = 0.0;
 				}
-				//angles[2] = Sine(DizzyProgress[client]);
-				DebugText("New angle 2 is %f progress %d", angles[2], DizzyProgress[client]);
+				TeleportEntity(client, NULL_VECTOR, angles, NULL_VECTOR);
+				DizzyProgress[client] += 1;
 			}
-			else{
-				angles[2] = 0.0;
-			}
-			TeleportEntity(client, NULL_VECTOR, angles, NULL_VECTOR);
-			DizzyProgress[client] += 1;
 		}
 	}
 }
@@ -569,19 +592,25 @@ public void OnClientPutInServer(int client) {
 }
 
 stock int SpawnPower(float location[3], bool respawn, int id = 0) {
-	// First check if there is a powerup already here, in the case that a duplicate has spawned
 	int entity = CreateEntityByName("tf_halloween_pickup");
 	DispatchKeyValue(entity, "powerup_model", "models/fortressblast/pickups/fb_pickup.mdl");
 	if (IsValidEdict(entity)) {
 		if (id == 0) {
-			powerupid[entity] = GetRandomInt(1, NumberOfPowerups);
-			while (!PowerupIsEnabled(powerupid[entity])) {
+			if(sm_fortressblast_ultra_spawnchance.FloatValue > GetRandomFloat(0.0, 100.0)){
+				powerupid[entity] = -1;
+			}
+			else{
 				powerupid[entity] = GetRandomInt(1, NumberOfPowerups);
+				while (!PowerupIsEnabled(powerupid[entity])) {
+					powerupid[entity] = GetRandomInt(1, NumberOfPowerups);
+				}
 			}
 		} else {
 			powerupid[entity] = id;
 		}
-		if (powerupid[entity] == 1) {
+		if (powerupid[entity] == -1) {
+			SetEntityRenderColor(entity, 255, 255, 255, 255);
+		} else if (powerupid[entity] == 1) {
 			SetEntityRenderColor(entity, 85, 102, 255, 255);
 		} else if (powerupid[entity] == 2) {
 			SetEntityRenderColor(entity, 255, 0, 0, 255);
@@ -659,7 +688,7 @@ public int SpawnGift(float location[3]) {
 public Action OnStartTouchFrozen(int entity, int other) {
 	// Test that using player and touched player are both valid targets
 	if (entity > 0 && entity <= MaxClients && other > 0 && other <= MaxClients && IsClientInGame(entity) && IsClientInGame(other)) {
-		if (FrostTouch[entity] && !FrostTouchFrozen[other]) {
+		if ((FrostTouch[entity] || UltraPowerup[entity]) && !FrostTouchFrozen[other]) {
 			float vel[3];
 			GetEntPropVector(other, Prop_Data, "m_vecVelocity", vel);
 			EmitAmbientSound("fortressblast2/frosttouch_freeze.mp3", vel, other);
@@ -758,7 +787,9 @@ public Action Timer_SpawnPowerAfterDelay(Handle timer, any data) {
 public void PlayPowerupSound(int client) {
 	float vel[3];
 	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel);
-	if (powerup[client] == 1) {
+	if (powerup[client] == -1) {
+		EmitSoundToClient(client, "fortressblast2/ultrapowerup_pickup.mp3", client);
+	} else if (powerup[client] == 1) {
 		EmitSoundToClient(client, "fortressblast2/superbounce_pickup.mp3", client);
 	} else if (powerup[client] == 2) {
 		EmitSoundToClient(client, "fortressblast2/shockabsorber_pickup.mp3", client);
@@ -837,7 +868,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		buttons &= ~IN_ATTACK;
 		buttons &= ~IN_ATTACK2;
 	}
-	if (Magnetism[client] && IsPlayerAlive(client)) {
+	if ((Magnetism[client] || UltraPowerup[client]) && IsPlayerAlive(client)) {
 		float pos1[3];
 		GetClientAbsOrigin(client, pos1);
 		for (int client2 = 1 ; client2 <= MaxClients ; client2++ ) {
@@ -868,7 +899,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 }
 
 public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3]) {
-	if (ShockAbsorber[victim] || FrostTouchFrozen[victim]) {
+	if (ShockAbsorber[victim] || FrostTouchFrozen[victim] || UltraPowerup[victim]) {
 		if (FrostTouchFrozen[victim]) {
 			damage = damage * 0.1;
 		} else {
@@ -887,7 +918,29 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
 public void UsePower(int client) {
 	float vel[3];
 	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel);
-	if (powerup[client] == 1) {
+	if (powerup[client] == -1) { // ULTRA DEFINE, IF YOU REMOVE THIS COMMENT YOU MAY INFACT BE CONSIDERED HOMOSEXUAL
+		ClearTimer(MegaMannHandle[client]);
+		UltraPowerup[client] = true;
+		UltraPowerupHandle[client] = CreateTimer(10.0, Timer_RemoveUltraPowerup, client);
+		// super bounce - not included
+		// shock absorber - done by the bool
+		// super speed:
+		SpeedRotationsLeft[client] = 100;
+		// super jump - not included
+		// gyrocopter - not included
+		// time travel - not included
+		// blast - not included
+		// mega mann (max value, no jumbo):
+		SetEntityHealth(client, (TF2_GetPlayerMaxHealth(client) * 4));
+		// frost touch - done by bool
+		// mystery (not included)
+		// teleportation (not included)
+		// magnetism, done by the Bool
+		// effect burst - not included
+		// dizzy bomb - not included
+		TF2_AddCondition(client, TFCond_CritOnFlagCapture, 10.0);
+		EmitAmbientSound("fortressblast2/ultrapowerup_use.mp3", vel, client);
+	} else if (powerup[client] == 1) {
 		// Super Bounce - Uncontrollable bunny hop and fall damage resistance for 5 seconds
 		EmitAmbientSound("fortressblast2/superbounce_use.mp3", vel, client);
 		VerticalVelocity[client] = 0.0; // Cancel previously stored vertical velocity
@@ -907,7 +960,6 @@ public void UsePower(int client) {
 		OldSpeed[client] = GetEntPropFloat(client, Prop_Send, "m_flMaxspeed");
 		SpeedRotationsLeft[client] = 80;
 		EmitAmbientSound("fortressblast2/superspeed_use.mp3", vel, client);
-		CreateTimer(0.1, Timer_RecalcSpeed, client);
 	} else if (powerup[client] == 4) {
 		// Super Jump - Launch user into air
 		if (MegaMann[client]) {
@@ -1093,6 +1145,14 @@ public Action Timer_RemoveMagnetism(Handle timer, int client){
 	Magnetism[client] = false;
 }
 
+public Action Timer_RemoveUltraPowerup(Handle timer, int client){
+	UltraPowerupHandle[client] = INVALID_HANDLE;
+	UltraPowerup[client] = false;
+	if(GetClientHealth(client) > TF2_GetPlayerMaxHealth(client)){
+		SetEntityHealth(client, TF2_GetPlayerMaxHealth(client));
+	}
+}
+
 public void BuildingDamage(int client, const char[] class) {
 	float pos1[3];
 	GetClientAbsOrigin(client, pos1);
@@ -1246,21 +1306,6 @@ public Action Timer_RemoveShockAbsorb(Handle timer, int client) {
 	ShockAbsorber[client] = false;
 }
 
-public Action Timer_RecalcSpeed(Handle timer, int client) {
-	if (SpeedRotationsLeft[client] > 1) {
-		if (IsPlayerAlive(client)) {
-			if (GetEntPropFloat(client, Prop_Send, "m_flMaxspeed") != SuperSpeed[client]) { // If TF2 changed the speed
-				OldSpeed[client] = GetEntPropFloat(client, Prop_Send, "m_flMaxspeed");
-			}
-			SuperSpeed[client] = OldSpeed[client] + (SpeedRotationsLeft[client] * 2);
-			SetEntPropFloat(client, Prop_Send, "m_flMaxspeed", SuperSpeed[client]);
-			CreateTimer(0.1, Timer_RecalcSpeed, client);
-		}
-	} else {
-		TF2_StunPlayer(client, 0.0, 0.0, TF_STUNFLAG_SLOWDOWN);
-	}
-	SpeedRotationsLeft[client]--;
-}
 
 public void DoHudText(int client) {
 	if (powerup[client] != 0) {
@@ -1269,7 +1314,9 @@ public void DoHudText(int client) {
 		} else {
 			SetHudTextParams(0.825, 0.5, 0.25, 255, 255, 0, 255);
 		}
-		if (powerup[client] == 1) {
+		if (powerup[client] == -1) {
+			ShowSyncHudText(client, texthand, "Collected powerup:\nULTRA POWERUP!!");
+		} else if (powerup[client] == 1) {
 			ShowSyncHudText(client, texthand, "Collected powerup:\nSuper Bounce");
 		} else if (powerup[client] == 2) {
 			ShowSyncHudText(client, texthand, "Collected powerup:\nShock Absorber");
@@ -1482,8 +1529,8 @@ public void DebugText(const char[] text, any ...) {
 		int len = strlen(text) + 255;
 		char[] format = new char[len];
 		VFormat(format, len, text, 2);
-		PrintToChatAll(format);
-		PrintToServer(format);
+		PrintToChatAll("%s", format);
+		PrintToServer("%s", format);
 	}
 }
 
