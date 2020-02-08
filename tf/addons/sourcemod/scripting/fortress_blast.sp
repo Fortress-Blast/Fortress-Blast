@@ -23,7 +23,7 @@ public Plugin myinfo = {
 	author = "Naleksuh & Jack5",
 	description = "Adds powerups from Marble Blast into TF2! Can easily be combined with custom gamemodes.",
 	version = PLUGIN_VERSION,
-	url = "http://fortressblast.miraheze.org"
+	url = "https://fortressblast.miraheze.org"
 };
 
 // Global Variables
@@ -37,6 +37,7 @@ int PlayerParticle[MAXPLAYERS + 1][MAX_PARTICLES + 1];
 int SpeedRotationsLeft[MAXPLAYERS + 1] = 80;
 int VictoryTeam = -1;
 int DizzyProgress[MAXPLAYERS+1] = -1;
+int FrostTouchFrozen[MAXPLAYERS + 1] = 0;
 bool PreviousAttack3[MAXPLAYERS + 1] = false;
 bool MapHasJsonFile = false;
 bool GiftHunt = false;
@@ -45,10 +46,12 @@ bool ShockAbsorber[MAXPLAYERS + 1] = false;
 bool TimeTravel[MAXPLAYERS + 1] = false;
 bool MegaMann[MAXPLAYERS + 1] = false;
 bool FrostTouch[MAXPLAYERS + 1] = false;
-bool FrostTouchFrozen[MAXPLAYERS + 1] = true;
 bool NegativeDizzy[MAXPLAYERS+1] = false;
 bool Magnetism[MAXPLAYERS + 1] = false;
 bool UltraPowerup[MAXPLAYERS+1] = false;
+bool GiftHuntAttackDefense = false;
+bool GiftHuntNeutralFlag = false;
+bool GiftHuntSetup = false;
 float OldSpeed[MAXPLAYERS + 1] = 0.0;
 float SuperSpeed[MAXPLAYERS + 1] = 0.0;
 float VerticalVelocity[MAXPLAYERS + 1];
@@ -125,6 +128,7 @@ public void OnPluginStart() {
 
 	// Hooks
 	HookEvent("teamplay_round_start", teamplay_round_start);
+	HookEvent("teamplay_setup_finished", teamplay_setup_finished);
 	HookEvent("teamplay_round_win", teamplay_round_win);
 	HookEvent("player_death", player_death);
 
@@ -166,6 +170,10 @@ public void OnPluginStart() {
 	gifttext = CreateHudSynchronizer();
 
 	InsertServerTag("fortressblast");
+}
+
+public void OnGameFrame(){
+	GiftHuntNeutralGoal();
 }
 
 public void InsertServerTag(const char[] insertThisTag) {
@@ -295,7 +303,7 @@ public Action FBMenu(int client, int args) {
 	char url[200];
 	char action[15];
 	sm_fortressblast_action_use.GetString(action, sizeof(action));
-	Format(url, sizeof(url), "http://fortress-blast.github.io/%s?powerups-enabled=%d&action=%s&gifthunt=%b", MOTD_VERSION, bitfield, action, sm_fortressblast_gifthunt.BoolValue);
+	Format(url, sizeof(url), "https://fortress-blast.github.io/%s?powerups-enabled=%d&action=%s&gifthunt=%b", MOTD_VERSION, bitfield, action, sm_fortressblast_gifthunt.BoolValue);
 	AdvMOTD_ShowMOTDPanel(client, "How are you reading this?", url, MOTDPANEL_TYPE_URL, true, true, true, INVALID_FUNCTION);
 	CPrintToChat(client, "%s {haunted}Opening Fortress Blast manual... If nothing happens, open your developer console and {yellow}try setting cl_disablehtmlmotd to 0{haunted}, then try again.", MESSAGE_PREFIX);
 }
@@ -348,21 +356,7 @@ public Action Command_SetPowerup(int client, int args) {
 	}
 	int player = FindTarget(client, arg, false, false);
 	powerup[player] = StringToInt(arg2);
-	PlayPowerupSound(player);
-	// If player is a bot and bot support is enabled
-	if (IsFakeClient(player) && sm_fortressblast_bot.BoolValue) {
-		// Get minimum and maximum times
-		float convar1 = sm_fortressblast_bot_min.FloatValue;
-		if (convar1 < 0) {
-			convar1 == 0;
-		}
-		float convar2 = sm_fortressblast_bot_max.FloatValue;
-		if (convar2 < convar1) {
-			convar2 == convar1;
-		}
-		// Get bot to use powerup within the random period
-		CreateTimer(GetRandomFloat(convar1, convar2), Timer_BotUsePowerup, player);
-	}
+	CollectedPowerup(player);
 	DebugText("%N has force-set %N's powerup to ID %d", client, player, StringToInt(arg2));
 }
 
@@ -376,8 +370,24 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 	if (sm_fortressblast_gifthunt.BoolValue) {
 		Format(path, sizeof(path), "scripts/fortress_blast/gift_spots/%s.json", map);
 		GiftHunt = FileExists(path);
+		JSONObject handle = JSONObject.FromFile(path);
+		if(handle.HasKey("attackdefense")){
+			GiftHuntAttackDefense = handle.GetBool("attackdefense");
+		}
+		GiftHuntNeutralFlag = false;
+		int flag;
+		while ((flag = FindEntityByClassname(flag, "item_teamflag")) != -1) {
+			if (GetEntProp(flag, Prop_Send, "m_iTeamNum") == 0) {
+				GiftHuntNeutralFlag = true;
+				AcceptEntityInput(flag, "Disable");
+			}
+		}
+		DebugText("All preperations in place for Gift Hunt Extended");
 	} else {
 		GiftHunt = false;
+	}
+	if(GiftHuntAttackDefense){
+		GiftHuntSetup = true;
 	}
 	VictoryTeam = -1;
 	// Gift Hunt map logic changes
@@ -459,12 +469,16 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 	}
 }
 
+public Action teamplay_setup_finished(Event event, const char[] name, bool dontBroadcast) {
+	if(GiftHuntAttackDefense){
+		GiftHuntSetup = false;
+		EntFire("team_round_timer", "Pause");
+	}
+}
+
 public void CalculateGiftAmountForPlayers() {
 	giftgoal = sm_fortressblast_gifthunt_goal.IntValue;
 	DebugText("Base gift goal is %d", giftgoal);
-	if (!sm_fortressblast_gifthunt_countbots.BoolValue) {
-		// Add something here to count the number of bots and not include them
-	}
 	int steps = RoundToFloor((PlayersAmount - 1) / sm_fortressblast_gifthunt_players.FloatValue);
 	if (steps < 0) {
 		steps = 0;
@@ -494,7 +508,7 @@ public void OnEntityDestroyed(int entity) {
 }
 
 public Action Timer_CheckGifts(Handle timer, any data) {
-	if (NumberOfActiveGifts() == 0) {
+	if (NumberOfActiveGifts() == 0 && !GiftHuntSetup) {
 		GetPowerupPlacements(true);
 	}
 	for (int client = 1 ; client <= MaxClients ; client++ ) {
@@ -688,7 +702,7 @@ public int SpawnGift(float location[3]) {
 public Action OnStartTouchFrozen(int entity, int other) {
 	// Test that using player and touched player are both valid targets
 	if (entity > 0 && entity <= MaxClients && other > 0 && other <= MaxClients && IsClientInGame(entity) && IsClientInGame(other)) {
-		if ((FrostTouch[entity] || UltraPowerup[entity]) && !FrostTouchFrozen[other]) {
+		if ((FrostTouch[entity] || UltraPowerup[entity]) && FrostTouchFrozen[other] == 0) {
 			float vel[3];
 			GetEntPropVector(other, Prop_Data, "m_vecVelocity", vel);
 			EmitAmbientSound("fortressblast2/frosttouch_freeze.mp3", vel, other);
@@ -703,7 +717,7 @@ public Action OnStartTouchFrozen(int entity, int other) {
 			SetEntityMoveType(iRagDoll, MOVETYPE_NONE);
 			ClearTimer(Timer_FrostTouchUnfreezeHandle[other]);
 			Timer_FrostTouchUnfreezeHandle[other] = CreateTimer(3.0, Timer_FrostTouchUnfreeze, other);
-			FrostTouchFrozen[other] = true;
+			FrostTouchFrozen[other] = ((UltraPowerup[entity]) ? 2 : 1);
 			BlockAttacking(other, 3.0);
 		}
 	}
@@ -718,7 +732,7 @@ public Action Timer_FrostTouchUnfreeze(Handle timer, int client) {
 	SetEntityMoveType(client, MOVETYPE_WALK);
 	ColorizePlayer(client, {255, 255, 255, 255});
 	SetThirdPerson(client, false);
-	FrostTouchFrozen[client] = false;
+	FrostTouchFrozen[client] = 0;
 }
 
 public Action OnStartTouchRespawn(int entity, int other) {
@@ -750,21 +764,7 @@ public void DeletePowerup(int entity, int other) {
 	}
 	powerup[other] = powerupid[entity];
 	DebugText("%N has collected powerup ID %d", other, powerup[other]);
-	PlayPowerupSound(other);
-	// If player is a bot and bot support is enabled
-	if (IsFakeClient(other) && sm_fortressblast_bot.BoolValue) {
-		// Get minimum and maximum times
-		float convar1 = GetConVarFloat(sm_fortressblast_bot_min);
-		if (convar1 < 0) {
-			convar1 == 0;
-		}
-		float convar2 = GetConVarFloat(sm_fortressblast_bot_max);
-		if (convar2 < convar1) {
-			convar2 == convar1;
-		}
-		// Get bot to use powerup within the random period
-		CreateTimer(GetRandomFloat(convar1, convar2), Timer_BotUsePowerup, other);
-	}
+	CollectedPowerup(other);
 }
 
 public Action Timer_BotUsePowerup(Handle timer, int client) {
@@ -784,7 +784,7 @@ public Action Timer_SpawnPowerAfterDelay(Handle timer, any data) {
 	SpawnPower(coords, true);
 }
 
-public void PlayPowerupSound(int client) {
+public void CollectedPowerup(int client) {
 	float vel[3];
 	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel);
 	if (powerup[client] == -1) {
@@ -817,6 +817,21 @@ public void PlayPowerupSound(int client) {
 		EmitSoundToClient(client, "fortressblast2/effectburst_pickup.mp3", client);
 	} else if (powerup[client] == 14) {
 		EmitSoundToClient(client, "fortressblast2/dizzybomb_pickup.mp3", client);
+	}
+
+
+	if (IsFakeClient(client) && sm_fortressblast_bot.BoolValue) {
+		// Get minimum and maximum times
+		float convar1 = sm_fortressblast_bot_min.FloatValue;
+		if (convar1 < 0) {
+			convar1 == 0;
+		}
+		float convar2 = sm_fortressblast_bot_max.FloatValue;
+		if (convar2 < convar1) {
+			convar2 == convar1;
+		}
+		// Get bot to use powerup within the random period
+		CreateTimer(GetRandomFloat(convar1, convar2), Timer_BotUsePowerup, client);
 	}
 }
 
@@ -899,9 +914,10 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 }
 
 public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3]) {
-	if (ShockAbsorber[victim] || FrostTouchFrozen[victim] || UltraPowerup[victim]) {
-		if (FrostTouchFrozen[victim]) {
+	if (ShockAbsorber[victim] || FrostTouchFrozen[victim] == 1 || UltraPowerup[victim]) {
+		if (FrostTouchFrozen[victim] == 1) {
 			damage = damage * 0.1;
+			DebugText("%N was in frozen state %d", victim, FrostTouchFrozen[victim]);
 		} else {
 			damage = damage * 0.25;
 		}
@@ -940,6 +956,13 @@ public void UsePower(int client) {
 		// dizzy bomb - not included
 		TF2_AddCondition(client, TFCond_CritOnFlagCapture, 10.0);
 		EmitAmbientSound("fortressblast2/ultrapowerup_use.mp3", vel, client);
+		float timeport = 0.1;
+		PowerupParticle(client, "medic_resist_bullet", 0.2, 0.0);
+		for (int timepoint = 0 ; timepoint <= 50 ; timepoint++) {
+			CreateTimer(timeport, MedicResistFire, client);
+			CreateTimer((timeport + 0.1), MedicResistBullet, client);
+			timeport = timeport + 0.2;
+		}
 	} else if (powerup[client] == 1) {
 		// Super Bounce - Uncontrollable bunny hop and fall damage resistance for 5 seconds
 		EmitAmbientSound("fortressblast2/superbounce_use.mp3", vel, client);
@@ -1137,6 +1160,18 @@ public void UsePower(int client) {
 public Action RepeatPing(Handle timer, int client){
 	if (IsClientInGame(client) && IsPlayerAlive(client) && Magnetism[client]) {
 		PowerupParticle(client, "ping_circle", 0.5, 0.0);
+	}
+}
+
+public Action MedicResistFire(Handle timer, int client){
+	if (IsClientInGame(client) && IsPlayerAlive(client) && UltraPowerup[client]) {
+		PowerupParticle(client, "medic_resist_fire", 0.2, 0.0);
+	}
+}
+
+public Action MedicResistBullet(Handle timer, int client){
+	if (IsClientInGame(client) && IsPlayerAlive(client) && UltraPowerup[client]) {
+		PowerupParticle(client, "medic_resist_bullet", 0.2, 0.0);
 	}
 }
 
@@ -1368,6 +1403,7 @@ public void GetPowerupPlacements(bool UsingGiftHunt) {
 		Format(path, sizeof(path), "scripts/fortress_blast/powerup_spots/%s.json", map);
 	} else {
 		Format(path, sizeof(path), "scripts/fortress_blast/gift_spots/%s.json", map);
+		DebugText("GETTING GIFT LOCATIONS");
 	}
 	JSONObject handle = JSONObject.FromFile(path);
 	bool flipx = false;
@@ -1737,6 +1773,9 @@ public void CollectedGift(int client) {
 					AcceptEntityInput(flag, "Enable");
 				}
 			}
+			if(GiftHuntAttackDefense){
+				EntFire("team_round_timer", "Resume");
+			}
 		} else if (GetClientTeam(client) == 3) {
 			PrintCenterTextAll("BLU team has collected the required number of gifts!");
 			DebugText("BLU team has collected the required number of gifts", client);
@@ -1756,6 +1795,30 @@ public void CollectedGift(int client) {
 				} else {
 					EmitSoundToClient(client2, "fortressblast2/gifthunt_goal_enemyteam.mp3", client2);
 				}
+			}
+		}
+	}
+}
+
+public void GiftHuntNeutralGoal() {
+	if(GiftHuntNeutralFlag){
+		int flag;
+		while ((flag = FindEntityByClassname(flag, "item_teamflag")) != -1) {
+			if(Gifts[2] >= giftgoal && Gifts[3] < giftgoal){
+				AcceptEntityInput(flag, "Enable");
+				SetEntProp(flag, Prop_Send, "m_iTeamNum", 3);
+			}
+			if(Gifts[3] >= giftgoal && Gifts[2] < giftgoal){
+				AcceptEntityInput(flag, "Enable");
+				SetEntProp(flag, Prop_Send, "m_iTeamNum", 2);
+			}
+			if(Gifts[2] >= giftgoal && Gifts[3] >= giftgoal){
+				AcceptEntityInput(flag, "Enable");
+				SetEntProp(flag, Prop_Send, "m_iTeamNum", 0);
+			}
+			if(Gifts[2] < giftgoal && Gifts[3] < giftgoal){
+				AcceptEntityInput(flag, "Disable");
+				SetEntProp(flag, Prop_Send, "m_iTeamNum", 0);
 			}
 		}
 	}
@@ -1912,7 +1975,7 @@ public bool BlockPowerup(int client) {
 	if (!IsPlayerAlive(client)) {
 		return true;
 	// Player is frozen
-	} else if (FrostTouchFrozen[client]) {
+	} else if (FrostTouchFrozen[client] != 0) {
 		return true;
 	// Player lost or is in a stalemate
 	} if (TF2_IsPlayerInCondition(client, TFCond_HalloweenKart) || TF2_IsPlayerInCondition(client, TFCond_Taunting)){
