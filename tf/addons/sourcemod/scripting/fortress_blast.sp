@@ -15,8 +15,8 @@
 #define MAX_PARTICLES 10 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
 #define MESSAGE_PREFIX "{orange}[Fortress Blast]"
 #define NO_COLOR_PREFIX "[Fortress Blast]"
-#define PLUGIN_VERSION "3.1"
-#define MOTD_VERSION "3.1"
+#define PLUGIN_VERSION "4.0"
+#define MOTD_VERSION "4.0"
 
 public Plugin myinfo = {
 	name = "Fortress Blast",
@@ -172,7 +172,7 @@ public void OnPluginStart() {
 	InsertServerTag("fortressblast");
 }
 
-public void OnGameFrame(){
+public void OnGameFrame() {
 	GiftHuntNeutralGoal();
 }
 
@@ -371,7 +371,7 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 		Format(path, sizeof(path), "scripts/fortress_blast/gift_spots/%s.json", map);
 		GiftHunt = FileExists(path);
 		JSONObject handle = JSONObject.FromFile(path);
-		if(handle.HasKey("attackdefense")){
+		if (handle.HasKey("attackdefense")) { // For single-team objective maps like Attack/Defense and Payload
 			GiftHuntAttackDefense = handle.GetBool("attackdefense");
 		}
 		GiftHuntNeutralFlag = false;
@@ -382,11 +382,10 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 				AcceptEntityInput(flag, "Disable");
 			}
 		}
-		DebugText("All preperations in place for Gift Hunt Extended");
 	} else {
 		GiftHunt = false;
 	}
-	if(GiftHuntAttackDefense){
+	if (GiftHuntAttackDefense) {
 		GiftHuntSetup = true;
 	}
 	VictoryTeam = -1;
@@ -415,6 +414,7 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 		for (int client = 1; client <= MaxClients; client++) {
 			powerup[client] = 0;
 			if (IsClientInGame(client)) {
+				// Only count bots if ConVar is true
 				if (!IsFakeClient(client) || sm_fortressblast_gifthunt_countbots.BoolValue) {
 					PlayersAmount++;
 				}
@@ -470,7 +470,7 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 }
 
 public Action teamplay_setup_finished(Event event, const char[] name, bool dontBroadcast) {
-	if(GiftHuntAttackDefense){
+	if (GiftHuntAttackDefense) {
 		GiftHuntSetup = false;
 		EntFire("team_round_timer", "Pause");
 	}
@@ -818,8 +818,7 @@ public void CollectedPowerup(int client) {
 	} else if (powerup[client] == 14) {
 		EmitSoundToClient(client, "fortressblast2/dizzybomb_pickup.mp3", client);
 	}
-
-
+	// If player is a bot and bot support is enabled
 	if (IsFakeClient(client) && sm_fortressblast_bot.BoolValue) {
 		// Get minimum and maximum times
 		float convar1 = sm_fortressblast_bot_min.FloatValue;
@@ -1163,13 +1162,13 @@ public Action RepeatPing(Handle timer, int client){
 	}
 }
 
-public Action MedicResistFire(Handle timer, int client){
+public Action MedicResistFire(Handle timer, int client) {
 	if (IsClientInGame(client) && IsPlayerAlive(client) && UltraPowerup[client]) {
 		PowerupParticle(client, "medic_resist_fire", 0.2, 0.0);
 	}
 }
 
-public Action MedicResistBullet(Handle timer, int client){
+public Action MedicResistBullet(Handle timer, int client) {
 	if (IsClientInGame(client) && IsPlayerAlive(client) && UltraPowerup[client]) {
 		PowerupParticle(client, "medic_resist_bullet", 0.2, 0.0);
 	}
@@ -1403,7 +1402,6 @@ public void GetPowerupPlacements(bool UsingGiftHunt) {
 		Format(path, sizeof(path), "scripts/fortress_blast/powerup_spots/%s.json", map);
 	} else {
 		Format(path, sizeof(path), "scripts/fortress_blast/gift_spots/%s.json", map);
-		DebugText("GETTING GIFT LOCATIONS");
 	}
 	JSONObject handle = JSONObject.FromFile(path);
 	bool flipx = false;
@@ -1773,7 +1771,7 @@ public void CollectedGift(int client) {
 					AcceptEntityInput(flag, "Enable");
 				}
 			}
-			if(GiftHuntAttackDefense){
+			if (GiftHuntAttackDefense) {
 				EntFire("team_round_timer", "Resume");
 			}
 		} else if (GetClientTeam(client) == 3) {
@@ -1801,24 +1799,26 @@ public void CollectedGift(int client) {
 }
 
 public void GiftHuntNeutralGoal() {
-	if(GiftHuntNeutralFlag){
+	// Neutral intelligence support for Gift Hunt
+	if (GiftHuntNeutralFlag) {
 		int flag;
 		while ((flag = FindEntityByClassname(flag, "item_teamflag")) != -1) {
-			if(Gifts[2] >= giftgoal && Gifts[3] < giftgoal){
-				AcceptEntityInput(flag, "Enable");
-				SetEntProp(flag, Prop_Send, "m_iTeamNum", 3);
-			}
-			if(Gifts[3] >= giftgoal && Gifts[2] < giftgoal){
-				AcceptEntityInput(flag, "Enable");
-				SetEntProp(flag, Prop_Send, "m_iTeamNum", 2);
-			}
-			if(Gifts[2] >= giftgoal && Gifts[3] >= giftgoal){
-				AcceptEntityInput(flag, "Enable");
-				SetEntProp(flag, Prop_Send, "m_iTeamNum", 0);
-			}
-			if(Gifts[2] < giftgoal && Gifts[3] < giftgoal){
+			// Neither team has reached gift goal, intelligence is neutral and disabled
+			if (Gifts[2] < giftgoal && Gifts[3] < giftgoal) {
 				AcceptEntityInput(flag, "Disable");
 				SetEntProp(flag, Prop_Send, "m_iTeamNum", 0);
+			// Both teams have reached gift goal, intelligence is neutral and enabled
+			} else if (Gifts[2] >= giftgoal && Gifts[3] >= giftgoal) {
+				AcceptEntityInput(flag, "Enable");
+				SetEntProp(flag, Prop_Send, "m_iTeamNum", 0);
+			// RED team has reached gift goal, intelligence is BLU and enabled
+			} else if (Gifts[3] >= giftgoal && Gifts[2] < giftgoal) {
+				AcceptEntityInput(flag, "Enable");
+				SetEntProp(flag, Prop_Send, "m_iTeamNum", 2);
+			// BLU team has reached gift goal, intelligence is RED and enabled
+			} else if (Gifts[2] >= giftgoal && Gifts[3] < giftgoal) {
+				AcceptEntityInput(flag, "Enable");
+				SetEntProp(flag, Prop_Send, "m_iTeamNum", 3);
 			}
 		}
 	}
