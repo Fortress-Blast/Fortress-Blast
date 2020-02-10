@@ -49,6 +49,7 @@ bool FrostTouch[MAXPLAYERS + 1] = false;
 bool NegativeDizzy[MAXPLAYERS+1] = false;
 bool Magnetism[MAXPLAYERS + 1] = false;
 bool UltraPowerup[MAXPLAYERS+1] = false;
+bool MegaMannVerified[MAXPLAYERS+1] = false;
 bool GiftHuntAttackDefense = false;
 bool GiftHuntNeutralFlag = false;
 bool GiftHuntSetup = false;
@@ -67,6 +68,7 @@ Handle DestroyPowerupHandle[MAX_EDICTS + 1] = INVALID_HANDLE;
 Handle TeleportationHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle MagnetismHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle UltraPowerupHandle[MAXPLAYERS+1] = INVALID_HANDLE;
+
 
 // HUDs
 Handle texthand;
@@ -96,6 +98,8 @@ ConVar sm_fortressblast_admin_flag;
 ConVar sm_fortressblast_dizzy_states;
 ConVar sm_fortressblast_dizzy_length;
 ConVar sm_fortressblast_ultra_spawnchance;
+
+
 
 /* Powerup IDs
 -1 - ULTRA POWERUP!!
@@ -293,6 +297,8 @@ public void OnMapStart() {
 	AddFileToDownloadsTable("sound/fortressblast2/gifthunt_goal_playerteam.mp3");
 
 	CreateTimer(0.1, Timer_CheckGifts, _, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE); // Timer to check gifts
+
+
 }
 
 public Action FBMenu(int client, int args) {
@@ -467,6 +473,8 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 	while ((spawnrooms = FindEntityByClassname(spawnrooms, "func_respawnroom")) != -1) {
 		SDKHook(spawnrooms, SDKHook_TouchPost, OnTouchRespawnRoom);
 	}
+
+
 }
 
 public Action teamplay_setup_finished(Event event, const char[] name, bool dontBroadcast) {
@@ -882,6 +890,11 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		buttons &= ~IN_ATTACK;
 		buttons &= ~IN_ATTACK2;
 	}
+	if (IsValidEntity(GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon"))) {
+		if (GetEntProp(GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon"), Prop_Send, "m_iItemDefinitionIndex") == 28 && !MegaMannVerified[client] && MegaMann[client]) {
+			buttons &= ~IN_ATTACK;
+		}
+	}
 	if ((Magnetism[client] || UltraPowerup[client]) && IsPlayerAlive(client)) {
 		float pos1[3];
 		GetClientAbsOrigin(client, pos1);
@@ -1051,6 +1064,7 @@ public void UsePower(int client) {
 		coords[2] += 16.0;
 		TeleportEntity(client, coords, NULL_VECTOR, NULL_VECTOR);
 		MegaMann[client] = true;
+		MegaMannVerified[client] = true;
 	} else if (powerup[client] == 9) {
 		// Frost Touch - Freeze touched players for 3 seconds within 8 seconds
 		EmitAmbientSound("fortressblast2/frosttouch_use.mp3", vel, client);
