@@ -292,7 +292,7 @@ public void OnMapStart() {
 	AddFileToDownloadsTable("sound/fortressblast2/gifthunt_goal_enemyteam.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/gifthunt_goal_playerteam.mp3");
 
-	CreateTimer(0.1, Timer_EveryTick, _, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE); // Timer to check gifts and calculate Super Speed and Dizzy Bomb progress
+	CreateTimer(0.1, MiscTimer, _, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE); // Timer to check gifts and calculate Super Speed and Dizzy Bomb progress
 }
 
 public Action FBMenu(int client, int args) {
@@ -507,7 +507,7 @@ public void OnEntityDestroyed(int entity) {
 	}
 }
 
-public Action Timer_EveryTick(Handle timer, any data) {
+public Action MiscTimer(Handle timer, any data) {
 	if (NumberOfActiveGifts() == 0 && !GiftHuntSetup) {
 		GetPowerupPlacements(true);
 	}
