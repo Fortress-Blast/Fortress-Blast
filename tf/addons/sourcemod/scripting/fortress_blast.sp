@@ -384,8 +384,10 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 			GiftMultiply[2] = 1;
 			GiftMultiply[3] = 1;
 			JSONObject handle = JSONObject.FromFile(path);
-			if (handle.HasKey("attackdefense")) { // For single-team objective maps like Attack/Defense and Payload
-				GiftHuntAttackDefense = handle.GetBool("attackdefense");
+			if (handle.HasKey("mode")) { // For single-team objective maps like Attack/Defense and Payload
+				char mode[30];
+				handle.GetString("mode", mode, sizeof(mode));
+				GiftHuntAttackDefense = StrEqual(mode, "attackdefense", true);
 			}
 			GiftHuntNeutralFlag = false;
 			int flag;
@@ -524,15 +526,17 @@ public void OnEntityDestroyed(int entity) {
 }
 
 public Action Timer_CheckGifts(Handle timer, any data) {
-	if (NumberOfActiveGifts() == 0 && !GiftHuntSetup) {
+	if (NumberOfActiveGifts() == 0 && !GiftHuntSetup && (Gifts[2] < giftgoal || Gifts[3] < giftgoal)) {
 		GetPowerupPlacements(true);
 	}
 	if(GiftHuntIncrementTime < GetGameTime() && (Gifts[2] >= giftgoal || Gifts[3] >= giftgoal) && sm_fortressblast_gifthunt_multiply.BoolValue){
 		if(Gifts[3] < giftgoal && GiftMultiply[3] < 5){
 			GiftMultiply[3]++;
+			PrintCenterTextAll("Catchup bonus: Gifts are now worth x%d for BLU team.", GiftMultiply[3]);
 		}
 		if(Gifts[2] < giftgoal && GiftMultiply[2] < 5){
 			GiftMultiply[2]++;
+			PrintCenterTextAll("Catchup bonus: Gifts are now worth x%d for RED team.", GiftMultiply[2]);
 		}
 		DebugText("Incremenet time is %f , game time is %f", GiftHuntIncrementTime, GetGameTime());
 		GiftHuntIncrementTime = (GetGameTime() + 60.0);
@@ -1421,7 +1425,7 @@ public void DoHudText(int client) {
   			ShowSyncHudText(client, gifttext, "BLU: %d (x%d)| Playing to %d gifts | RED: %d", Gifts[3], GiftMultiply[3], giftgoal, Gifts[2]);
 			}
 			if(GiftMultiply[2] >= 2 && GiftMultiply[3] < 2){
-  			ShowSyncHudText(client, gifttext, "BLU: %d | Playing to %d gifts | RED: %d(x%d)", Gifts[3], giftgoal, Gifts[2], GiftMultiply[2]);
+  			ShowSyncHudText(client, gifttext, "BLU: %d | Playing to %d gifts | RED: %d (x%d)", Gifts[3], giftgoal, Gifts[2], GiftMultiply[2]);
 			}
 	}
 }
@@ -1804,6 +1808,7 @@ public void CollectedGift(int client) {
 	if (Gifts[team] >= giftgoal && Gifts[team] < (giftgoal + GiftMultiply[team])) {
 		GiftHuntIncrementTime = (GetGameTime() + 60.0);
 		if (team == 2) {
+			GiftMultiply[2] = 1;
 			PrintCenterTextAll("RED team has collected the required number of gifts!");
 			DebugText("RED team has collected the required number of gifts", client);
 			flag = 0;
@@ -1818,6 +1823,7 @@ public void CollectedGift(int client) {
 				EntFire("team_round_timer", "Resume");
 			}
 		} else if (team == 3) {
+			GiftMultiply[3] = 1;
 			PrintCenterTextAll("BLU team has collected the required number of gifts!");
 			DebugText("BLU team has collected the required number of gifts", client);
 			flag = 0;
