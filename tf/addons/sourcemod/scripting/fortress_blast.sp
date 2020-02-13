@@ -15,8 +15,8 @@
 #define MAX_PARTICLES 10 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
 #define MESSAGE_PREFIX "{orange}[Fortress Blast]"
 #define NO_COLOR_PREFIX "[Fortress Blast]"
-#define PLUGIN_VERSION "4.0"
-#define MOTD_VERSION "4.0"
+#define PLUGIN_VERSION "4.1"
+#define MOTD_VERSION "4.1"
 
 public Plugin myinfo = {
 	name = "Fortress Blast",
@@ -76,6 +76,7 @@ Handle texthand;
 Handle gifttext;
 
 // ConVars
+ConVar sm_fortressblast_spawn_roundstart;
 ConVar sm_fortressblast_action_use;
 ConVar sm_fortressblast_admin_flag;
 ConVar sm_fortressblast_blast_buildings;
@@ -100,6 +101,7 @@ ConVar sm_fortressblast_mannpower;
 ConVar sm_fortressblast_powerups;
 ConVar sm_fortressblast_spawnroom_kill;
 ConVar sm_fortressblast_ultra_spawnchance;
+ConVar sm_fortressblast_auto_intro;
 
 /* Powerup IDs
 -1 - ULTRA POWERUP!!
@@ -140,10 +142,12 @@ public void OnPluginStart() {
 	RegConsoleCmd("sm_coordsjson", CoordsJson);
 	RegConsoleCmd("sm_setpowerup", Command_SetPowerup);
 	RegConsoleCmd("sm_spawnpowerup", Command_SpawnPowerup);
+	RegConsoleCmd("sm_respawnpowerups", RespawnPowerups);
 
 	LoadTranslations("common.phrases");
 
 	// ConVars
+	sm_fortressblast_spawn_roundstart = CreateConVar("sm_fortressblast_spawn_roundstart", "1", "Whether or not to automatically spawn powerups when the round starts");
 	sm_fortressblast_action_use = CreateConVar("sm_fortressblast_action_use", "attack3", "Which action to watch for in order to use powerups.");
 	sm_fortressblast_admin_flag = CreateConVar("sm_fortressblast_admin_flag", "z", "Which flag to use for admin-restricted commands outside of debug mode.");
 	sm_fortressblast_blast_buildings = CreateConVar("sm_fortressblast_blast_buildings", "100", "Percentage of Blast player damage to inflict on enemy buildings.");
@@ -167,7 +171,8 @@ public void OnPluginStart() {
 	sm_fortressblast_mannpower = CreateConVar("sm_fortressblast_mannpower", "2", "How to handle replacing Mannpower powerups.");
 	sm_fortressblast_powerups = CreateConVar("sm_fortressblast_powerups", "-1", "Bitfield of which powerups to enable.");
 	sm_fortressblast_spawnroom_kill = CreateConVar("sm_fortressblast_spawnroom_kill", "1", "Disables or enables killing enemies inside spawnrooms due to Mega Mann exploit.");
-	sm_fortressblast_ultra_spawnchance = CreateConVar("sm_fortressblast_ultra_spawnchance", "1", "Chance out of 100 for ULTRA POWERUP!! to spawn.");
+	sm_fortressblast_ultra_spawnchance = CreateConVar("sm_fortressblast_ultra_spawnchance", "0.1", "Chance out of 100 for ULTRA POWERUP!! to spawn.");
+	sm_fortressblast_auto_intro = CreateConVar("sm_fortressblast_auto_intro", "1", "Whether or not to automatically display the intro text");
 
 	// HUDs
 	texthand = CreateHudSynchronizer();
@@ -300,6 +305,25 @@ public void OnMapStart() {
 }
 
 public Action FBMenu(int client, int args) {
+	char arg[30];
+	GetCmdArg(1, arg, sizeof(arg));
+	if(StrEqual(arg, "force")){
+		if(AdminCommand(client)){
+			for (int client2 = 1; client2 <= MaxClients; client2++) {
+				if(IsClientInGame(client2)){
+					CreateTimer(0.0, Timer_DisplayIntro, client2);
+				}
+			}
+			return Plugin_Handled;
+		}
+		else{
+			return Plugin_Handled;
+		}
+	}
+	if(client == 0){
+		PrintToServer("%s Because this command uses the crosshair, it cannot be executed from the server console.", NO_COLOR_PREFIX);
+		return Plugin_Handled;
+	}
 	int bitfield = sm_fortressblast_powerups.IntValue;
 	if (bitfield < 1 && bitfield > ((Bitfieldify(NumberOfPowerups) * 2) - 1)) {
 		bitfield = -1;
@@ -307,15 +331,15 @@ public Action FBMenu(int client, int args) {
 	char url[200];
 	char action[15];
 	sm_fortressblast_action_use.GetString(action, sizeof(action));
-	Format(url, sizeof(url), "https://fortress-blast.github.io/%s?powerups-enabled=%d&action=%s&gifthunt=%b", MOTD_VERSION, bitfield, action, sm_fortressblast_gifthunt.BoolValue);
+	Format(url, sizeof(url), "https://fortress-blast.github.io/%s?powerups-enabled=%d&action=%s&gifthunt=%b&ultra=%f", MOTD_VERSION, bitfield, action, sm_fortressblast_gifthunt.BoolValue, sm_fortressblast_ultra_spawnchance.FloatValue);
 	AdvMOTD_ShowMOTDPanel(client, "How are you reading this?", url, MOTDPANEL_TYPE_URL, true, true, true, INVALID_FUNCTION);
 	CPrintToChat(client, "%s {haunted}Opening Fortress Blast manual... If nothing happens, open your developer console and {yellow}try setting cl_disablehtmlmotd to 0{haunted}, then try again.", MESSAGE_PREFIX);
+	return Plugin_Handled;
 }
 
 public Action Command_SetPowerup(int client, int args) {
-	if (!CheckCommandAccess(client, "", AdminFlagInt()) && !sm_fortressblast_debug.BoolValue) {
-		CPrintToChat(client, "%s {red}You do not have permission to use this command.", MESSAGE_PREFIX);
-		return;
+	if(!AdminCommand(client)){
+		return Plugin_Handled;
 	}
 	char arg[MAX_NAME_LENGTH + 1];
 	char arg2[3]; // Need to have a check if there's only one argument, apply to command user
@@ -328,40 +352,41 @@ public Action Command_SetPowerup(int client, int args) {
 				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
 			}
 		}
-		return;
+		return Plugin_Handled;
 	} else if (StrEqual(arg, "@red")) {
 		for (int client2 = 1; client2 <= MaxClients; client2++) {
 			if (IsClientInGame(client2) && GetClientTeam(client2) == 2) {
 				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
 			}
 		}
-		return;
+		return Plugin_Handled;
 	} else if (StrEqual(arg, "@blue")) {
 		for (int client2 = 1; client2 <= MaxClients; client2++) {
 			if (IsClientInGame(client2) && GetClientTeam(client2) == 3) {
 				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
 			}
 		}
-		return;
+		return Plugin_Handled;
 	} else if (StrEqual(arg, "@bots")) {
 		for (int client2 = 1; client2 <= MaxClients; client2++) {
 			if (IsClientInGame(client2) && IsFakeClient(client2)) {
 				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
 			}
 		}
-		return;
+		return Plugin_Handled;
 	} else if (StrEqual(arg, "@humans")) {
 		for (int client2 = 1; client2 <= MaxClients; client2++) {
 			if (IsClientInGame(client2) && !IsFakeClient(client2)) {
 				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
 			}
 		}
-		return;
+		return Plugin_Handled;
 	}
 	int player = FindTarget(client, arg, false, false);
 	powerup[player] = StringToInt(arg2);
 	CollectedPowerup(player);
 	DebugText("%N has force-set %N's powerup to ID %d", client, player, StringToInt(arg2));
+	return Plugin_Handled;
 }
 
 public Action teamplay_round_start(Event event, const char[] name, bool dontBroadcast) {
@@ -428,7 +453,9 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 				if (!IsFakeClient(client) || sm_fortressblast_gifthunt_countbots.BoolValue) {
 					PlayersAmount++;
 				}
-				CreateTimer(3.0, Timer_PesterThisDude, client);
+				if(sm_fortressblast_auto_intro.BoolValue){
+					CreateTimer(3.0, Timer_DisplayIntro, client);
+				}
 				// Remove powerup effects on round start
 				SetEntityGravity(client, 1.0);
 				SuperBounce[client] = false;
@@ -440,16 +467,7 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 		}
 	}
 	CalculateGiftAmountForPlayers();
-	for (int entity = 1; entity <= MAX_EDICTS ; entity++) { // Remove leftover powerups
-		if (IsValidEntity(entity)) {
-			char classname[60];
-			GetEntityClassname(entity, classname, sizeof(classname));
-			if (StrEqual(classname, "tf_halloween_pickup")) {
-				DebugText("Removing leftover powerup entity %d", entity);
-				RemoveEntity(entity);
-			}
-		}
-	}
+	RemoveAllPowerups()
 	for (int entity = 1; entity <= MAX_EDICTS ; entity++) { // Add powerups and replace Mannpower
 		if (IsValidEntity(entity)) {
 			char classname[60];
@@ -470,7 +488,9 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 			}
 		}
 	}
-	GetPowerupPlacements(false);
+	if(sm_fortressblast_spawn_roundstart.BoolValue){
+		GetPowerupPlacements(false);
+	}
 	Gifts[2] = 0;
 	Gifts[3] = 0;
 	int spawnrooms;
@@ -576,7 +596,7 @@ public int NumberOfActiveGifts() {
 	return totalgifts;
 }
 
-public Action Timer_PesterThisDude(Handle timer, int client) {
+public Action Timer_DisplayIntro(Handle timer, int client) {
 	if (IsClientInGame(client)) { // Required because player might disconnect before this fires
 		if (Smissmas()) {
 			CPrintToChat(client, "%s {haunted}This server is running {salmon}F{limegreen}o{salmon}r{limegreen}t{salmon}r{limegreen}e{salmon}s{limegreen}s {salmon}B{limegreen}l{salmon}a{limegreen}s{salmon}t {yellow}v%s!", MESSAGE_PREFIX, PLUGIN_VERSION);
@@ -619,7 +639,7 @@ public void OnClientPutInServer(int client) {
 	powerup[client] = 0;
 	SDKHook(client, SDKHook_OnTakeDamageAlive, OnTakeDamage);
 	SDKHook(client, SDKHook_StartTouch, OnStartTouchFrozen);
-	CreateTimer(3.0, Timer_PesterThisDude, client);
+	CreateTimer(3.0, Timer_DisplayIntro, client);
 	DizzyProgress[client] = -1;
 }
 
@@ -968,7 +988,7 @@ public void UsePower(int client) {
 		// time travel - not included
 		// blast - not included
 		// mega mann (max value, no jumbo):
-		SetEntityHealth(client, (TF2_GetPlayerMaxHealth(client) * 4));
+		SetEntityHealth(client, (GetPlayerMaxHealth(client) * 4));
 		// frost touch - done by bool
 		// mystery (not included)
 		// teleportation (not included)
@@ -1063,8 +1083,8 @@ public void UsePower(int client) {
 		AcceptEntityInput(client, "SetModelScale");
 		SetEntityHealth(client, (GetClientHealth(client) * 4)); // 4x current health
 		// Cap at 4x maximum health
-		if (GetClientHealth(client) > (TF2_GetPlayerMaxHealth(client) * 4)) {
-			SetEntityHealth(client, TF2_GetPlayerMaxHealth(client) * 4);
+		if (GetClientHealth(client) > (GetPlayerMaxHealth(client) * 4)) {
+			SetEntityHealth(client, GetPlayerMaxHealth(client) * 4);
 		}
 		ClearTimer(MegaMannHandle[client]);
 		MegaMannHandle[client] = CreateTimer(10.0, Timer_RemoveMegaMann, client);
@@ -1205,8 +1225,8 @@ public Action Timer_RemoveMagnetism(Handle timer, int client) {
 public Action Timer_RemoveUltraPowerup(Handle timer, int client) {
 	UltraPowerupHandle[client] = INVALID_HANDLE;
 	UltraPowerup[client] = false;
-	if (GetClientHealth(client) > TF2_GetPlayerMaxHealth(client)) {
-		SetEntityHealth(client, TF2_GetPlayerMaxHealth(client));
+	if (GetClientHealth(client) > GetPlayerMaxHealth(client)) {
+		SetEntityHealth(client, GetPlayerMaxHealth(client));
 	}
 }
 
@@ -1331,8 +1351,8 @@ public Action Timer_RemoveMegaMann(Handle timer, int client) {
 		SetVariantString("1 0");
 		AcceptEntityInput(client, "SetModelScale");
 		// Remove excess overheal, but leave injuries
-		if (GetClientHealth(client) > TF2_GetPlayerMaxHealth(client)) {
-			SetEntityHealth(client, TF2_GetPlayerMaxHealth(client));
+		if (GetClientHealth(client) > GetPlayerMaxHealth(client)) {
+			SetEntityHealth(client, GetPlayerMaxHealth(client));
 		}
 	}
 }
@@ -1701,7 +1721,7 @@ public int AdminFlagInt() {
 	return ADMFLAG_ROOT;
 }
 
-stock int TF2_GetPlayerMaxHealth(int client) {
+stock int GetPlayerMaxHealth(int client) {
 	return GetEntProp(GetPlayerResourceEntity(), Prop_Send, "m_iMaxHealth", _, client);
 }
 
@@ -1907,8 +1927,7 @@ public int Bitfieldify(int bitter) {
 }
 
 public Action Command_SpawnPowerup(int client, int args) {
-	if (!CheckCommandAccess(client, "", AdminFlagInt()) && !sm_fortressblast_debug.BoolValue) {
-		CPrintToChat(client, "%s {red}You do not have permission to use this command.", MESSAGE_PREFIX);
+	if(!AdminCommand(client)){
 		return Plugin_Handled;
 	}
 	if (client == 0) {
@@ -1932,6 +1951,30 @@ public Action CoordsJson(int client, int args) {
 	GetCollisionPoint(client, points);
 	CPrintToChat(client, "{haunted}\"#-x\": \"%d\", \"#-y\": \"%d\", \"#-z\": \"%d\",", RoundFloat(points[0]), RoundFloat(points[1]), RoundFloat(points[2]));
 	return Plugin_Handled;
+}
+
+public bool AdminCommand(int client){
+	if (!CheckCommandAccess(client, "", AdminFlagInt()) && !sm_fortressblast_debug.BoolValue) {
+		CPrintToChat(client, "%s {red}You do not have permission to use this command.", MESSAGE_PREFIX);
+		return false;
+	}
+	return true;
+}
+
+public Action RespawnPowerups(int client, int args){
+	if(!AdminCommand(client)){
+		return Plugin_Handled;
+	}
+	RemoveAllPowerups();
+	GetPowerupPlacements(false);
+	return Plugin_Handled;
+}
+
+public void RemoveAllPowerups(){
+	int entity;
+	while ((entity = FindEntityByClassname(entity, "tf_halloween_pickup")) != -1) {
+		RemoveEntity(entity);
+	}
 }
 
 stock void GetCollisionPoint(int client, float pos[3]) {
