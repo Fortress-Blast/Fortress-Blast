@@ -310,7 +310,7 @@ public Action FBMenu(int client, int args) {
 	if(StrEqual(arg, "force")){
 		if(AdminCommand(client)){
 			for (int client2 = 1; client2 <= MaxClients; client2++) {
-				if(IsClientInGame(client2)){
+				if (IsClientInGame(client2)) {
 					CreateTimer(0.0, Timer_DisplayIntro, client2);
 				}
 			}
@@ -320,7 +320,7 @@ public Action FBMenu(int client, int args) {
 			return Plugin_Handled;
 		}
 	}
-	if(client == 0){
+	if (client == 0) {
 		PrintToServer("%s Because this command uses the MOTD, it cannot be executed from the server console.", NO_COLOR_PREFIX);
 		return Plugin_Handled;
 	}
@@ -338,7 +338,7 @@ public Action FBMenu(int client, int args) {
 }
 
 public Action Command_SetPowerup(int client, int args) {
-	if(!AdminCommand(client)){
+	if (!AdminCommand(client)) {
 		return Plugin_Handled;
 	}
 	char arg[MAX_NAME_LENGTH + 1];
@@ -1927,7 +1927,7 @@ public int Bitfieldify(int bitter) {
 }
 
 public Action Command_SpawnPowerup(int client, int args) {
-	if(!AdminCommand(client)){
+	if (!AdminCommand(client)) {
 		return Plugin_Handled;
 	}
 	if (client == 0) {
@@ -1962,7 +1962,7 @@ public bool AdminCommand(int client){
 }
 
 public Action RespawnPowerups(int client, int args){
-	if(!AdminCommand(client)){
+	if (!AdminCommand(client)) {
 		return Plugin_Handled;
 	}
 	RemoveAllPowerups();
