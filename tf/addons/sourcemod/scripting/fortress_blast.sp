@@ -321,7 +321,7 @@ public Action FBMenu(int client, int args) {
 		}
 	}
 	if(client == 0){
-		PrintToServer("%s Because this command uses the crosshair, it cannot be executed from the server console.", NO_COLOR_PREFIX);
+		PrintToServer("%s Because this command uses the MOTD, it cannot be executed from the server console.", NO_COLOR_PREFIX);
 		return Plugin_Handled;
 	}
 	int bitfield = sm_fortressblast_powerups.IntValue;
@@ -618,7 +618,7 @@ public Action player_death(Event event, const char[] name, bool dontBroadcast) {
 	if (sm_fortressblast_drop.IntValue == 2 || (sm_fortressblast_drop.BoolValue && !MapHasJsonFile)) {
 		// Get chance a powerup will be dropped
 		float convar = sm_fortressblast_drop_rate.FloatValue;
-		int randomNumber = GetRandomInt(0, 99);
+		int randomNumber = GetRandomFloat(0, 99);
 		if (convar > randomNumber && (sm_fortressblast_drop_teams.IntValue == GetClientTeam(GetClientOfUserId(event.GetInt("userid"))) || sm_fortressblast_drop_teams.IntValue == 1)) {
 			DebugText("Dropping powerup due to player death");
 			float coords[3];
