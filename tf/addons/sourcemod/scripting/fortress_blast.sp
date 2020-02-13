@@ -14,7 +14,7 @@
 #define	MAX_EDICTS (1<<MAX_EDICT_BITS)
 #define MAX_PARTICLES 10 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
 #define MESSAGE_PREFIX "{orange}[Fortress Blast]"
-#define MESSAGE_PREFIX_PLAIN "[Fortress Blast]"
+#define MESSAGE_PREFIX_NO_COLOR "[Fortress Blast]"
 #define PLUGIN_VERSION "4.1"
 #define MOTD_VERSION "4.1"
 
@@ -322,7 +322,7 @@ public Action FBMenu(int client, int args) {
 		}
 	}
 	if (client == 0) {
-		PrintToServer("%s Because this command uses the MOTD, it cannot be executed from the server console.", MESSAGE_PREFIX_PLAIN);
+		PrintToServer("%s Because this command uses the MOTD, it cannot be executed from the server console.", MESSAGE_PREFIX_NO_COLOR);
 		return Plugin_Handled;
 	}
 	int bitfield = sm_fortressblast_powerups.IntValue;
@@ -1428,7 +1428,7 @@ public void DoHudText(int client) {
 
 public void GetPowerupPlacements(bool UsingGiftHunt) {
 	if (!UsingGiftHunt && !MapHasJsonFile) {
-		PrintToServer("%s No powerup locations .json file for this map! You can download pre-made files from the official maps repository:", MESSAGE_PREFIX_PLAIN);
+		PrintToServer("%s No powerup locations .json file for this map! You can download pre-made files from the official maps repository:", MESSAGE_PREFIX_NO_COLOR);
 		PrintToServer("https://github.com/Fortress-Blast/Fortress-Blast-Maps");
 		return;
 	} else if (UsingGiftHunt && !GiftHunt) {
@@ -1578,7 +1578,7 @@ public void PowerupParticle(int client, char particlename[80], float time, float
 	if (freeid == -5) {
 		freeid = GetRandomInt(1, MAX_PARTICLES);
 		RemoveEntity(PlayerParticle[client][freeid]);
-		PrintToServer("%s All of %N's particles were in use, freeing #%d", MESSAGE_PREFIX_PLAIN, client, freeid);
+		PrintToServer("%s All of %N's particles were in use, freeing #%d", MESSAGE_PREFIX_NO_COLOR, client, freeid);
 	}
 	PlayerParticle[client][freeid] = particle;
 	ParticleZAdjust[client][freeid] = zadjust;
@@ -1898,10 +1898,10 @@ public bool PowerupIsEnabled(int id) {
 	if (bitfield == -1) {
 		return true; // All powerups enabled
 	} else if (bitfield < 1 || bitfield > max) {
-		PrintToServer("%s Your powerup whitelist ConVar is out of range. As a fallback, all powerups are allowed.", MESSAGE_PREFIX_PLAIN);
+		PrintToServer("%s Your powerup whitelist ConVar is out of range. As a fallback, all powerups are allowed.", MESSAGE_PREFIX_NO_COLOR);
 		return true;
 	} else if (bitfield == 512) {
-		PrintToServer("%s Your powerup whitelist ConVar is set to Mystery only. Mystery requires at least one other powerup to work and cannot be used on its own. As a fallback, all powerups are allowed.", MESSAGE_PREFIX_PLAIN);
+		PrintToServer("%s Your powerup whitelist ConVar is set to Mystery only. Mystery requires at least one other powerup to work and cannot be used on its own. As a fallback, all powerups are allowed.", MESSAGE_PREFIX_NO_COLOR);
 		return true;
 	} else if (bitfield & Bitfieldify(id)) {
 		return true; // return bitfield & Bitfieldify(id) doesn't work
@@ -1922,7 +1922,7 @@ public Action Command_SpawnPowerup(int client, int args) {
 		return Plugin_Handled;
 	}
 	if (client == 0) {
-		PrintToServer("%s Because this command uses the crosshair, it cannot be executed from the server console.", MESSAGE_PREFIX_PLAIN);
+		PrintToServer("%s Because this command uses the crosshair, it cannot be executed from the server console.", MESSAGE_PREFIX_NO_COLOR);
 		return Plugin_Handled;
 	}
 	float points[3];
@@ -1935,7 +1935,7 @@ public Action Command_SpawnPowerup(int client, int args) {
 
 public Action CoordsJson(int client, int args) {
 	if (client == 0) {
-		PrintToServer("%s Because this command uses the crosshair, it cannot be executed from the server console.", MESSAGE_PREFIX_PLAIN);
+		PrintToServer("%s Because this command uses the crosshair, it cannot be executed from the server console.", MESSAGE_PREFIX_NO_COLOR);
 		return Plugin_Handled;
 	}
 	float points[3];
@@ -1996,7 +1996,7 @@ public void OnTouchRespawnRoom(int entity, int other) {
 	// Kill enemies inside spawnrooms
 	if (GetEntProp(entity, Prop_Send, "m_iTeamNum") != GetClientTeam(other) && sm_fortressblast_spawnroom_kill.BoolValue && VictoryTeam == -1) {
 		FakeClientCommandEx(other, "kill");
-		PrintToServer("%s %N was killed due to being inside an enemy team spawnroom.", MESSAGE_PREFIX_PLAIN, other);
+		PrintToServer("%s %N was killed due to being inside an enemy team spawnroom.", MESSAGE_PREFIX_NO_COLOR, other);
 		CPrintToChat(other, "%s {red}You were killed because you were inside the enemy spawn.", MESSAGE_PREFIX);
 	}
 }
