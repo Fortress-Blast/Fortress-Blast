@@ -76,7 +76,6 @@ Handle texthand;
 Handle gifttext;
 
 // ConVars
-ConVar sm_fortressblast_spawn_roundstart;
 ConVar sm_fortressblast_action_use;
 ConVar sm_fortressblast_admin_flag;
 ConVar sm_fortressblast_blast_buildings;
@@ -97,11 +96,12 @@ ConVar sm_fortressblast_gifthunt_increment;
 ConVar sm_fortressblast_gifthunt_players;
 ConVar sm_fortressblast_gifthunt_rate;
 ConVar sm_fortressblast_gifthunt_multiply;
+ConVar sm_fortressblast_intro;
 ConVar sm_fortressblast_mannpower;
 ConVar sm_fortressblast_powerups;
+ConVar sm_fortressblast_powerups_spawn;
 ConVar sm_fortressblast_spawnroom_kill;
 ConVar sm_fortressblast_ultra_spawnchance;
-ConVar sm_fortressblast_auto_intro;
 
 /* Powerup IDs
 -1 - ULTRA POWERUP!!
@@ -138,16 +138,15 @@ public void OnPluginStart() {
 	HookEvent("player_death", player_death);
 
 	// Commands
-	RegConsoleCmd("sm_fortressblast", FBMenu);
-	RegConsoleCmd("sm_coordsjson", CoordsJson);
-	RegConsoleCmd("sm_setpowerup", Command_SetPowerup);
-	RegConsoleCmd("sm_spawnpowerup", Command_SpawnPowerup);
-	RegConsoleCmd("sm_respawnpowerups", RespawnPowerups);
+	RegConsoleCmd("sm_fortressblast", FBMenu); // !fortressblast {force}
+	RegConsoleCmd("sm_coordsjson", CoordsJson); // !coordsjson
+	RegConsoleCmd("sm_setpowerup", Command_SetPowerup); // !setpowerup <player> <id>
+	RegConsoleCmd("sm_spawnpowerup", Command_SpawnPowerup); // !spawnpowerup <id>
+	RegConsoleCmd("sm_respawnpowerups", RespawnPowerups); // !respawnpowerups
 
 	LoadTranslations("common.phrases");
 
 	// ConVars
-	sm_fortressblast_spawn_roundstart = CreateConVar("sm_fortressblast_spawn_roundstart", "1", "Whether or not to automatically spawn powerups when the round starts");
 	sm_fortressblast_action_use = CreateConVar("sm_fortressblast_action_use", "attack3", "Which action to watch for in order to use powerups.");
 	sm_fortressblast_admin_flag = CreateConVar("sm_fortressblast_admin_flag", "z", "Which flag to use for admin-restricted commands outside of debug mode.");
 	sm_fortressblast_blast_buildings = CreateConVar("sm_fortressblast_blast_buildings", "100", "Percentage of Blast player damage to inflict on enemy buildings.");
@@ -162,17 +161,18 @@ public void OnPluginStart() {
 	sm_fortressblast_drop_teams = CreateConVar("sm_fortressblast_drop_teams", "1", "Teams that will drop powerups on death.");
 	sm_fortressblast_event_xmas = CreateConVar("sm_fortressblast_event_xmas", "1", "How to handle the TF2 Smissmas event.");
 	sm_fortressblast_gifthunt = CreateConVar("sm_fortressblast_gifthunt", "0", "Disables or enables Gift Hunt on maps with Gift Hunt .json files.");
-	sm_fortressblast_gifthunt_countbots = CreateConVar("sm_fortressblast_gifthunt_countbots", "0", "Disables or enables counting bots as players when increasing the gift goal.");
+	sm_fortressblast_gifthunt_countbots = CreateConVar("sm_fortressblast_gifthunt_countbots", "0", "Disables or enables counting bots as players when increasing the goal.");
 	sm_fortressblast_gifthunt_goal = CreateConVar("sm_fortressblast_gifthunt_goal", "125", "Base number of gifts required to unlock the objective in Gift Hunt.");
 	sm_fortressblast_gifthunt_increment = CreateConVar("sm_fortressblast_gifthunt_increment", "25", "Amount to increase the gift goal per extra group of players.");
 	sm_fortressblast_gifthunt_players = CreateConVar("sm_fortressblast_gifthunt_players", "4", "Number of players in a group, any more and the gift goal increases.");
 	sm_fortressblast_gifthunt_rate = CreateConVar("sm_fortressblast_gifthunt_rate", "20", "Chance out of 100 for each gift to spawn once all gifts are collected.");
 	sm_fortressblast_gifthunt_multiply = CreateConVar("sm_fortressblsat_gifthunt_multiply", "1", "Whether or not to multiply players' gift collections once they get behind");
+	sm_fortressblast_intro = CreateConVar("sm_fortressblast_intro", "1", "Disables or enables automatically display the plugin intro message.");
 	sm_fortressblast_mannpower = CreateConVar("sm_fortressblast_mannpower", "2", "How to handle replacing Mannpower powerups.");
 	sm_fortressblast_powerups = CreateConVar("sm_fortressblast_powerups", "-1", "Bitfield of which powerups to enable.");
+	sm_fortressblast_powerups_spawn = CreateConVar("sm_fortressblast_powerups_spawn", "1", "Disables or enables automatically spawning powerups on round start.");
 	sm_fortressblast_spawnroom_kill = CreateConVar("sm_fortressblast_spawnroom_kill", "1", "Disables or enables killing enemies inside spawnrooms due to Mega Mann exploit.");
 	sm_fortressblast_ultra_spawnchance = CreateConVar("sm_fortressblast_ultra_spawnchance", "0.1", "Chance out of 100 for ULTRA POWERUP!! to spawn.");
-	sm_fortressblast_auto_intro = CreateConVar("sm_fortressblast_auto_intro", "1", "Whether or not to automatically display the intro text");
 
 	// HUDs
 	texthand = CreateHudSynchronizer();
@@ -307,20 +307,20 @@ public void OnMapStart() {
 public Action FBMenu(int client, int args) {
 	char arg[30];
 	GetCmdArg(1, arg, sizeof(arg));
-	if(StrEqual(arg, "force")){
-		if(AdminCommand(client)){
+	// Command '!fortressblast force' will print intro message to everyone if user is an admin
+	if (StrEqual(arg, "force")) {
+		if (AdminCommand(client)) {
 			for (int client2 = 1; client2 <= MaxClients; client2++) {
-				if(IsClientInGame(client2)){
+				if (IsClientInGame(client2)) {
 					CreateTimer(0.0, Timer_DisplayIntro, client2);
 				}
 			}
 			return Plugin_Handled;
-		}
-		else{
+		} else {
 			return Plugin_Handled;
 		}
 	}
-	if(client == 0){
+	if (client == 0) {
 		PrintToServer("%s Because this command uses the MOTD, it cannot be executed from the server console.", NO_COLOR_PREFIX);
 		return Plugin_Handled;
 	}
@@ -338,7 +338,7 @@ public Action FBMenu(int client, int args) {
 }
 
 public Action Command_SetPowerup(int client, int args) {
-	if(!AdminCommand(client)){
+	if (!AdminCommand(client)) {
 		return Plugin_Handled;
 	}
 	char arg[MAX_NAME_LENGTH + 1];
@@ -453,7 +453,7 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 				if (!IsFakeClient(client) || sm_fortressblast_gifthunt_countbots.BoolValue) {
 					PlayersAmount++;
 				}
-				if(sm_fortressblast_auto_intro.BoolValue){
+				if (sm_fortressblast_intro.BoolValue) {
 					CreateTimer(3.0, Timer_DisplayIntro, client);
 				}
 				// Remove powerup effects on round start
@@ -488,7 +488,7 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 			}
 		}
 	}
-	if(sm_fortressblast_spawn_roundstart.BoolValue){
+	if (sm_fortressblast_powerups_spawn.BoolValue) {
 		GetPowerupPlacements(false);
 	}
 	Gifts[2] = 0;
@@ -618,7 +618,7 @@ public Action player_death(Event event, const char[] name, bool dontBroadcast) {
 	if (sm_fortressblast_drop.IntValue == 2 || (sm_fortressblast_drop.BoolValue && !MapHasJsonFile)) {
 		// Get chance a powerup will be dropped
 		float convar = sm_fortressblast_drop_rate.FloatValue;
-		int randomNumber = GetRandomFloat(0, 99);
+		int randomNumber = GetRandomFloat(0, 99.99);
 		if (convar > randomNumber && (sm_fortressblast_drop_teams.IntValue == GetClientTeam(GetClientOfUserId(event.GetInt("userid"))) || sm_fortressblast_drop_teams.IntValue == 1)) {
 			DebugText("Dropping powerup due to player death");
 			float coords[3];
@@ -648,7 +648,7 @@ stock int SpawnPower(float location[3], bool respawn, int id = 0) {
 	DispatchKeyValue(entity, "powerup_model", "models/fortressblast/pickups/fb_pickup.mdl");
 	if (IsValidEdict(entity)) {
 		if (id == 0) {
-			if (sm_fortressblast_ultra_spawnchance.FloatValue > GetRandomFloat(0.0, 100.0)) {
+			if (sm_fortressblast_ultra_spawnchance.FloatValue > GetRandomFloat(0.0, 99.99)) {
 				powerupid[entity] = -1;
 			} else {
 				powerupid[entity] = GetRandomInt(1, NumberOfPowerups);
@@ -1927,7 +1927,7 @@ public int Bitfieldify(int bitter) {
 }
 
 public Action Command_SpawnPowerup(int client, int args) {
-	if(!AdminCommand(client)){
+	if (!AdminCommand(client)) {
 		return Plugin_Handled;
 	}
 	if (client == 0) {
@@ -1953,7 +1953,7 @@ public Action CoordsJson(int client, int args) {
 	return Plugin_Handled;
 }
 
-public bool AdminCommand(int client){
+public bool AdminCommand(int client) {
 	if (!CheckCommandAccess(client, "", AdminFlagInt()) && !sm_fortressblast_debug.BoolValue) {
 		CPrintToChat(client, "%s {red}You do not have permission to use this command.", MESSAGE_PREFIX);
 		return false;
@@ -1961,8 +1961,8 @@ public bool AdminCommand(int client){
 	return true;
 }
 
-public Action RespawnPowerups(int client, int args){
-	if(!AdminCommand(client)){
+public Action RespawnPowerups(int client, int args) {
+	if (!AdminCommand(client)) {
 		return Plugin_Handled;
 	}
 	RemoveAllPowerups();
@@ -1970,7 +1970,7 @@ public Action RespawnPowerups(int client, int args){
 	return Plugin_Handled;
 }
 
-public void RemoveAllPowerups(){
+public void RemoveAllPowerups() {
 	int entity;
 	while ((entity = FindEntityByClassname(entity, "tf_halloween_pickup")) != -1) {
 		RemoveEntity(entity);
