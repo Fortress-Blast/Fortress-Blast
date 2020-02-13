@@ -619,7 +619,7 @@ public Action player_death(Event event, const char[] name, bool dontBroadcast) {
 	if (sm_fortressblast_drop.IntValue == 2 || (sm_fortressblast_drop.BoolValue && !MapHasJsonFile)) {
 		// Get chance a powerup will be dropped
 		float convar = sm_fortressblast_drop_rate.FloatValue;
-		int randomNumber = GetRandomFloat(0, 99.99);
+		float randomNumber = GetRandomFloat(0.0, 99.99);
 		if (convar > randomNumber && (sm_fortressblast_drop_teams.IntValue == GetClientTeam(GetClientOfUserId(event.GetInt("userid"))) || sm_fortressblast_drop_teams.IntValue == 1)) {
 			DebugText("Dropping powerup due to player death");
 			float coords[3];
@@ -1257,14 +1257,27 @@ public Action Timer_BeginTeleporter(Handle timer, int client) {
 		CPrintToChat(client, "%s {haunted}You were teleported to your spawn as there are no active Teleporter exits on your team.", MESSAGE_PREFIX);
 		int preregenhealth = GetClientHealth(client);
 		int ammo[4];
+		int clip[4];
 		for (int i = 0; i <= 3; i++) {
 			ammo[i] = GetEntProp(client, Prop_Data, "m_iAmmo", 4, i);
+			if(IsValidEntity(GetPlayerWeaponSlot(client, i))){
+				clip[i] = GetEntProp(GetPlayerWeaponSlot(client, i), Prop_Data, "m_iClip1");
+			}
 		}
+		int active = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
+		DebugText("Active weapon ID is %d", active);
+		char classname[30];
+		GetEntityClassname(active, classname, sizeof(classname));
 		TF2_RespawnPlayer(client);
 		SetEntityHealth(client, preregenhealth);
 		for (int i = 0; i <= 3; i++) {
 			SetEntProp(client, Prop_Data, "m_iAmmo", ammo[i], 4, i);
+			if(IsValidEntity(GetPlayerWeaponSlot(client, i))){
+				SetEntProp(GetPlayerWeaponSlot(client, i), Prop_Data, "m_iClip1", clip[i]);
+			}
 		}
+		FakeClientCommand(client, "use %s", classname);
+		SetEntPropEnt(client, Prop_Send, "m_hActiveWeapon", active);
 		TeleportXmasParticles(client);
 		return;
 	}
