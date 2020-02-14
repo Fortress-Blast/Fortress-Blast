@@ -1256,12 +1256,15 @@ public Action Timer_BeginTeleporter(Handle timer, int client) {
 	if (teles == 0) {
 		CPrintToChat(client, "%s {haunted}You were teleported to your spawn as there are no active Teleporter exits on your team.", MESSAGE_PREFIX);
 		int preregenhealth = GetClientHealth(client);
+		int index[4];
 		int ammo[4];
 		int clip[4];
 		for (int i = 0; i <= 3; i++) {
 			ammo[i] = GetEntProp(client, Prop_Data, "m_iAmmo", 4, i);
-			if (IsValidEntity(GetPlayerWeaponSlot(client, i))) {
-				clip[i] = GetEntProp(GetPlayerWeaponSlot(client, i), Prop_Data, "m_iClip1");
+			int slot = GetPlayerWeaponSlot(client, i);
+			if (IsValidEntity(slot)) {
+				clip[i] = GetEntProp(slot, Prop_Data, "m_iClip1");
+				index[i] = GetEntProp(slot, Prop_Send, "m_iItemDefinitionIndex");
 			}
 		}
 		int active = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
@@ -1271,9 +1274,12 @@ public Action Timer_BeginTeleporter(Handle timer, int client) {
 		TF2_RespawnPlayer(client);
 		SetEntityHealth(client, preregenhealth);
 		for (int i = 0; i <= 3; i++) {
-			SetEntProp(client, Prop_Data, "m_iAmmo", ammo[i], 4, i);
-			if (IsValidEntity(GetPlayerWeaponSlot(client, i))) {
-				SetEntProp(GetPlayerWeaponSlot(client, i), Prop_Data, "m_iClip1", clip[i]);
+			int slot = GetPlayerWeaponSlot(client, i);
+			if (IsValidEntity(slot)) {
+				if(GetEntProp(slot, Prop_Send, "m_iItemDefinitionIndex") == index[i]){
+					SetEntProp(slot, Prop_Data, "m_iClip1", clip[i]);
+					SetEntProp(client, Prop_Data, "m_iAmmo", ammo[i], 4, i);
+				}
 			}
 		}
 		FakeClientCommand(client, "use %s", classname);
