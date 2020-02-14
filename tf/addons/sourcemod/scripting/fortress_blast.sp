@@ -819,7 +819,8 @@ public Action Timer_SpawnPowerAfterDelay(Handle timer, any data) {
 	coords[1] = KvGetFloat(coordskv, "1");
 	coords[2] = KvGetFloat(coordskv, "2");
 	int LocalVerifier = KvGetNum(coordskv, "verifier");
-	if(LocalVerifier == GlobalVerifier){
+	// Only respawn powerup if it has an ID equal to the previously placed one
+	if (LocalVerifier == GlobalVerifier) {
 		DebugText("Respawning powerup at %f, %f, %f", coords[0], coords[1], coords[2]);
 		SpawnPower(coords, true);
 	}
@@ -1279,7 +1280,7 @@ public Action Timer_BeginTeleporter(Handle timer, int client) {
 		for (int i = 0; i <= 3; i++) {
 			int slot = GetPlayerWeaponSlot(client, i);
 			if (IsValidEntity(slot)) {
-				if(GetEntProp(slot, Prop_Send, "m_iItemDefinitionIndex") == index[i]){
+				if (GetEntProp(slot, Prop_Send, "m_iItemDefinitionIndex") == index[i]) {
 					SetEntProp(slot, Prop_Data, "m_iClip1", clip[i]);
 					SetEntProp(client, Prop_Data, "m_iAmmo", ammo[i], 4, i);
 				}
@@ -1462,7 +1463,7 @@ public void GetPowerupPlacements(bool UsingGiftHunt) {
 	char path[PLATFORM_MAX_PATH + 1];
 	if (!UsingGiftHunt) {
 		Format(path, sizeof(path), "scripts/fortress_blast/powerup_spots/%s.json", map);
-		GlobalVerifier = GetRandomInt(1, 999999999);
+		GlobalVerifier = GetRandomInt(1, 999999999); // Large integer used to avoid duplicate powerups where possible
 	} else {
 		Format(path, sizeof(path), "scripts/fortress_blast/gift_spots/%s.json", map);
 	}
