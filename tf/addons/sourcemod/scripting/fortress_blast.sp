@@ -1260,7 +1260,7 @@ public Action Timer_BeginTeleporter(Handle timer, int client) {
 		int clip[4];
 		for (int i = 0; i <= 3; i++) {
 			ammo[i] = GetEntProp(client, Prop_Data, "m_iAmmo", 4, i);
-			if(IsValidEntity(GetPlayerWeaponSlot(client, i))){
+			if (IsValidEntity(GetPlayerWeaponSlot(client, i))) {
 				clip[i] = GetEntProp(GetPlayerWeaponSlot(client, i), Prop_Data, "m_iClip1");
 			}
 		}
@@ -1272,7 +1272,7 @@ public Action Timer_BeginTeleporter(Handle timer, int client) {
 		SetEntityHealth(client, preregenhealth);
 		for (int i = 0; i <= 3; i++) {
 			SetEntProp(client, Prop_Data, "m_iAmmo", ammo[i], 4, i);
-			if(IsValidEntity(GetPlayerWeaponSlot(client, i))){
+			if (IsValidEntity(GetPlayerWeaponSlot(client, i))) {
 				SetEntProp(GetPlayerWeaponSlot(client, i), Prop_Data, "m_iClip1", clip[i]);
 			}
 		}
