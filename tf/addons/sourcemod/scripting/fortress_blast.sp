@@ -39,6 +39,7 @@ int SpeedRotationsLeft[MAXPLAYERS + 1] = 80;
 int VictoryTeam = -1;
 int DizzyProgress[MAXPLAYERS + 1] = -1;
 int FrostTouchFrozen[MAXPLAYERS + 1] = 0;
+int GlobalVerifier = 0;
 bool PreviousAttack3[MAXPLAYERS + 1] = false;
 bool MapHasJsonFile = false;
 bool GiftHunt = false;
@@ -775,15 +776,14 @@ public Action Timer_FrostTouchUnfreeze(Handle timer, int client) {
 
 public Action OnStartTouchRespawn(int entity, int other) {
 	if (other > 0 && other <= MaxClients) {
-		if (VictoryTeam == -1 && !GameRules_GetProp("m_bInWaitingForPlayers")) {
-			float coords[3];
-			GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
-			Handle coordskv = CreateKeyValues("coordskv");
-			KvSetFloat(coordskv, "0", coords[0]);
-			KvSetFloat(coordskv, "1", coords[1]);
-			KvSetFloat(coordskv, "2", coords[2]);
-			CreateTimer(10.0, Timer_SpawnPowerAfterDelay, coordskv);
-		}
+		float coords[3];
+		GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
+		Handle coordskv = CreateKeyValues("coordskv");
+		KvSetFloat(coordskv, "0", coords[0]);
+		KvSetFloat(coordskv, "1", coords[1]);
+		KvSetFloat(coordskv, "2", coords[2]);
+		KvSetNum(coordskv, "verifier", GlobalVerifier);
+		CreateTimer(10.0, Timer_SpawnPowerAfterDelay, coordskv);
 		DeletePowerup(entity, other);
 		return Plugin_Continue;
 	}
@@ -818,8 +818,11 @@ public Action Timer_SpawnPowerAfterDelay(Handle timer, any data) {
 	coords[0] = KvGetFloat(coordskv, "0");
 	coords[1] = KvGetFloat(coordskv, "1");
 	coords[2] = KvGetFloat(coordskv, "2");
-	DebugText("Respawning powerup at %f, %f, %f", coords[0], coords[1], coords[2]);
-	SpawnPower(coords, true);
+	int LocalVerifier = KvGetNum(coordskv, "verifier");
+	if(LocalVerifier == GlobalVerifier){
+		DebugText("Respawning powerup at %f, %f, %f", coords[0], coords[1], coords[2]);
+		SpawnPower(coords, true);
+	}
 }
 
 public void CollectedPowerup(int client) {
@@ -1459,6 +1462,7 @@ public void GetPowerupPlacements(bool UsingGiftHunt) {
 	char path[PLATFORM_MAX_PATH + 1];
 	if (!UsingGiftHunt) {
 		Format(path, sizeof(path), "scripts/fortress_blast/powerup_spots/%s.json", map);
+		GlobalVerifier = GetRandomInt(1, 999999999);
 	} else {
 		Format(path, sizeof(path), "scripts/fortress_blast/gift_spots/%s.json", map);
 	}
