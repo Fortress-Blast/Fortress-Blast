@@ -1284,11 +1284,11 @@ public void UsePowerup(int client) {
 		SuperBounceHandle[client] = CreateTimer(5.0, Timer_RemoveSuperBounce, client);
 		ParticleOnPlayer(client, "teleporter_blue_charged_level2", 5.0, 0.0);
 		if (AprilFools()) {
-			if(Gyrocopter[client]){
-				SetEntityGravity(client, 1.5);
-			}
-			else{
-				SetEntityGravity(client, 3.0); // Increase gravity during April Fools, need a way to track Gyrocopter
+			// Increase gravity during April Fools
+			if (!Gyrocopter[client]) {
+				SetEntityGravity(client, 3.0);
+			} else {
+				SetEntityGravity(client, 0.75); 
 			}
 		}
 	} else if (PowerupCollected[client] == 2) {
@@ -1315,7 +1315,7 @@ public void UsePowerup(int client) {
 	} else if (PowerupCollected[client] == 5) {
 		// Gyrocopter - 25% gravity for 5 seconds
 		if (SuperBounce[client] && AprilFools()) {
-			SetEntityGravity(client, 1.5);
+			SetEntityGravity(client, 0.75);
 		} else {
 			SetEntityGravity(client, 0.25);
 		}
@@ -1881,11 +1881,10 @@ public Action Timer_RemoveSuperBounce(Handle timer, int client) {
 	SuperBounceHandle[client] = INVALID_HANDLE;
 	SuperBounce[client] = false;
 	if (IsClientInGame(client)) {
-		if(AprilFools() && Gyrocopter[client]){
+		if (AprilFools() && Gyrocopter[client]) {
 			SetEntityGravity(client, 0.25);
-		}
-		else{
-			SetEntityGravity(client, 1.0); // Need a way to track Gyrocopter
+		} else {
+			SetEntityGravity(client, 1.0);
 		}
 	}
 }
