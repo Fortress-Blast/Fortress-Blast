@@ -49,7 +49,7 @@ int GlobalVerifier = 0;
 bool PreviousAttack3[MAXPLAYERS + 1] = false;
 bool MapHasJsonFile = false;
 bool GiftHunt = false;
-bool UsingPowerup[MAXPLAYERS + 1][NumberOfPowerups + 1] = false; // For active powerup usage, Ultra Powerup is 0
+bool UsingPowerup[MAXPLAYERS + 1][14 + 1]; // For active powerup usage, Ultra Powerup is 0
 bool NegativeDizzy[MAXPLAYERS + 1] = false;
 bool MegaMannVerified[MAXPLAYERS + 1] = false;
 bool GiftHuntAttackDefense = false;
@@ -1542,7 +1542,7 @@ public Action Timer_RespawnPowerup(Handle timer, any data) {
 ==================================================================================================== */
 
 public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3]) {
-	if (ShockAbsorber[victim] || FrostTouchFrozen[victim] == 1 || UltraPowerup[victim]) {
+	if (UsingPowerup[victim][2] || FrostTouchFrozen[victim] == 1 || UsingPowerup[victim][0]) {
 		if (FrostTouchFrozen[victim] == 1) {
 			damage = damage * 0.1;
 			DebugText("%N was in frozen state %d", victim, FrostTouchFrozen[victim]);
@@ -1553,7 +1553,7 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
 		damageForce[1] = 0.0;
 		damageForce[2] = 0.0;
 	}
-	if (SuperBounce[victim] && attacker == 0 && damage < 100.0) {
+	if (UsingPowerup[victim][1] && attacker == 0 && damage < 100.0) {
 		return Plugin_Handled;
 	}
 	return Plugin_Changed;
@@ -1605,7 +1605,7 @@ public void BuildingDamage(int client, const char[] class) {
 public Action OnStartTouchFrozen(int entity, int other) {
 	// Test that using player and touched player are both valid targets
 	if (entity > 0 && entity <= MaxClients && other > 0 && other <= MaxClients && IsClientInGame(entity) && IsClientInGame(other)) {
-		if ((FrostTouch[entity] || UltraPowerup[entity]) && FrostTouchFrozen[other] == 0) {
+		if ((UsingPowerup[entity][9] || UsingPowerup[entity][0]) && FrostTouchFrozen[other] == 0) {
 			float vel[3];
 			GetEntPropVector(other, Prop_Data, "m_vecVelocity", vel);
 			EmitAmbientSound("fortressblast2/frosttouch_freeze.mp3", vel, other);
@@ -1620,7 +1620,7 @@ public Action OnStartTouchFrozen(int entity, int other) {
 			SetEntityMoveType(iRagDoll, MOVETYPE_NONE);
 			ClearTimer(FrostTouchUnfreezeHandle[other]);
 			FrostTouchUnfreezeHandle[other] = CreateTimer(3.0, Timer_FrostTouchUnfreeze, other);
-			FrostTouchFrozen[other] = ((UltraPowerup[entity]) ? 2 : 1);
+			FrostTouchFrozen[other] = ((UsingPowerup[entity][0]) ? 2 : 1);
 			BlockAttacking(other, 3.0);
 		}
 	}
