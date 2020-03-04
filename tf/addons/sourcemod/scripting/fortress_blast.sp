@@ -1191,7 +1191,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 					NegateVector(direction);
 					float multiplier = Pow(distanceScale * 4, 2.0);
 					// Polarities are reversed during April Fools
-					if ((GetEntPropEnt(client, Prop_Data, "m_hActiveWeapon") != GetPlayerWeaponSlot(client, 2) && !AprilFools()) || (GetEntPropEnt(client, Prop_Data, "m_hActiveWeapon") = GetPlayerWeaponSlot(client, 2) && AprilFools())) {
+					if ((GetEntPropEnt(client, Prop_Data, "m_hActiveWeapon") != GetPlayerWeaponSlot(client, 2) && !AprilFools()) || (GetEntPropEnt(client, Prop_Data, "m_hActiveWeapon") == GetPlayerWeaponSlot(client, 2) && AprilFools())) {
 						multiplier = multiplier * -1.25;
 					}
 					direction[0] = direction[0] * multiplier;
@@ -1283,7 +1283,7 @@ public void UsePowerup(int client) {
 		SuperBounceHandle[client] = CreateTimer(5.0, Timer_RemoveSuperBounce, client);
 		ParticleOnPlayer(client, "teleporter_blue_charged_level2", 5.0, 0.0);
 		if (AprilFools()) {
-			SetEntityGravity(client, 2); // Increase gravity during April Fools, need a way to track Gyrocopter
+			SetEntityGravity(client, 2.0); // Increase gravity during April Fools, need a way to track Gyrocopter
 		}		
 	} else if (PowerupCollected[client] == 2) {
 		// Shock Absorber - 75% damage and 100% knockback resistances for 5 seconds
@@ -1387,8 +1387,8 @@ public void UsePowerup(int client) {
 		// Mystery - Random powerup
 		// Has a higher chance of picking Gyrocopter during April Fools
 		float tryGyrocopter = 0.0;
-		if (AprilFools() && PowerupIsEnabled()) {
-			float tryGyrocopter = GetRandomFloat(0.0, 99.99);
+		if (AprilFools() && PowerupIsEnabled(5)) {
+			tryGyrocopter = GetRandomFloat(0.0, 99.99);
 		}
 		if (tryGyrocopter < 75.0) {
 			PowerupCollected[client] = 5;
