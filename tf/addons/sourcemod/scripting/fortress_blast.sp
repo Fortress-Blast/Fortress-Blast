@@ -143,10 +143,10 @@ public void OnPluginStart() {
 	}
 
 	// Hooks
-	HookEvent("teamplay_round_start", teamplay_round_start);
-	HookEvent("teamplay_setup_finished", teamplay_setup_finished);
-	HookEvent("teamplay_round_win", teamplay_round_win);
-	HookEvent("player_death", player_death);
+	HookEvent("teamplay_round_start", Event_RoundStart);
+	HookEvent("teamplay_setup_finished", Event_SetupFinished);
+	HookEvent("teamplay_round_win", Event_RoundWin);
+	HookEvent("player_death", Event_PlayerDeath);
 
 	// Commands
 	RegConsoleCmd("sm_fortressblast", Command_FortressBlast);
@@ -173,7 +173,7 @@ public void OnPluginStart() {
 	sm_fortressblast_drop_teams = CreateConVar("sm_fortressblast_drop_teams", "1", "Teams that will drop powerups on death.");
 	sm_fortressblast_event_xmas = CreateConVar("sm_fortressblast_event_xmas", "1", "How to handle the TF2 Smissmas event.");
 	sm_fortressblast_gifthunt = CreateConVar("sm_fortressblast_gifthunt", "0", "Disables or enables Gift Hunt on maps with Gift Hunt .json files.");
-	sm_fortressblast_gifthunt_bonus = CreateConVar("sm_fortressblsat_gifthunt_multiply", "1", "Whether or not to multiply players' gift collections once they fall behind.");
+	sm_fortressblast_gifthunt_bonus = CreateConVar("sm_fortressblast_gifthunt_bonus", "1", "Whether or not to multiply players' gift collections once they fall behind.");
 	sm_fortressblast_gifthunt_countbots = CreateConVar("sm_fortressblast_gifthunt_countbots", "0", "Disables or enables counting bots as players when increasing the goal.");
 	sm_fortressblast_gifthunt_goal = CreateConVar("sm_fortressblast_gifthunt_goal", "125", "Base number of gifts required to unlock the objective in Gift Hunt.");
 	sm_fortressblast_gifthunt_increment = CreateConVar("sm_fortressblast_gifthunt_increment", "25", "Amount to increase the gift goal per extra group of players.");
@@ -191,7 +191,7 @@ public void OnPluginStart() {
 	GiftText = CreateHudSynchronizer();
 }
 
-/* OnConfigsExecuted()
+/* OnConfigsExecuted() + InsertServerTag()
 ==================================================================================================== */
 
 public void OnConfigsExecuted() {
@@ -215,10 +215,6 @@ public void InsertServerTag(const char[] insertThisTag) {
 			}
 		}
 	}
-}
-
-public void OnGameFrame() {
-	GiftHuntNeutralGoal();
 }
 
 /* OnMapStart()
@@ -323,7 +319,18 @@ public void OnMapStart() {
 	AddFileToDownloadsTable("sound/fortressblast2/gifthunt_goal_enemyteam.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/gifthunt_goal_playerteam.mp3");
 
-	CreateTimer(0.1, MiscTimer, _, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE); // Timer to check gifts and calculate Super Speed and Dizzy Bomb progress
+	CreateTimer(0.1, Timer_MiscTimer, _, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE); // Timer to check gifts and calculate Super Speed and Dizzy Bomb progress
+}
+
+/* Commands
+==================================================================================================== */
+
+public bool AdminCommand(int client) {
+	if (!CheckCommandAccess(client, "", AdminFlagInit()) && !sm_fortressblast_debug.BoolValue) {
+		CPrintToChat(client, "%s {red}You do not have permission to use this command.", MESSAGE_PREFIX);
+		return false;
+	}
+	return true;
 }
 
 public Action Command_FortressBlast(int client, int args) {
@@ -356,6 +363,26 @@ public Action Command_FortressBlast(int client, int args) {
 	Format(url, sizeof(url), "https://fortress-blast.github.io/%s?powerups-enabled=%d&action=%s&gifthunt=%b&ultra=%f", MOTD_VERSION, bitfield, action, sm_fortressblast_gifthunt.BoolValue, sm_fortressblast_ultra_rate.FloatValue);
 	AdvMOTD_ShowMOTDPanel(client, "", url, MOTDPANEL_TYPE_URL, true, true, true, INVALID_FUNCTION);
 	CPrintToChat(client, "%s {haunted}Opening Fortress Blast manual... If nothing happened, open your developer console and {yellow}set cl_disablehtmlmotd to 0{haunted}, then try again.", MESSAGE_PREFIX);
+	return Plugin_Handled;
+}
+
+public Action Command_CoordsJson(int client, int args) {
+	if (client == 0) {
+		PrintToServer("%s Because this command uses the crosshair, it cannot be executed from the server console.", MESSAGE_PREFIX_NO_COLOR);
+		return Plugin_Handled;
+	}
+	float points[3];
+	GetCollisionPoint(client, points);
+	CPrintToChat(client, "{haunted}\"#-x\": \"%d\", \"#-y\": \"%d\", \"#-z\": \"%d\",", RoundFloat(points[0]), RoundFloat(points[1]), RoundFloat(points[2]));
+	return Plugin_Handled;
+}
+
+public Action Command_RespawnPowerups(int client, int args){
+	if (!AdminCommand(client)) {
+		return Plugin_Handled;
+	}
+	RemoveAllPowerups();
+	GetSpawns(false);
 	return Plugin_Handled;
 }
 
@@ -411,7 +438,50 @@ public Action Command_SetPowerup(int client, int args) {
 	return Plugin_Handled;
 }
 
-public Action teamplay_round_start(Event event, const char[] name, bool dontBroadcast) {
+public Action Command_SpawnPowerup(int client, int args) {
+	if (!AdminCommand(client)) {
+		return Plugin_Handled;
+	}
+	if (client == 0) {
+		PrintToServer("%s Because this command uses the crosshair, it cannot be executed from the server console.", MESSAGE_PREFIX_NO_COLOR);
+		return Plugin_Handled;
+	}
+	float points[3];
+	GetCollisionPoint(client, points);
+	char arg1[3];
+	GetCmdArg(1, arg1, sizeof(arg1));
+	SpawnPowerup(points, false, StringToInt(arg1));
+	return Plugin_Handled;
+}
+
+/* Command dependencies
+==================================================================================================== */
+
+stock void GetCollisionPoint(int client, float pos[3]) {
+	float vOrigin[3];
+	float vAngles[3];
+
+	GetClientEyePosition(client, vOrigin);
+	GetClientEyeAngles(client, vAngles);
+
+	Handle trace = TR_TraceRayFilterEx(vOrigin, vAngles, MASK_SOLID, RayType_Infinite, TraceEntityFilterPlayer);
+
+	if (TR_DidHit(trace)) {
+		TR_GetEndPosition(pos, trace);
+		CloseHandle(trace);
+		return;
+	}
+	CloseHandle(trace);
+}
+
+public bool TraceEntityFilterPlayer(int entity, int contentsMask) {
+	return entity > MaxClients;
+}
+
+/* Powerups, Gifts and Respawn Room initialisation
+==================================================================================================== */
+
+public Action Event_RoundStart(Event event, const char[] name, bool dontBroadcast) {
 	char map[80];
 	GetCurrentMap(map, sizeof(map));
 	char path[PLATFORM_MAX_PATH + 1];
@@ -488,7 +558,7 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 			}
 		}
 	}
-	CalculateGiftAmountForPlayers();
+	CalculateGiftGoal();
 	RemoveAllPowerups()
 	for (int entity = 1; entity <= MAX_EDICTS ; entity++) { // Add powerups and replace Mannpower
 		if (IsValidEntity(entity)) {
@@ -501,7 +571,7 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 							float coords[3] = 69.420;
 							GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
 							DebugText("Found Mannpower spawn at %f, %f, %f", coords[0], coords[1], coords[2]);
-							SpawnPower(coords, true);
+							SpawnPowerup(coords, true);
 						}
 						DebugText("Removing entity name %s", classname);
 						RemoveEntity(entity);
@@ -511,7 +581,7 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 		}
 	}
 	if (sm_fortressblast_powerups_roundstart.BoolValue) {
-		GetPowerupPlacements(false);
+		GetSpawns(false);
 	}
 	GiftsCollected[2] = 0;
 	GiftsCollected[3] = 0;
@@ -521,14 +591,139 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 	}
 }
 
-public Action teamplay_setup_finished(Event event, const char[] name, bool dontBroadcast) {
-	if (GiftHuntAttackDefense) {
-		GiftHuntSetup = false;
-		EntFire("team_round_timer", "Pause");
+public void GetSpawns(bool UsingGiftHunt) {
+	if (!UsingGiftHunt && !MapHasJsonFile) {
+		PrintToServer("%s No powerup locations .json file for this map! You can download pre-made files from the official maps repository:", MESSAGE_PREFIX_NO_COLOR);
+		PrintToServer("https://github.com/Fortress-Blast/Fortress-Blast-Maps");
+		return;
+	} else if (UsingGiftHunt && !GiftHunt) {
+		return;
+	}
+	// Get symmetry specifications from locations .json
+	char map[80];
+	GetCurrentMap(map, sizeof(map));
+	char path[PLATFORM_MAX_PATH + 1];
+	if (!UsingGiftHunt) {
+		Format(path, sizeof(path), "scripts/fortress_blast/powerup_spawns/%s.json", map);
+		GlobalVerifier = GetRandomInt(1, 999999999); // Large integer used to avoid duplicate powerups where possible
+	} else {
+		Format(path, sizeof(path), "scripts/fortress_blast/gift_spawns/%s.json", map);
+	}
+	JSONObject handle = JSONObject.FromFile(path);
+	bool flipx = false;
+	bool flipy = false;
+	float centerx = 0.0;
+	float centery = 0.0;
+	char cent[80];
+	if (handle.HasKey("flipx")) {
+		flipx = handle.GetBool("flipx");
+	}
+	if (handle.HasKey("flipy")) {
+		flipy = handle.GetBool("flipy");
+	}
+	if (flipx || flipy) {
+		if (handle.HasKey("centerx")) {
+			handle.GetString("centerx", cent, sizeof(cent));
+			centerx = StringToFloat(cent);
+		}
+		if (handle.HasKey("centery")) {
+			handle.GetString("centery", cent, sizeof(cent));
+			centery = StringToFloat(cent);
+		}
+	}
+	// Iterate through .json file to get coordinates
+	int itemloop = 1;
+	char stringamount[80];
+	IntToString(itemloop, stringamount, sizeof(stringamount));
+	bool spcontinue = true;
+	while (spcontinue) {
+		float coords[3] = 0.001;
+		char query[80];
+		for (int to = 0; to <= 2; to++) {
+			char string[15];
+			query = "";
+			StrCat(query, sizeof(query), stringamount);
+			StrCat(query, sizeof(query), "-");
+			if (to == 0) {
+				StrCat(query, sizeof(query), "x");
+			} else if (to == 1) {
+				StrCat(query, sizeof(query), "y");
+			} else if (to == 2) {
+				StrCat(query, sizeof(query), "z");
+			}
+			if (handle.HasKey(query)) {
+				handle.GetString(query, string, sizeof(string));
+				coords[to] = StringToFloat(string);
+			} else {
+				spcontinue = false;
+			}
+		}
+		if (coords[0] != 0.001) {
+			if (UsingGiftHunt && (GetRandomInt(0, 99) >= sm_fortressblast_gifthunt_rate.IntValue)) {
+				DebugText("Not spawning gift %d because it failed random", itemloop);
+			} else {
+				if (UsingGiftHunt) {
+					coords[2] += 8.0;
+					DebugText("Spawning gift %d at %f, %f, %f", itemloop, coords[0], coords[1], coords[2]);
+					SpawnGift(coords);
+				} else {
+					DebugText("Spawning powerup %d at %f, %f, %f", itemloop, coords[0], coords[1], coords[2]);
+					SpawnPowerup(coords, true);
+				}
+				if (flipx && flipy) {
+					if (coords[0] != centerx || coords[1] != centery) {
+						coords[0] = coords[0] - ((coords[0] - centerx) * 2);
+						coords[1] = coords[1] - ((coords[1] - centery) * 2);
+						DebugText("Flipping both axes, new entity created at %f, %f, %f", coords[0], coords[1], coords[2]);
+						if (UsingGiftHunt) {
+							SpawnGift(coords);
+						} else {
+							SpawnPowerup(coords, true);
+						}
+					} else {
+						DebugText("Entity is at the center and will not be flipped");
+   	 				}
+				} else if (flipx) {
+					if (coords[0] != centerx) {
+						coords[0] = coords[0] - ((coords[0] - centerx) * 2);
+						DebugText("Flipping X axis, new entity created at %f, %f, %f", coords[0], coords[1], coords[2]);
+						if (UsingGiftHunt) {
+							SpawnGift(coords);
+						} else {
+							SpawnPowerup(coords, true);
+						}
+					} else {
+						DebugText("Entity is at the X axis center and will not be flipped");
+    				}
+				} else if (flipy) {
+					if (coords[1] != centery) {
+						coords[1] = coords[1] - ((coords[1] - centery) * 2);
+						DebugText("Flipping Y axis, new entity created at %f, %f, %f", coords[0], coords[1], coords[2]);
+						if (UsingGiftHunt) {
+							SpawnGift(coords);
+						} else {
+							SpawnPowerup(coords, true);
+						}
+					} else {
+						DebugText("Entity is at the Y axis center and will not be flipped");
+					}
+				}
+			}
+			itemloop++;
+			IntToString(itemloop, stringamount, sizeof(stringamount));
+		}
+	}
+	return;
+}
+
+public void RemoveAllPowerups() {
+	int entity;
+	while ((entity = FindEntityByClassname(entity, "tf_halloween_pickup")) != -1) {
+		RemoveEntity(entity);
 	}
 }
 
-public void CalculateGiftAmountForPlayers() {
+public void CalculateGiftGoal() {
 	GiftGoal = sm_fortressblast_gifthunt_goal.IntValue;
 	DebugText("Base gift goal is %d", GiftGoal);
 	int steps = RoundToFloor((PlayersAmount - 1) / sm_fortressblast_gifthunt_players.FloatValue);
@@ -538,6 +733,16 @@ public void CalculateGiftAmountForPlayers() {
 	GiftGoal += (sm_fortressblast_gifthunt_increment.IntValue * steps);
 	DebugText("Calculated gift goal is %d", GiftGoal);
 }
+
+public Action Event_SetupFinished(Event event, const char[] name, bool dontBroadcast) {
+	if (GiftHuntAttackDefense) {
+		GiftHuntSetup = false;
+		EntFire("team_round_timer", "Pause");
+	}
+}
+
+/* OnEntityDestroyed()
+==================================================================================================== */
 
 public void OnEntityDestroyed(int entity) {
 	if (IsValidEntity(entity) && entity > 0) {
@@ -559,9 +764,13 @@ public void OnEntityDestroyed(int entity) {
 	}
 }
 
-public Action MiscTimer(Handle timer, any data) {
+/* Timer_MiscTimer() + NumberOfActiveGifts()
+Handles multiple plugin features including Gift Hunt, Super Speed and Dizzy Bomb
+==================================================================================================== */
+
+public Action Timer_MiscTimer(Handle timer, any data) {
 	if (NumberOfActiveGifts() == 0 && !GiftHuntSetup && (GiftsCollected[2] < GiftGoal || GiftsCollected[3] < GiftGoal)) {
-		GetPowerupPlacements(true);
+		GetSpawns(true);
 	}
 	if (GiftHuntIncrementTime < GetGameTime() && (GiftsCollected[2] >= GiftGoal || GiftsCollected[3] >= GiftGoal) && sm_fortressblast_gifthunt_bonus.BoolValue) {
 		if (GiftsCollected[3] < GiftGoal && GiftMultiplier[3] < 5) {
@@ -618,6 +827,9 @@ public int NumberOfActiveGifts() {
 	return totalgifts;
 }
 
+/* Timer_DisplayIntro()
+==================================================================================================== */
+
 public Action Timer_DisplayIntro(Handle timer, int client) {
 	if (IsClientInGame(client)) { // Required because player might disconnect before this fires
 		CPrintToChat(client, "%s {haunted}This server is running {yellow}Fortress Blast v%s!", MESSAGE_PREFIX, PLUGIN_VERSION);
@@ -625,12 +837,15 @@ public Action Timer_DisplayIntro(Handle timer, int client) {
 	}
 }
 
-public Action teamplay_round_win(Event event, const char[] name, bool dontBroadcast) {
+/* Events
+==================================================================================================== */
+
+public Action Event_RoundWin(Event event, const char[] name, bool dontBroadcast) {
 	VictoryTeam = event.GetInt("team");
 	DebugText("Team #%d has won the round", event.GetInt("team"));
 }
 
-public Action player_death(Event event, const char[] name, bool dontBroadcast) {
+public Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast) {
 	PowerupCollected[GetClientOfUserId(event.GetInt("userid"))] = 0;
 	// Is dropping powerups enabled
 	if (sm_fortressblast_drop.IntValue == 2 || (sm_fortressblast_drop.BoolValue && !MapHasJsonFile)) {
@@ -641,7 +856,7 @@ public Action player_death(Event event, const char[] name, bool dontBroadcast) {
 			DebugText("Dropping powerup due to player death");
 			float coords[3];
 			GetEntPropVector(GetClientOfUserId(event.GetInt("userid")), Prop_Send, "m_vecOrigin", coords);
-			int entity = SpawnPower(coords, false);
+			int entity = SpawnPowerup(coords, false);
 			ClearTimer(DestroyPowerupHandle[entity]);
 			DestroyPowerupHandle[entity] = CreateTimer(15.0, Timer_DestroyPowerupTime, entity);
 		}
@@ -661,7 +876,10 @@ public void OnClientPutInServer(int client) {
 	DizzyProgress[client] = -1;
 }
 
-stock int SpawnPower(float location[3], bool respawn, int id = 0) {
+/* SpawnPowerup() + SpawnGift()
+==================================================================================================== */
+
+stock int SpawnPowerup(float location[3], bool respawn, int id = 0) {
 	int entity = CreateEntityByName("tf_halloween_pickup");
 	DispatchKeyValue(entity, "powerup_model", "models/fortressblast/pickups/fb_pickup.mdl");
 	if (IsValidEdict(entity)) {
@@ -753,96 +971,36 @@ public int SpawnGift(float location[3]) {
 	}
 }
 
-public Action OnStartTouchFrozen(int entity, int other) {
-	// Test that using player and touched player are both valid targets
-	if (entity > 0 && entity <= MaxClients && other > 0 && other <= MaxClients && IsClientInGame(entity) && IsClientInGame(other)) {
-		if ((FrostTouch[entity] || UltraPowerup[entity]) && FrostTouchFrozen[other] == 0) {
-			float vel[3];
-			GetEntPropVector(other, Prop_Data, "m_vecVelocity", vel);
-			EmitAmbientSound("fortressblast2/frosttouch_freeze.mp3", vel, other);
-			SetEntityMoveType(other, MOVETYPE_NONE);
-			ColorizePlayer(other, {255, 255, 255, 0});
+/* Enabled Powerups
+==================================================================================================== */
 
-			int iRagDoll = CreateRagdoll(other);
-			if (iRagDoll > MaxClients && IsValidEntity(iRagDoll)) {
-				SetClientViewEntity(other, iRagDoll);
-				SetThirdPerson(other, true);
-			}
-			SetEntityMoveType(iRagDoll, MOVETYPE_NONE);
-			ClearTimer(FrostTouchUnfreezeHandle[other]);
-			FrostTouchUnfreezeHandle[other] = CreateTimer(3.0, Timer_FrostTouchUnfreeze, other);
-			FrostTouchFrozen[other] = ((UltraPowerup[entity]) ? 2 : 1);
-			BlockAttacking(other, 3.0);
-		}
+public bool PowerupIsEnabled(int id) {
+	int max = (Bitfieldify(NumberOfPowerups) * 2) - 1;
+	int bitfield = sm_fortressblast_powerups.IntValue;
+	if (bitfield == -1) {
+		return true; // All powerups enabled
+	} else if (bitfield < 1 || bitfield > max) {
+		PrintToServer("%s Your powerup whitelist ConVar is out of range. As a fallback, all powerups are allowed.", MESSAGE_PREFIX_NO_COLOR);
+		return true;
+	} else if (bitfield == 512) {
+		PrintToServer("%s Your powerup whitelist ConVar is set to Mystery only. Mystery requires at least one other powerup to work and cannot be used on its own. As a fallback, all powerups are allowed.", MESSAGE_PREFIX_NO_COLOR);
+		return true;
+	} else if (bitfield & Bitfieldify(id)) {
+		return true; // return bitfield & Bitfieldify(id) doesn't work
 	}
+	return false;
 }
 
-public Action Timer_FrostTouchUnfreeze(Handle timer, int client) {
-	FrostTouchUnfreezeHandle[client] = INVALID_HANDLE;
-	float vel[3];
-	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel);
-	if (IsPlayerAlive(client)) {
-		EmitAmbientSound("fortressblast2/frosttouch_unfreeze.mp3", vel, client);
+public int Bitfieldify(int bitter) {
+	int num = 1;
+	for (int id = 1; id <= bitter ; id++) {
+		num = num * 2;
 	}
-	SetClientViewEntity(client, client);
-	SetEntityMoveType(client, MOVETYPE_WALK);
-	ColorizePlayer(client, {255, 255, 255, 255});
-	SetThirdPerson(client, false);
-	FrostTouchFrozen[client] = 0;
+	return (num / 2);
 }
 
-public Action OnStartTouchRespawn(int entity, int other) {
-	if (other > 0 && other <= MaxClients) {
-		float coords[3];
-		GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
-		Handle coordskv = CreateKeyValues("coordskv");
-		KvSetFloat(coordskv, "0", coords[0]);
-		KvSetFloat(coordskv, "1", coords[1]);
-		KvSetFloat(coordskv, "2", coords[2]);
-		KvSetNum(coordskv, "verifier", GlobalVerifier);
-		CreateTimer(10.0, Timer_SpawnPowerAfterDelay, coordskv);
-		DeletePowerup(entity, other);
-		return Plugin_Continue;
-	}
-	return Plugin_Continue;
-}
-
-public Action OnStartTouchDontRespawn(int entity, int other) {
-	DeletePowerup(entity, other);
-}
-
-public void DeletePowerup(int entity, int other) {
-	RemoveEntity(entity);
-	if (PowerupID[entity] == 0) {
-		CollectedGift(other);
-		return;
-	}
-	PowerupCollected[other] = PowerupID[entity];
-	DebugText("%N has collected powerup ID %d", other, PowerupCollected[other]);
-	CollectedPowerup(other);
-}
-
-public Action Timer_BotUsePowerup(Handle timer, int client) {
-	if (IsClientInGame(client)) {
-		DebugText("Forcing bot %N to use powerup ID %d", client, PowerupCollected[client]);
-		UsePower(client);
-	}
-}
-
-public Action Timer_SpawnPowerAfterDelay(Handle timer, any data) {
-	float coords[3];
-	Handle coordskv = data;
-	coords[0] = KvGetFloat(coordskv, "0");
-	coords[1] = KvGetFloat(coordskv, "1");
-	coords[2] = KvGetFloat(coordskv, "2");
-	int LocalVerifier = KvGetNum(coordskv, "verifier");
-	// Only respawn powerup if it has an ID equal to the previously placed one
-	if (LocalVerifier == GlobalVerifier) {
-		DebugText("Respawning powerup at %f, %f, %f", coords[0], coords[1], coords[2]);
-		EmitAmbientSound("items/spawn_item.wav", coords);
-		SpawnPower(coords, true);
-	}
-}
+/* CollectedPowerup() + Timer_BotUsePowerup()
+==================================================================================================== */
 
 public void CollectedPowerup(int client) {
 	float vel[3];
@@ -894,18 +1052,82 @@ public void CollectedPowerup(int client) {
 	}
 }
 
+public Action Timer_BotUsePowerup(Handle timer, int client) {
+	if (IsClientInGame(client)) {
+		DebugText("Forcing bot %N to use powerup ID %d", client, PowerupCollected[client]);
+		UsePowerup(client);
+	}
+}
+
+/* CollectedGift()
+==================================================================================================== */
+
+public void CollectedGift(int client) {
+	int flag;
+	DebugText("%N has collected a gift", client);
+	float vel[3];
+	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel);
+	EmitAmbientSound("fortressblast2/gifthunt_gift_pickup.mp3", vel, client);
+	int team = GetClientTeam(client);
+	GiftsCollected[team] = GiftsCollected[team] + GiftMultiplier[team];
+	// A team has reached the gift goal
+	if (GiftsCollected[team] >= GiftGoal && GiftsCollected[team] < (GiftGoal + GiftMultiplier[team])) {
+		GiftHuntIncrementTime = GetGameTime() + 60.0;
+		if (team == 2) {
+			GiftMultiplier[2] = 1;
+			PrintCenterTextAll("RED team has collected the required number of gifts!");
+			DebugText("RED team has collected the required number of gifts", client);
+			flag = 0;
+			EntFire("trigger_capture_area", "SetTeamCanCap", "2 1"); // Allow capturing control points
+			// Allow collecting enemy intelligences
+			while ((flag = FindEntityByClassname(flag, "item_teamflag")) != -1) {
+				if (GetEntProp(flag, Prop_Send, "m_iTeamNum") == 3) {
+					AcceptEntityInput(flag, "Enable");
+				}
+			}
+			if (GiftHuntAttackDefense) {
+				EntFire("team_round_timer", "Resume");
+			}
+		} else if (team == 3) {
+			GiftMultiplier[3] = 1;
+			PrintCenterTextAll("BLU team has collected the required number of gifts!");
+			DebugText("BLU team has collected the required number of gifts", client);
+			flag = 0;
+			EntFire("trigger_capture_area", "SetTeamCanCap", "3 1"); // Allow capturing control points
+			// Allow collecting enemy intelligences
+			while ((flag = FindEntityByClassname(flag, "item_teamflag")) != -1) {
+				if (GetEntProp(flag, Prop_Send, "m_iTeamNum") == 2) {
+					AcceptEntityInput(flag, "Enable");
+				}
+			}
+		}
+		for (int client2 = 1 ; client2 <= MaxClients ; client2++) {
+			if (IsClientInGame(client2)) {
+				if (GetClientTeam(client2) == team) {
+					EmitSoundToClient(client2, "fortressblast2/gifthunt_goal_playerteam.mp3", client2);
+				} else {
+					EmitSoundToClient(client2, "fortressblast2/gifthunt_goal_enemyteam.mp3", client2);
+				}
+			}
+		}
+	}
+}
+
+/* OnPlayerRunCmd() + BlockPowerup()
+==================================================================================================== */
+
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float ang[3], int &weapon) {
-	float coords[3] = 69.420;
+	float coords[3] = 0.0; // Placeholder value
 	GetEntPropVector(client, Prop_Send, "m_vecOrigin", coords);
 	if (TimeTravel[client]) {
 		SetEntPropFloat(client, Prop_Send, "m_flMaxspeed", 520.0);
 	}
-	if (buttons & 33554432 && (!PreviousAttack3[client]) && StringButtonInt() != 33554432) {
+	if (buttons & 33554432 && (!PreviousAttack3[client]) && ActionInit() != 33554432) {
 		char button[40];
 		sm_fortressblast_action.GetString(button, sizeof(button))
 		CPrintToChat(client, "%s {red}Special attack is currently disabled on this server. You are required to {yellow}perform the '%s' action to use a powerup.", MESSAGE_PREFIX, button);
-	} else if (buttons & StringButtonInt() && !BlockPowerup(client)) {
-		UsePower(client);
+	} else if (buttons & ActionInit() && !BlockPowerup(client)) {
+		UsePowerup(client);
 	}
 	float vel2[3];
 	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel2);
@@ -977,25 +1199,43 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	}
 }
 
-public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3]) {
-	if (ShockAbsorber[victim] || FrostTouchFrozen[victim] == 1 || UltraPowerup[victim]) {
-		if (FrostTouchFrozen[victim] == 1) {
-			damage = damage * 0.1;
-			DebugText("%N was in frozen state %d", victim, FrostTouchFrozen[victim]);
-		} else {
-			damage = damage * 0.25;
+public bool BlockPowerup(int client) {
+	// Player is dead
+	if (!IsPlayerAlive(client)) {
+		return true;
+	// Player is frozen
+	} else if (FrostTouchFrozen[client] != 0) {
+		return true;
+	// Player is in a kart or is taunting
+	} else if (TF2_IsPlayerInCondition(client, TFCond_HalloweenKart) || TF2_IsPlayerInCondition(client, TFCond_Taunting)) {
+		return true;
+	// Player lost or is in a stalemate
+	} else if ((VictoryTeam != -1 && VictoryTeam != GetClientTeam(client))) {
+		return true;
+	// Mega Mann pre-stuck checking
+	} else if (PowerupCollected[client] == 8 && !MegaMann[client]) {
+		SetVariantString("1.75 0");
+		AcceptEntityInput(client, "SetModelScale");
+		float coords[3] = 69.420;
+		GetEntPropVector(client, Prop_Send, "m_vecOrigin", coords);
+		coords[2] += 16.0;
+		TeleportEntity(client, coords, NULL_VECTOR, NULL_VECTOR);
+		bool stuck = IsEntityStuck(client);
+		coords[2] -= 16.0;
+		TeleportEntity(client, coords, NULL_VECTOR, NULL_VECTOR);
+		SetVariantString("1 0");
+		AcceptEntityInput(client, "SetModelScale");
+		if (stuck) {
+			return true;
 		}
-		damageForce[0] = 0.0;
-		damageForce[1] = 0.0;
-		damageForce[2] = 0.0;
 	}
-	if (SuperBounce[victim] && attacker == 0 && damage < 100.0) {
-		return Plugin_Handled;
-	}
-	return Plugin_Changed;
+	return false;
 }
 
-public void UsePower(int client) {
+/* UsePowerup()
+==================================================================================================== */
+
+public void UsePowerup(int client) {
 	float vel[3];
 	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel);
 	if (PowerupCollected[client] == -1) {
@@ -1023,10 +1263,10 @@ public void UsePower(int client) {
 		EmitAmbientSound("fortressblast2/ultrapowerup_use.mp3", vel, client);
 		// Spam of Vaccinator particles
 		float timeport = 0.1;
-		PowerupParticle(client, "medic_resist_bullet", 0.2, 0.0);
+		ParticleOnPlayer(client, "medic_resist_bullet", 0.2, 0.0);
 		for (int timepoint = 0 ; timepoint <= 50 ; timepoint++) {
-			CreateTimer(timeport, MedicResistFire, client);
-			CreateTimer((timeport + 0.1), MedicResistBullet, client);
+			CreateTimer(timeport, UltraParticleRepeaterFire, client);
+			CreateTimer((timeport + 0.1), UltraParticleRepeaterBullet, client);
 			timeport = timeport + 0.2;
 		}
 	} else if (PowerupCollected[client] == 1) {
@@ -1036,14 +1276,14 @@ public void UsePower(int client) {
 		SuperBounce[client] = true;
 		ClearTimer(SuperBounceHandle[client]);
 		SuperBounceHandle[client] = CreateTimer(5.0, Timer_RemoveSuperBounce, client);
-		PowerupParticle(client, "teleporter_blue_charged_level2", 5.0, 0.0);
+		ParticleOnPlayer(client, "teleporter_blue_charged_level2", 5.0, 0.0);
 	} else if (PowerupCollected[client] == 2) {
 		// Shock Absorber - 75% damage and 100% knockback resistances for 5 seconds
 		ShockAbsorber[client] = true;
 		EmitAmbientSound("fortressblast2/shockabsorber_use.mp3", vel, client);
 		ClearTimer(ShockAbsorberHandle[client]);
 		ShockAbsorberHandle[client] = CreateTimer(5.0, Timer_RemoveShockAbsorb, client);
-		PowerupParticle(client, "teleporter_red_charged_level2", 5.0, 0.0);
+		ParticleOnPlayer(client, "teleporter_red_charged_level2", 5.0, 0.0);
 	} else if (PowerupCollected[client] == 3) {
 		// Super Speed - Increased speed, gradually wears off over 10 seconds
 		OldSpeed[client] = GetEntPropFloat(client, Prop_Send, "m_flMaxspeed");
@@ -1075,10 +1315,10 @@ public void UsePower(int client) {
 		EmitAmbientSound("fortressblast2/timetravel_use_3sec.mp3", vel, client);
 	} else if (PowerupCollected[client] == 7) {
 		// Blast - Create explosion at user
-		PowerupParticle(client, "rd_robot_explosion", 1.0, 0.0);
+		ParticleOnPlayer(client, "rd_robot_explosion", 1.0, 0.0);
 		EmitAmbientSound("fortressblast2/blast_use.mp3", vel, client);
 		if (Smissmas()) {
-			PowerupParticle(client, "xmas_ornament_glitter_alt", 2.0, 0.0);
+			ParticleOnPlayer(client, "xmas_ornament_glitter_alt", 2.0, 0.0);
 			EmitAmbientSound("misc/jingle_bells/jingle_bells_nm_02.wav", vel, client);
 		}
 		TF2_RemoveCondition(client, TFCond_StealthedUserBuffFade);
@@ -1130,7 +1370,7 @@ public void UsePower(int client) {
 		ClearTimer(FrostTouchHandle[client]);
 		FrostTouchHandle[client] = CreateTimer(8.0, Timer_RemoveFrostTouch, client);
 		FrostTouch[client] = true;
-		PowerupParticle(client, "smoke_rocket_steam", 8.0, 32.0);
+		ParticleOnPlayer(client, "smoke_rocket_steam", 8.0, 32.0);
 	} else if (PowerupCollected[client] == 10) {
 		// Mystery - Random powerup
 		int mysrand = 10;
@@ -1138,13 +1378,13 @@ public void UsePower(int client) {
 			mysrand = GetRandomInt(1, NumberOfPowerups);
 		}
 		PowerupCollected[client] = mysrand;
-		UsePower(client);
+		UsePowerup(client);
 	} else if (PowerupCollected[client] == 11) {
 		// Teleportation - Teleport to random active Engineer exit teleport or spawn
 		ClearTimer(TeleportationHandle[client]);
 		TeleportationHandle[client] = CreateTimer(0.5, Timer_BeginTeleporter, client);
 		EmitAmbientSound("fortressblast2/teleportation_use.mp3", vel, client);
-		PowerupParticle(client, "teleported_flash", 0.5, 0.0); // Particle on using powerup
+		ParticleOnPlayer(client, "teleported_flash", 0.5, 0.0); // Particle on using powerup
 		int clients[2];
 		clients[0] = client;
 		int duration = 255;
@@ -1177,15 +1417,15 @@ public void UsePower(int client) {
 		MagnetismHandle[client] = CreateTimer(5.0, Timer_RemoveMagnetism, client);
 		// Repeatedly produce Magnetism particle
 		float timeport = 0.1;
-		PowerupParticle(client, "ping_circle", 0.5, 0.0);
+		ParticleOnPlayer(client, "ping_circle", 0.5, 0.0);
 		for (int timepoint = 0 ; timepoint <= 50 ; timepoint++) {
-			CreateTimer(timeport, RepeatPing, client);
+			CreateTimer(timeport, MagnetismParticleRepeater, client);
 			timeport = timeport + 0.1;
 		}
 	} else if (PowerupCollected[client] == 13) {
 		// Effect Burst - Afflict enemies with one of four random status effects
 		EmitAmbientSound("fortressblast2/effectburst_use.mp3", vel, client);
-		PowerupParticle(client, "merasmus_dazed_explosion", 1.0, 0.0);
+		ParticleOnPlayer(client, "merasmus_dazed_explosion", 1.0, 0.0);
 		float pos1[3];
 		GetClientAbsOrigin(client, pos1);
 		for (int client2 = 1 ; client2 <= MaxClients ; client2++) {
@@ -1222,7 +1462,7 @@ public void UsePower(int client) {
 					DizzyProgress[client2] = 0;
 					NegativeDizzy[client2] = (GetRandomInt(0, 1) == 0); // Randomly decide which direction dizziness shoudl start in
 					EmitSoundToClient(client2, "fortressblast2/dizzybomb_dizzy.mp3", client2);
-					PowerupParticle(client2, "conc_stars", sm_fortressblast_dizzy_length.FloatValue, 80.0);
+					ParticleOnPlayer(client2, "conc_stars", sm_fortressblast_dizzy_length.FloatValue, 80.0);
 				}
 			}
 		}
@@ -1230,34 +1470,94 @@ public void UsePower(int client) {
 	PowerupCollected[client] = 0;
 }
 
-public Action RepeatPing(Handle timer, int client) {
+/* Deleting and Respawning Powerups and Gifts
+==================================================================================================== */
+
+public Action OnStartTouchRespawn(int entity, int other) {
+	if (other > 0 && other <= MaxClients) {
+		float coords[3];
+		GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
+		Handle coordskv = CreateKeyValues("coordskv");
+		KvSetFloat(coordskv, "0", coords[0]);
+		KvSetFloat(coordskv, "1", coords[1]);
+		KvSetFloat(coordskv, "2", coords[2]);
+		KvSetNum(coordskv, "verifier", GlobalVerifier);
+		CreateTimer(10.0, Timer_RespawnPowerup, coordskv);
+		DeletePowerup(entity, other);
+		return Plugin_Continue;
+	}
+	return Plugin_Continue;
+}
+
+public Action OnStartTouchDontRespawn(int entity, int other) {
+	DeletePowerup(entity, other);
+}
+
+public void DeletePowerup(int entity, int other) {
+	RemoveEntity(entity);
+	if (PowerupID[entity] == 0) {
+		CollectedGift(other);
+		return;
+	}
+	PowerupCollected[other] = PowerupID[entity];
+	DebugText("%N has collected powerup ID %d", other, PowerupCollected[other]);
+	CollectedPowerup(other);
+}
+
+public Action Timer_RespawnPowerup(Handle timer, any data) {
+	float coords[3];
+	Handle coordskv = data;
+	coords[0] = KvGetFloat(coordskv, "0");
+	coords[1] = KvGetFloat(coordskv, "1");
+	coords[2] = KvGetFloat(coordskv, "2");
+	int LocalVerifier = KvGetNum(coordskv, "verifier");
+	// Only respawn powerup if it has an ID equal to the previously placed one
+	if (LocalVerifier == GlobalVerifier) {
+		DebugText("Respawning powerup at %f, %f, %f", coords[0], coords[1], coords[2]);
+		EmitAmbientSound("items/spawn_item.wav", coords);
+		SpawnPowerup(coords, true);
+	}
+}
+
+/* OnTakeDamage()
+==================================================================================================== */
+
+public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3]) {
+	if (ShockAbsorber[victim] || FrostTouchFrozen[victim] == 1 || UltraPowerup[victim]) {
+		if (FrostTouchFrozen[victim] == 1) {
+			damage = damage * 0.1;
+			DebugText("%N was in frozen state %d", victim, FrostTouchFrozen[victim]);
+		} else {
+			damage = damage * 0.25;
+		}
+		damageForce[0] = 0.0;
+		damageForce[1] = 0.0;
+		damageForce[2] = 0.0;
+	}
+	if (SuperBounce[victim] && attacker == 0 && damage < 100.0) {
+		return Plugin_Handled;
+	}
+	return Plugin_Changed;
+}
+
+/* Particle Repeaters
+==================================================================================================== */
+
+public Action MagnetismParticleRepeater(Handle timer, int client) {
 	if (IsClientInGame(client) && IsPlayerAlive(client) && Magnetism[client]) {
-		PowerupParticle(client, "ping_circle", 0.5, 0.0);
+		ParticleOnPlayer(client, "ping_circle", 0.5, 0.0);
 	}
 }
 
-public Action MedicResistFire(Handle timer, int client) {
+public Action UltraParticleRepeaterFire(Handle timer, int client) {
 	if (IsClientInGame(client) && IsPlayerAlive(client) && UltraPowerup[client]) {
-		PowerupParticle(client, "medic_resist_fire", 0.2, 0.0);
+		ParticleOnPlayer(client, "medic_resist_fire", 0.2, 0.0);
 	}
 }
 
-public Action MedicResistBullet(Handle timer, int client) {
+public Action UltraParticleRepeaterBullet(Handle timer, int client) {
 	if (IsClientInGame(client) && IsPlayerAlive(client) && UltraPowerup[client]) {
-		PowerupParticle(client, "medic_resist_bullet", 0.2, 0.0);
-	}
-}
-
-public Action Timer_RemoveMagnetism(Handle timer, int client) {
-	MagnetismHandle[client] = INVALID_HANDLE;
-	Magnetism[client] = false;
-}
-
-public Action Timer_RemoveUltraPowerup(Handle timer, int client) {
-	UltraPowerupHandle[client] = INVALID_HANDLE;
-	UltraPowerup[client] = false;
-	if (GetClientHealth(client) > GetPlayerMaxHealth(client)) {
-		SetEntityHealth(client, GetPlayerMaxHealth(client));
+		ParticleOnPlayer(client, "medic_resist_bullet", 0.2, 0.0);
 	}
 }
 
@@ -1279,6 +1579,165 @@ public void BuildingDamage(int client, const char[] class) {
 		}
 	}
 }
+
+/* Frost Touch
+==================================================================================================== */
+
+public Action OnStartTouchFrozen(int entity, int other) {
+	// Test that using player and touched player are both valid targets
+	if (entity > 0 && entity <= MaxClients && other > 0 && other <= MaxClients && IsClientInGame(entity) && IsClientInGame(other)) {
+		if ((FrostTouch[entity] || UltraPowerup[entity]) && FrostTouchFrozen[other] == 0) {
+			float vel[3];
+			GetEntPropVector(other, Prop_Data, "m_vecVelocity", vel);
+			EmitAmbientSound("fortressblast2/frosttouch_freeze.mp3", vel, other);
+			SetEntityMoveType(other, MOVETYPE_NONE);
+			ColorizePlayer(other, {255, 255, 255, 0});
+
+			int iRagDoll = CreateRagdoll(other);
+			if (iRagDoll > MaxClients && IsValidEntity(iRagDoll)) {
+				SetClientViewEntity(other, iRagDoll);
+				SetThirdPerson(other, true);
+			}
+			SetEntityMoveType(iRagDoll, MOVETYPE_NONE);
+			ClearTimer(FrostTouchUnfreezeHandle[other]);
+			FrostTouchUnfreezeHandle[other] = CreateTimer(3.0, Timer_FrostTouchUnfreeze, other);
+			FrostTouchFrozen[other] = ((UltraPowerup[entity]) ? 2 : 1);
+			BlockAttacking(other, 3.0);
+		}
+	}
+}
+
+public Action Timer_FrostTouchUnfreeze(Handle timer, int client) {
+	FrostTouchUnfreezeHandle[client] = INVALID_HANDLE;
+	float vel[3];
+	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel);
+	if (IsPlayerAlive(client)) {
+		EmitAmbientSound("fortressblast2/frosttouch_unfreeze.mp3", vel, client);
+	}
+	SetClientViewEntity(client, client);
+	SetEntityMoveType(client, MOVETYPE_WALK);
+	ColorizePlayer(client, {255, 255, 255, 255});
+	SetThirdPerson(client, false);
+	FrostTouchFrozen[client] = 0;
+}
+
+stock void ColorizePlayer(int client, int iColor[4]) { // Roll the Dice function with new syntax
+	SetEntityColor(client, iColor);
+	for (int i = 0; i < 3; i++) {
+		int iWeapon = GetPlayerWeaponSlot(client, i);
+		if (iWeapon > MaxClients && IsValidEntity(iWeapon)) {
+			SetEntityColor(iWeapon, iColor);
+		}
+	}
+	char strClass[20];
+	for (int i = MaxClients + 1; i < GetMaxEntities(); i++) {
+		if (IsValidEntity(i)) {
+			GetEdictClassname(i, strClass, sizeof(strClass));
+			if ((strncmp(strClass, "tf_wearable", 11) == 0 || strncmp(strClass, "tf_powerup", 10) == 0) && GetEntPropEnt(i, Prop_Send, "m_hOwnerEntity") == client) {
+				SetEntityColor(i, iColor);
+			}
+		}
+	}
+	int iWeapon = GetEntPropEnt(client, Prop_Send, "m_hDisguiseWeapon");
+	if (iWeapon > MaxClients && IsValidEntity(iWeapon)) {
+		SetEntityColor(iWeapon, iColor);
+	}
+	TF2_RemoveCondition(client, TFCond_DemoBuff);
+}
+
+public int CreateRagdoll(int client) { // Roll the Dice function with new syntax
+	int iRag = CreateEntityByName("tf_ragdoll");
+	if (iRag > MaxClients && IsValidEntity(iRag)) {
+		float flPos[3];
+		float flAng[3];
+		float flVel[3];
+		GetClientAbsOrigin(client, flPos);
+		GetClientAbsAngles(client, flAng);
+		TeleportEntity(iRag, flPos, flAng, flVel);
+		SetEntProp(iRag, Prop_Send, "m_iPlayerIndex", client);
+		SetEntProp(iRag, Prop_Send, "m_bIceRagdoll", 1);
+		SetEntProp(iRag, Prop_Send, "m_iTeam", GetClientTeam(client));
+		SetEntProp(iRag, Prop_Send, "m_iClass", view_as<int>(TF2_GetPlayerClass(client)));
+		SetEntProp(iRag, Prop_Send, "m_bOnGround", 1);
+
+		// Fix oddly shaped statues
+		SetEntPropFloat(iRag, Prop_Send, "m_flHeadScale", GetEntPropFloat(client, Prop_Send, "m_flHeadScale"));
+		SetEntPropFloat(iRag, Prop_Send, "m_flTorsoScale", GetEntPropFloat(client, Prop_Send, "m_flTorsoScale"));
+		SetEntPropFloat(iRag, Prop_Send, "m_flHandScale", GetEntPropFloat(client, Prop_Send, "m_flHandScale"));
+
+		SetEntityMoveType(iRag, MOVETYPE_NONE);
+		DispatchSpawn(iRag);
+		ActivateEntity(iRag);
+		return iRag;
+	}
+	return 0;
+}
+
+stock void SetEntityColor(int iEntity, int iColor[4]) { // Roll the Dice function with new syntax
+	SetEntityRenderMode(iEntity, RENDER_TRANSCOLOR);
+	SetEntityRenderColor(iEntity, iColor[0], iColor[1], iColor[2], iColor[3]);
+}
+
+/* SetThirdPerson()
+Roll the Dice function with new syntax
+==================================================================================================== */
+
+public void SetThirdPerson(int client, bool bEnabled) {
+	if (bEnabled) {
+		SetVariantInt(1);
+	} else {
+		SetVariantInt(0);
+	}
+	AcceptEntityInput(client, "SetForcedTauntCam");
+}
+
+/* Mega Mann dependencies + OnTouchRespawnRoom()
+==================================================================================================== */
+
+stock int GetPlayerMaxHealth(int client) {
+	return GetEntProp(GetPlayerResourceEntity(), Prop_Send, "m_iMaxHealth", _, client);
+}
+
+public Action TF2_OnPlayerTeleport(int client, int teleporter, bool& result) {
+	if (MegaMann[client]) {
+		result = false; // Prevent players with Mega Mann from taking teleporters
+	}
+	return Plugin_Changed;
+}
+
+public bool IsEntityStuck(int iEntity) { // Roll the Dice function with new syntax
+	float flOrigin[3];
+	float flMins[3];
+	float flMaxs[3];
+	GetEntPropVector(iEntity, Prop_Send, "m_vecOrigin", flOrigin);
+	GetEntPropVector(iEntity, Prop_Send, "m_vecMins", flMins);
+	GetEntPropVector(iEntity, Prop_Send, "m_vecMaxs", flMaxs);
+
+	TR_TraceHullFilter(flOrigin, flOrigin, flMins, flMaxs, MASK_SOLID, TraceFilterNotSelf, iEntity);
+	return TR_DidHit();
+}
+
+public bool TraceFilterNotSelf(int entity, int contentsMask, any client) {
+	if (entity == client) {
+		return false;
+	}
+	return true;
+}
+
+public void OnTouchRespawnRoom(int entity, int other) {
+	if (other < 1 || other > MaxClients) return;
+	if (!IsClientInGame(other)) return;
+	if (!IsPlayerAlive(other)) return;
+	// Kill enemies inside spawnrooms
+	if (GetEntProp(entity, Prop_Send, "m_iTeamNum") != GetClientTeam(other) && sm_fortressblast_respawnroomkill.BoolValue && VictoryTeam == -1) {
+		FakeClientCommandEx(other, "kill");
+		PrintToServer("%s %N was killed due to being inside an enemy team spawnroom.", MESSAGE_PREFIX_NO_COLOR, other);
+		CPrintToChat(other, "%s {red}You were killed because you were inside the enemy spawn.", MESSAGE_PREFIX);
+	}
+}
+
+/* Teleportation
+==================================================================================================== */
 
 public Action Timer_BeginTeleporter(Handle timer, int client) {
 	TeleportationHandle[client] = INVALID_HANDLE;
@@ -1344,9 +1803,9 @@ public Action Timer_BeginTeleporter(Handle timer, int client) {
 		}
 	}
 	if (TF2_GetClientTeam(client) == TFTeam_Red) {
-		PowerupParticle(client, "teleportedin_red", 1.0, 0.0);
+		ParticleOnPlayer(client, "teleportedin_red", 1.0, 0.0);
 	} else if (TF2_GetClientTeam(client) == TFTeam_Blue) {
-		PowerupParticle(client, "teleportedin_blue", 1.0, 0.0);
+		ParticleOnPlayer(client, "teleportedin_blue", 1.0, 0.0);
 	}
 	TeleportXmasParticles(client);
 }
@@ -1356,7 +1815,7 @@ public void TeleportXmasParticles(int client) {
 	if (Smissmas()) {
 		float vel[3];
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel);
-		PowerupParticle(client, "xms_snowburst_child01", 5.0, 0.0);
+		ParticleOnPlayer(client, "xms_snowburst_child01", 5.0, 0.0);
 		EmitAmbientSound("misc/jingle_bells/jingle_bells_nm_01.wav", vel, client);
 	}
 }
@@ -1385,6 +1844,22 @@ public bool TeleporterPassesNetprops(int entity) {
 		return true;
 	}
 	return false;
+}
+
+/* Powerup Removal
+==================================================================================================== */
+
+public Action Timer_RemoveMagnetism(Handle timer, int client) {
+	MagnetismHandle[client] = INVALID_HANDLE;
+	Magnetism[client] = false;
+}
+
+public Action Timer_RemoveUltraPowerup(Handle timer, int client) {
+	UltraPowerupHandle[client] = INVALID_HANDLE;
+	UltraPowerup[client] = false;
+	if (GetClientHealth(client) > GetPlayerMaxHealth(client)) {
+		SetEntityHealth(client, GetPlayerMaxHealth(client));
+	}
 }
 
 public Action Timer_RemoveFrostTouch(Handle timer, int client) {
@@ -1431,6 +1906,19 @@ public Action Timer_RemoveShockAbsorb(Handle timer, int client) {
 	ShockAbsorber[client] = false;
 }
 
+/* ClearTimer()
+From SourceMod forums
+==================================================================================================== */
+
+stock void ClearTimer(Handle Timer) {
+    if (Timer != INVALID_HANDLE) {
+        CloseHandle(Timer);
+        Timer = INVALID_HANDLE;
+    }
+}
+
+/* DoHudText()
+==================================================================================================== */
 
 public void DoHudText(int client) {
 	if (PowerupCollected[client] != 0) {
@@ -1483,140 +1971,10 @@ public void DoHudText(int client) {
 	}
 }
 
-public void GetPowerupPlacements(bool UsingGiftHunt) {
-	if (!UsingGiftHunt && !MapHasJsonFile) {
-		PrintToServer("%s No powerup locations .json file for this map! You can download pre-made files from the official maps repository:", MESSAGE_PREFIX_NO_COLOR);
-		PrintToServer("https://github.com/Fortress-Blast/Fortress-Blast-Maps");
-		return;
-	} else if (UsingGiftHunt && !GiftHunt) {
-		return;
-	}
-	// Get symmetry specifications from locations .json
-	char map[80];
-	GetCurrentMap(map, sizeof(map));
-	char path[PLATFORM_MAX_PATH + 1];
-	if (!UsingGiftHunt) {
-		Format(path, sizeof(path), "scripts/fortress_blast/powerup_spawns/%s.json", map);
-		GlobalVerifier = GetRandomInt(1, 999999999); // Large integer used to avoid duplicate powerups where possible
-	} else {
-		Format(path, sizeof(path), "scripts/fortress_blast/gift_spawns/%s.json", map);
-	}
-	JSONObject handle = JSONObject.FromFile(path);
-	bool flipx = false;
-	bool flipy = false;
-	float centerx = 0.0;
-	float centery = 0.0;
-	char cent[80];
-	if (handle.HasKey("flipx")) {
-		flipx = handle.GetBool("flipx");
-	}
-	if (handle.HasKey("flipy")) {
-		flipy = handle.GetBool("flipy");
-	}
-	if (flipx || flipy) {
-		if (handle.HasKey("centerx")) {
-			handle.GetString("centerx", cent, sizeof(cent));
-			centerx = StringToFloat(cent);
-		}
-		if (handle.HasKey("centery")) {
-			handle.GetString("centery", cent, sizeof(cent));
-			centery = StringToFloat(cent);
-		}
-	}
-	// Iterate through .json file to get coordinates
-	int itemloop = 1;
-	char stringamount[80];
-	IntToString(itemloop, stringamount, sizeof(stringamount));
-	bool spcontinue = true;
-	while (spcontinue) {
-		float coords[3] = 0.001;
-		char query[80];
-		for (int to = 0; to <= 2; to++) {
-			char string[15];
-			query = "";
-			StrCat(query, sizeof(query), stringamount);
-			StrCat(query, sizeof(query), "-");
-			if (to == 0) {
-				StrCat(query, sizeof(query), "x");
-			} else if (to == 1) {
-				StrCat(query, sizeof(query), "y");
-			} else if (to == 2) {
-				StrCat(query, sizeof(query), "z");
-			}
-			if (handle.HasKey(query)) {
-				handle.GetString(query, string, sizeof(string));
-				coords[to] = StringToFloat(string);
-			} else {
-				spcontinue = false;
-			}
-		}
-		if (coords[0] != 0.001) {
-			if (UsingGiftHunt && (GetRandomInt(0, 99) >= sm_fortressblast_gifthunt_rate.IntValue)) {
-				DebugText("Not spawning gift %d because it failed random", itemloop);
-			} else {
-				if (UsingGiftHunt) {
-					coords[2] += 8.0;
-					DebugText("Spawning gift %d at %f, %f, %f", itemloop, coords[0], coords[1], coords[2]);
-					SpawnGift(coords);
-				} else {
-					DebugText("Spawning powerup %d at %f, %f, %f", itemloop, coords[0], coords[1], coords[2]);
-					SpawnPower(coords, true);
-				}
-				if (flipx && flipy) {
-					if (coords[0] != centerx || coords[1] != centery) {
-						coords[0] = coords[0] - ((coords[0] - centerx) * 2);
-						coords[1] = coords[1] - ((coords[1] - centery) * 2);
-						DebugText("Flipping both axes, new entity created at %f, %f, %f", coords[0], coords[1], coords[2]);
-						if (UsingGiftHunt) {
-							SpawnGift(coords);
-						} else {
-							SpawnPower(coords, true);
-						}
-					} else {
-						DebugText("Entity is at the center and will not be flipped");
-   	 				}
-				} else if (flipx) {
-					if (coords[0] != centerx) {
-						coords[0] = coords[0] - ((coords[0] - centerx) * 2);
-						DebugText("Flipping X axis, new entity created at %f, %f, %f", coords[0], coords[1], coords[2]);
-						if (UsingGiftHunt) {
-							SpawnGift(coords);
-						} else {
-							SpawnPower(coords, true);
-						}
-					} else {
-						DebugText("Entity is at the X axis center and will not be flipped");
-    				}
-				} else if (flipy) {
-					if (coords[1] != centery) {
-						coords[1] = coords[1] - ((coords[1] - centery) * 2);
-						DebugText("Flipping Y axis, new entity created at %f, %f, %f", coords[0], coords[1], coords[2]);
-						if (UsingGiftHunt) {
-							SpawnGift(coords);
-						} else {
-							SpawnPower(coords, true);
-						}
-					} else {
-						DebugText("Entity is at the Y axis center and will not be flipped");
-					}
-				}
-			}
-			itemloop++;
-			IntToString(itemloop, stringamount, sizeof(stringamount));
-		}
-	}
-	return;
-}
+/* Particles
+==================================================================================================== */
 
-
-stock void ClearTimer(Handle Timer) { // From SourceMod forums
-    if (Timer != INVALID_HANDLE) {
-        CloseHandle(Timer);
-        Timer = INVALID_HANDLE;
-    }
-}
-
-public void PowerupParticle(int client, char particlename[80], float time, float zadjust) {
+public void ParticleOnPlayer(int client, char particlename[80], float time, float zadjust) {
 	int particle = CreateEntityByName("info_particle_system");
 	DispatchKeyValue(particle, "effect_name", particlename);
 	AcceptEntityInput(particle, "SetParent", client);
@@ -1656,6 +2014,9 @@ public Action Timer_RemoveParticle(Handle timer, any data) {
 	PlayerParticle[client][id] = -1;
 }
 
+/* DebugText()
+==================================================================================================== */
+
 public void DebugText(const char[] text, any ...) {
 	if (sm_fortressblast_debug.BoolValue) {
 		int len = strlen(text) + 255;
@@ -1666,7 +2027,10 @@ public void DebugText(const char[] text, any ...) {
 	}
 }
 
-public int StringButtonInt() {
+/* ActionInit() + AdminFlagInit()
+==================================================================================================== */
+
+public int ActionInit() {
 	char button[40];
 	sm_fortressblast_action.GetString(button, sizeof(button));
 	if (StrEqual(button, "attack")) {
@@ -1723,7 +2087,7 @@ public int StringButtonInt() {
 	return 33554432; // Special attack
 }
 
-public int AdminFlagInt() {
+public int AdminFlagInit() {
 	char flag[40];
 	sm_fortressblast_adminflag.GetString(flag, sizeof(flag));
 	if (StrEqual(flag, "a")) {
@@ -1770,76 +2134,6 @@ public int AdminFlagInt() {
 	return ADMFLAG_ROOT;
 }
 
-stock int GetPlayerMaxHealth(int client) {
-	return GetEntProp(GetPlayerResourceEntity(), Prop_Send, "m_iMaxHealth", _, client);
-}
-
-stock void ColorizePlayer(int client, int iColor[4]) { // Roll the Dice function with new syntax
-	SetEntityColor(client, iColor);
-	for (int i = 0; i < 3; i++) {
-		int iWeapon = GetPlayerWeaponSlot(client, i);
-		if (iWeapon > MaxClients && IsValidEntity(iWeapon)) {
-			SetEntityColor(iWeapon, iColor);
-		}
-	}
-	char strClass[20];
-	for (int i = MaxClients + 1; i < GetMaxEntities(); i++) {
-		if (IsValidEntity(i)) {
-			GetEdictClassname(i, strClass, sizeof(strClass));
-			if ((strncmp(strClass, "tf_wearable", 11) == 0 || strncmp(strClass, "tf_powerup", 10) == 0) && GetEntPropEnt(i, Prop_Send, "m_hOwnerEntity") == client) {
-				SetEntityColor(i, iColor);
-			}
-		}
-	}
-	int iWeapon = GetEntPropEnt(client, Prop_Send, "m_hDisguiseWeapon");
-	if (iWeapon > MaxClients && IsValidEntity(iWeapon)) {
-		SetEntityColor(iWeapon, iColor);
-	}
-	TF2_RemoveCondition(client, TFCond_DemoBuff);
-}
-
-public int CreateRagdoll(int client) { // Roll the Dice function with new syntax
-	int iRag = CreateEntityByName("tf_ragdoll");
-	if (iRag > MaxClients && IsValidEntity(iRag)) {
-		float flPos[3];
-		float flAng[3];
-		float flVel[3];
-		GetClientAbsOrigin(client, flPos);
-		GetClientAbsAngles(client, flAng);
-		TeleportEntity(iRag, flPos, flAng, flVel);
-		SetEntProp(iRag, Prop_Send, "m_iPlayerIndex", client);
-		SetEntProp(iRag, Prop_Send, "m_bIceRagdoll", 1);
-		SetEntProp(iRag, Prop_Send, "m_iTeam", GetClientTeam(client));
-		SetEntProp(iRag, Prop_Send, "m_iClass", view_as<int>(TF2_GetPlayerClass(client)));
-		SetEntProp(iRag, Prop_Send, "m_bOnGround", 1);
-
-		// Fix oddly shaped statues
-		SetEntPropFloat(iRag, Prop_Send, "m_flHeadScale", GetEntPropFloat(client, Prop_Send, "m_flHeadScale"));
-		SetEntPropFloat(iRag, Prop_Send, "m_flTorsoScale", GetEntPropFloat(client, Prop_Send, "m_flTorsoScale"));
-		SetEntPropFloat(iRag, Prop_Send, "m_flHandScale", GetEntPropFloat(client, Prop_Send, "m_flHandScale"));
-
-		SetEntityMoveType(iRag, MOVETYPE_NONE);
-		DispatchSpawn(iRag);
-		ActivateEntity(iRag);
-		return iRag;
-	}
-	return 0;
-}
-
-public void SetThirdPerson(int client, bool bEnabled) { // Roll the Dice function with new syntax
-	if (bEnabled) {
-		SetVariantInt(1);
-	} else {
-		SetVariantInt(0);
-	}
-	AcceptEntityInput(client, "SetForcedTauntCam");
-}
-
-stock void SetEntityColor(int iEntity, int iColor[4]) { // Roll the Dice function with new syntax
-	SetEntityRenderMode(iEntity, RENDER_TRANSCOLOR);
-	SetEntityRenderColor(iEntity, iColor[0], iColor[1], iColor[2], iColor[3]);
-}
-
 public void BlockAttacking(int client, float time) { // Roll the Dice function with new syntax
 	for (int weapon = 0; weapon <= 5 ; weapon++) {
 		if (GetPlayerWeaponSlot(client, weapon) != -1) {
@@ -1849,59 +2143,15 @@ public void BlockAttacking(int client, float time) { // Roll the Dice function w
 	}
 }
 
-public void CollectedGift(int client) {
-	int flag;
-	DebugText("%N has collected a gift", client);
-	float vel[3];
-	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel);
-	EmitAmbientSound("fortressblast2/gifthunt_gift_pickup.mp3", vel, client);
-	int team = GetClientTeam(client);
-	GiftsCollected[team] = GiftsCollected[team] + GiftMultiplier[team];
-	// A team has reached the gift goal
-	if (GiftsCollected[team] >= GiftGoal && GiftsCollected[team] < (GiftGoal + GiftMultiplier[team])) {
-		GiftHuntIncrementTime = GetGameTime() + 60.0;
-		if (team == 2) {
-			GiftMultiplier[2] = 1;
-			PrintCenterTextAll("RED team has collected the required number of gifts!");
-			DebugText("RED team has collected the required number of gifts", client);
-			flag = 0;
-			EntFire("trigger_capture_area", "SetTeamCanCap", "2 1"); // Allow capturing control points
-			// Allow collecting enemy intelligences
-			while ((flag = FindEntityByClassname(flag, "item_teamflag")) != -1) {
-				if (GetEntProp(flag, Prop_Send, "m_iTeamNum") == 3) {
-					AcceptEntityInput(flag, "Enable");
-				}
-			}
-			if (GiftHuntAttackDefense) {
-				EntFire("team_round_timer", "Resume");
-			}
-		} else if (team == 3) {
-			GiftMultiplier[3] = 1;
-			PrintCenterTextAll("BLU team has collected the required number of gifts!");
-			DebugText("BLU team has collected the required number of gifts", client);
-			flag = 0;
-			EntFire("trigger_capture_area", "SetTeamCanCap", "3 1"); // Allow capturing control points
-			// Allow collecting enemy intelligences
-			while ((flag = FindEntityByClassname(flag, "item_teamflag")) != -1) {
-				if (GetEntProp(flag, Prop_Send, "m_iTeamNum") == 2) {
-					AcceptEntityInput(flag, "Enable");
-				}
-			}
-		}
-		for (int client2 = 1 ; client2 <= MaxClients ; client2++) {
-			if (IsClientInGame(client2)) {
-				if (GetClientTeam(client2) == team) {
-					EmitSoundToClient(client2, "fortressblast2/gifthunt_goal_playerteam.mp3", client2);
-				} else {
-					EmitSoundToClient(client2, "fortressblast2/gifthunt_goal_enemyteam.mp3", client2);
-				}
-			}
-		}
-	}
+/* OnGameFrame() + GiftHuntNeutralGoal()
+Neutral intelligence support for Gift Hunt
+==================================================================================================== */
+
+public void OnGameFrame() {
+	GiftHuntNeutralGoal();
 }
 
 public void GiftHuntNeutralGoal() {
-	// Neutral intelligence support for Gift Hunt
 	if (GiftHuntNeutralFlag) {
 		int flag;
 		while ((flag = FindEntityByClassname(flag, "item_teamflag")) != -1) {
@@ -1926,7 +2176,10 @@ public void GiftHuntNeutralGoal() {
 	}
 }
 
-// sm_entfire with updated syntax
+/* EntFire()
+sm_entfire with updated syntax
+==================================================================================================== */
+
 stock bool EntFire(char[] strTargetname, char[] strInput, char strParameter[] = "", float flDelay = 0.0) {
 	char strBuffer[255];
 	Format(strBuffer, sizeof(strBuffer), "OnUser1 %s:%s:%s:%f:1", strTargetname, strInput, strParameter, flDelay);
@@ -1950,140 +2203,8 @@ public Action Timer_DeleteEdict(Handle timer, int entity) {
 	return Plugin_Stop;
 }
 
-public bool PowerupIsEnabled(int id) {
-	int max = (Bitfieldify(NumberOfPowerups) * 2) - 1;
-	int bitfield = sm_fortressblast_powerups.IntValue;
-	if (bitfield == -1) {
-		return true; // All powerups enabled
-	} else if (bitfield < 1 || bitfield > max) {
-		PrintToServer("%s Your powerup whitelist ConVar is out of range. As a fallback, all powerups are allowed.", MESSAGE_PREFIX_NO_COLOR);
-		return true;
-	} else if (bitfield == 512) {
-		PrintToServer("%s Your powerup whitelist ConVar is set to Mystery only. Mystery requires at least one other powerup to work and cannot be used on its own. As a fallback, all powerups are allowed.", MESSAGE_PREFIX_NO_COLOR);
-		return true;
-	} else if (bitfield & Bitfieldify(id)) {
-		return true; // return bitfield & Bitfieldify(id) doesn't work
-	}
-	return false;
-}
-
-public int Bitfieldify(int bitter) {
-	int num = 1;
-	for (int id = 1; id <= bitter ; id++) {
-		num = num * 2;
-	}
-	return (num / 2);
-}
-
-public Action Command_SpawnPowerup(int client, int args) {
-	if (!AdminCommand(client)) {
-		return Plugin_Handled;
-	}
-	if (client == 0) {
-		PrintToServer("%s Because this command uses the crosshair, it cannot be executed from the server console.", MESSAGE_PREFIX_NO_COLOR);
-		return Plugin_Handled;
-	}
-	float points[3];
-	GetCollisionPoint(client, points);
-	char arg1[3];
-	GetCmdArg(1, arg1, sizeof(arg1));
-	SpawnPower(points, false, StringToInt(arg1));
-	return Plugin_Handled;
-}
-
-public Action Command_CoordsJson(int client, int args) {
-	if (client == 0) {
-		PrintToServer("%s Because this command uses the crosshair, it cannot be executed from the server console.", MESSAGE_PREFIX_NO_COLOR);
-		return Plugin_Handled;
-	}
-	float points[3];
-	GetCollisionPoint(client, points);
-	CPrintToChat(client, "{haunted}\"#-x\": \"%d\", \"#-y\": \"%d\", \"#-z\": \"%d\",", RoundFloat(points[0]), RoundFloat(points[1]), RoundFloat(points[2]));
-	return Plugin_Handled;
-}
-
-public bool AdminCommand(int client) {
-	if (!CheckCommandAccess(client, "", AdminFlagInt()) && !sm_fortressblast_debug.BoolValue) {
-		CPrintToChat(client, "%s {red}You do not have permission to use this command.", MESSAGE_PREFIX);
-		return false;
-	}
-	return true;
-}
-
-public Action Command_RespawnPowerups(int client, int args){
-	if (!AdminCommand(client)) {
-		return Plugin_Handled;
-	}
-	RemoveAllPowerups();
-	GetPowerupPlacements(false);
-	return Plugin_Handled;
-}
-
-public void RemoveAllPowerups() {
-	int entity;
-	while ((entity = FindEntityByClassname(entity, "tf_halloween_pickup")) != -1) {
-		RemoveEntity(entity);
-	}
-}
-
-stock void GetCollisionPoint(int client, float pos[3]) {
-	float vOrigin[3];
-	float vAngles[3];
-
-	GetClientEyePosition(client, vOrigin);
-	GetClientEyeAngles(client, vAngles);
-
-	Handle trace = TR_TraceRayFilterEx(vOrigin, vAngles, MASK_SOLID, RayType_Infinite, TraceEntityFilterPlayer);
-
-	if (TR_DidHit(trace)) {
-		TR_GetEndPosition(pos, trace);
-		CloseHandle(trace);
-		return;
-	}
-	CloseHandle(trace);
-}
-
-public bool TraceEntityFilterPlayer(int entity, int contentsMask) {
-	return entity > MaxClients;
-}
-
-public void OnTouchRespawnRoom(int entity, int other) {
-	if (other < 1 || other > MaxClients) return;
-	if (!IsClientInGame(other)) return;
-	if (!IsPlayerAlive(other)) return;
-	// Kill enemies inside spawnrooms
-	if (GetEntProp(entity, Prop_Send, "m_iTeamNum") != GetClientTeam(other) && sm_fortressblast_respawnroomkill.BoolValue && VictoryTeam == -1) {
-		FakeClientCommandEx(other, "kill");
-		PrintToServer("%s %N was killed due to being inside an enemy team spawnroom.", MESSAGE_PREFIX_NO_COLOR, other);
-		CPrintToChat(other, "%s {red}You were killed because you were inside the enemy spawn.", MESSAGE_PREFIX);
-	}
-}
-
-public Action TF2_OnPlayerTeleport(int client, int teleporter, bool& result) {
-	if (MegaMann[client]) {
-		result = false; // Prevent players with Mega Mann from taking teleporters
-	}
-	return Plugin_Changed;
-}
-
-public bool IsEntityStuck(int iEntity) { // Roll the Dice function with new syntax
-	float flOrigin[3];
-	float flMins[3];
-	float flMaxs[3];
-	GetEntPropVector(iEntity, Prop_Send, "m_vecOrigin", flOrigin);
-	GetEntPropVector(iEntity, Prop_Send, "m_vecMins", flMins);
-	GetEntPropVector(iEntity, Prop_Send, "m_vecMaxs", flMaxs);
-
-	TR_TraceHullFilter(flOrigin, flOrigin, flMins, flMaxs, MASK_SOLID, TraceFilterNotSelf, iEntity);
-	return TR_DidHit();
-}
-
-public bool TraceFilterNotSelf(int entity, int contentsMask, any client) {
-	if (entity == client) {
-		return false;
-	}
-	return true;
-}
+/* Events/Holidays
+==================================================================================================== */
 
 public bool Smissmas() {
 	int FeelsLikeTheVeryFirst = sm_fortressblast_event_xmas.IntValue;
@@ -2093,37 +2214,4 @@ public bool Smissmas() {
 		return TF2_IsHolidayActive(TFHoliday_Christmas);
 	}
 	return true;
-}
-
-public bool BlockPowerup(int client) {
-	// Player is dead
-	if (!IsPlayerAlive(client)) {
-		return true;
-	// Player is frozen
-	} else if (FrostTouchFrozen[client] != 0) {
-		return true;
-	// Player is in a kart or is taunting
-	} else if (TF2_IsPlayerInCondition(client, TFCond_HalloweenKart) || TF2_IsPlayerInCondition(client, TFCond_Taunting)) {
-		return true;
-	// Player lost or is in a stalemate
-	} else if ((VictoryTeam != -1 && VictoryTeam != GetClientTeam(client))) {
-		return true;
-	// Mega Mann pre-stuck checking
-	} else if (PowerupCollected[client] == 8 && !MegaMann[client]) {
-		SetVariantString("1.75 0");
-		AcceptEntityInput(client, "SetModelScale");
-		float coords[3] = 69.420;
-		GetEntPropVector(client, Prop_Send, "m_vecOrigin", coords);
-		coords[2] += 16.0;
-		TeleportEntity(client, coords, NULL_VECTOR, NULL_VECTOR);
-		bool stuck = IsEntityStuck(client);
-		coords[2] -= 16.0;
-		TeleportEntity(client, coords, NULL_VECTOR, NULL_VECTOR);
-		SetVariantString("1 0");
-		AcceptEntityInput(client, "SetModelScale");
-		if (stuck) {
-			return true;
-		}
-	}
-	return false;
 }
