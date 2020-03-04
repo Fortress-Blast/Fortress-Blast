@@ -1240,6 +1240,7 @@ public bool BlockPowerup(int client) {
 ==================================================================================================== */
 
 public void UsePowerup(int client) {
+	UsingPowerup[PowerupID[client]][client] = true; // double array :)
 	float vel[3];
 	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel);
 	if (PowerupID[client] == -1) {
@@ -1277,7 +1278,6 @@ public void UsePowerup(int client) {
 		// Super Bounce - Uncontrollable bunny hop and fall damage resistance for 5 seconds
 		EmitAmbientSound("fortressblast2/superbounce_use.mp3", vel, client);
 		VerticalVelocity[client] = 0.0; // Cancel previously stored vertical velocity
-		UsingPowerup[1][client] = true;
 		ClearTimer(SuperBounceHandle[client]);
 		SuperBounceHandle[client] = CreateTimer(5.0, Timer_RemoveSuperBounce, client);
 		ParticleOnPlayer(client, "teleporter_blue_charged_level2", 5.0, 0.0);
@@ -1291,7 +1291,6 @@ public void UsePowerup(int client) {
 		}
 	} else if (PowerupID[client] == 2) {
 		// Shock Absorber - 75% damage and 100% knockback resistances for 5 seconds
-		UsingPowerup[2][client] = true;
 		EmitAmbientSound("fortressblast2/shockabsorber_use.mp3", vel, client);
 		ClearTimer(ShockAbsorberHandle[client]);
 		ShockAbsorberHandle[client] = CreateTimer(5.0, Timer_RemoveShockAbsorb, client);
@@ -1319,11 +1318,9 @@ public void UsePowerup(int client) {
 		}
 		ClearTimer(GyrocopterHandle[client]);
 		GyrocopterHandle[client] = CreateTimer(5.0, Timer_RemoveGyrocopter, client);
-		UsingPowerup[5][client] = true;
 		EmitAmbientSound("fortressblast2/gyrocopter_use.mp3", vel, client);
 	} else if (PowerupID[client] == 6) {
 		// Time Travel - Increased speed, invisibility and can't attack for 5 seconds
-		UsingPowerup[6][client] = true;
 		SetThirdPerson(client, true);
 		TF2_AddCondition(client, TFCond_StealthedUserBuffFade, 3.0);
 		BlockAttacking(client, 3.0);
@@ -1379,23 +1376,17 @@ public void UsePowerup(int client) {
 		GetEntPropVector(client, Prop_Send, "m_vecOrigin", coords);
 		coords[2] += 16.0;
 		TeleportEntity(client, coords, NULL_VECTOR, NULL_VECTOR);
-		UsingPowerup[8][client] = true;
 		MegaMannVerified[client] = true;
 	} else if (PowerupID[client] == 9) {
 		// Frost Touch - Freeze touched players for 3 seconds within 8 seconds
 		EmitAmbientSound("fortressblast2/frosttouch_use.mp3", vel, client);
 		ClearTimer(FrostTouchHandle[client]);
 		FrostTouchHandle[client] = CreateTimer(8.0, Timer_RemoveFrostTouch, client);
-		UsingPowerup[9][client] = true;
 		ParticleOnPlayer(client, "smoke_rocket_steam", 8.0, 32.0);
 	} else if (PowerupID[client] == 10) {
 		// Mystery - Random powerup
 		// Has a higher chance of picking Gyrocopter during April Fools
-		float tryGyrocopter = 0.0;
-		if (AprilFools() && PowerupIsEnabled(5)) {
-			tryGyrocopter = GetRandomFloat(0.0, 99.99);
-		}
-		if (tryGyrocopter < 75.0) {
+		if (GetRandomFloat(0.0, 99.99) < 75.0 && AprilFools() && PowerupIsEnabled(5)) {
 			PowerupID[client] = 5;
 		} else {
 			int mysrand = 10;
@@ -1438,7 +1429,6 @@ public void UsePowerup(int client) {
 	} else if (PowerupID[client] == 12) {
 		// Magnetism - Repel or attract enemies depending on weapon slot
 		EmitAmbientSound("fortressblast2/magnetism_use.mp3", vel, client);
-		UsingPowerup[12][client] = true;
 		ClearTimer(MagnetismHandle[client]);
 		MagnetismHandle[client] = CreateTimer(5.0, Timer_RemoveMagnetism, client);
 		// Repeatedly produce Magnetism particle
