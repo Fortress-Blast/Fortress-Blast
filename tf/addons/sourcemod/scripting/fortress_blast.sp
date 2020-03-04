@@ -96,6 +96,7 @@ ConVar sm_fortressblast_dizzy_length;
 ConVar sm_fortressblast_drop;
 ConVar sm_fortressblast_drop_rate;
 ConVar sm_fortressblast_drop_teams;
+ConVar sm_fortressblast_event_fools;
 ConVar sm_fortressblast_event_xmas;
 ConVar sm_fortressblast_gifthunt;
 ConVar sm_fortressblast_gifthunt_countbots;
@@ -171,6 +172,7 @@ public void OnPluginStart() {
 	sm_fortressblast_drop = CreateConVar("sm_fortressblast_drop", "1", "How to handle dropping powerups on death.");
 	sm_fortressblast_drop_rate = CreateConVar("sm_fortressblast_drop_rate", "10", "Chance out of 100 for a powerup to drop on death.");
 	sm_fortressblast_drop_teams = CreateConVar("sm_fortressblast_drop_teams", "1", "Teams that will drop powerups on death.");
+	sm_fortressblast_event_fools = CreateConVar("sm_fortressblast_event_fools", "1", "How to handle the TF2 April Fools event.");
 	sm_fortressblast_event_xmas = CreateConVar("sm_fortressblast_event_xmas", "1", "How to handle the TF2 Smissmas event.");
 	sm_fortressblast_gifthunt = CreateConVar("sm_fortressblast_gifthunt", "0", "Disables or enables Gift Hunt on maps with Gift Hunt .json files.");
 	sm_fortressblast_gifthunt_bonus = CreateConVar("sm_fortressblast_gifthunt_bonus", "1", "Whether or not to multiply players' gift collections once they fall behind.");
@@ -769,19 +771,21 @@ Handles multiple plugin features including Gift Hunt, Super Speed and Dizzy Bomb
 ==================================================================================================== */
 
 public Action Timer_MiscTimer(Handle timer, any data) {
-	if (NumberOfActiveGifts() == 0 && !GiftHuntSetup && (GiftsCollected[2] < GiftGoal || GiftsCollected[3] < GiftGoal)) {
-		GetSpawns(true);
-	}
-	if (GiftHuntIncrementTime < GetGameTime() && (GiftsCollected[2] >= GiftGoal || GiftsCollected[3] >= GiftGoal) && sm_fortressblast_gifthunt_bonus.BoolValue) {
-		if (GiftsCollected[3] < GiftGoal && GiftMultiplier[3] < 5) {
-			GiftMultiplier[3]++;
-			PrintCenterTextAll("Catchup bonus: Gifts are now worth x%d for BLU team.", GiftMultiplier[3]);
-		} else if (GiftsCollected[2] < GiftGoal && GiftMultiplier[2] < 5) {
-			GiftMultiplier[2]++;
-			PrintCenterTextAll("Catchup bonus: Gifts are now worth x%d for RED team.", GiftMultiplier[2]);
+	if (GiftHunt) {
+		if (NumberOfActiveGifts() == 0 && !GiftHuntSetup && (GiftsCollected[2] < GiftGoal || GiftsCollected[3] < GiftGoal)) {
+			GetSpawns(true);
 		}
-		DebugText("Incremenet time is %f , game time is %f", GiftHuntIncrementTime, GetGameTime());
-		GiftHuntIncrementTime = GetGameTime() + 60.0;
+		if (GiftHuntIncrementTime < GetGameTime() && (GiftsCollected[2] >= GiftGoal || GiftsCollected[3] >= GiftGoal) && sm_fortressblast_gifthunt_bonus.BoolValue) {
+			if (GiftsCollected[3] < GiftGoal && GiftMultiplier[3] < 5) {
+				GiftMultiplier[3]++;
+				PrintCenterTextAll("Catchup bonus: Gifts are now worth x%d for BLU team.", GiftMultiplier[3]);
+			} else if (GiftsCollected[2] < GiftGoal && GiftMultiplier[2] < 5) {
+				GiftMultiplier[2]++;
+				PrintCenterTextAll("Catchup bonus: Gifts are now worth x%d for RED team.", GiftMultiplier[2]);
+			}
+			DebugText("Incremenet time is %f , game time is %f", GiftHuntIncrementTime, GetGameTime());
+			GiftHuntIncrementTime = GetGameTime() + 60.0;
+		}
 	}
 	for (int client = 1 ; client <= MaxClients ; client++ ) {
 		if (IsClientInGame(client)) {
@@ -925,8 +929,8 @@ stock int SpawnPowerup(float location[3], bool respawn, int id = 0) {
 		} else if (PowerupID[entity] == 14) {
 			SetEntityRenderColor(entity, 36, 255, 255, 255);
 		}
-		DispatchKeyValue(entity, "pickup_sound", "get_out_of_the_console_snoop");
-		DispatchKeyValue(entity, "pickup_particle", "get_out_of_the_console_snoop");
+		DispatchKeyValue(entity, "pickup_sound", "");
+		DispatchKeyValue(entity, "pickup_particle", "");
 		AcceptEntityInput(entity, "EnableCollision");
 		DispatchSpawn(entity);
 		ActivateEntity(entity);
@@ -945,8 +949,8 @@ public int SpawnGift(float location[3]) {
 	int entity = CreateEntityByName("tf_halloween_pickup");
 	if (IsValidEntity(entity)) {
 		DispatchKeyValue(entity, "powerup_model", "models/items/tf_gift.mdl");
-		DispatchKeyValue(entity, "pickup_sound", "get_out_of_the_console_snoop");
-		DispatchKeyValue(entity, "pickup_particle", "get_out_of_the_console_snoop");
+		DispatchKeyValue(entity, "pickup_sound", "");
+		DispatchKeyValue(entity, "pickup_particle", "");
 		char giftidsandstuff[20];
 		Format(giftidsandstuff, sizeof(giftidsandstuff), "fb_giftid_%d", entity);
 		DispatchKeyValue(entity, "targetname", giftidsandstuff);
@@ -1186,7 +1190,8 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 					GetEntPropVector(client2, Prop_Data, "m_vecVelocity", playerVel);
 					NegateVector(direction);
 					float multiplier = Pow(distanceScale * 4, 2.0);
-					if (GetEntPropEnt(client, Prop_Data, "m_hActiveWeapon") != GetPlayerWeaponSlot(client, 2)) {
+					// Polarities are reversed during April Fools
+					if ((GetEntPropEnt(client, Prop_Data, "m_hActiveWeapon") != GetPlayerWeaponSlot(client, 2) && !AprilFools()) || (GetEntPropEnt(client, Prop_Data, "m_hActiveWeapon") = GetPlayerWeaponSlot(client, 2) && AprilFools())) {
 						multiplier = multiplier * -1.25;
 					}
 					direction[0] = direction[0] * multiplier;
@@ -1277,6 +1282,9 @@ public void UsePowerup(int client) {
 		ClearTimer(SuperBounceHandle[client]);
 		SuperBounceHandle[client] = CreateTimer(5.0, Timer_RemoveSuperBounce, client);
 		ParticleOnPlayer(client, "teleporter_blue_charged_level2", 5.0, 0.0);
+		if (AprilFools()) {
+			SetEntityGravity(client, 2); // Increase gravity during April Fools, need a way to track Gyrocopter
+		}		
 	} else if (PowerupCollected[client] == 2) {
 		// Shock Absorber - 75% damage and 100% knockback resistances for 5 seconds
 		ShockAbsorber[client] = true;
@@ -1300,9 +1308,13 @@ public void UsePowerup(int client) {
 		EmitAmbientSound("fortressblast2/superjump_use.mp3", vel, client);
 	} else if (PowerupCollected[client] == 5) {
 		// Gyrocopter - 25% gravity for 5 seconds
-		SetEntityGravity(client, 0.25);
+		if (SuperBounce[client] && AprilFools()) {
+			SetEntityGravity(client, 0.5);
+		} else {
+			SetEntityGravity(client, 0.25);
+		}
 		ClearTimer(GyrocopterHandle[client]);
-		GyrocopterHandle[client] = CreateTimer(5.0, Timer_RestoreGravity, client);
+		GyrocopterHandle[client] = CreateTimer(5.0, Timer_RemoveGyrocopter, client);
 		EmitAmbientSound("fortressblast2/gyrocopter_use.mp3", vel, client);
 	} else if (PowerupCollected[client] == 6) {
 		// Time Travel - Increased speed, invisibility and can't attack for 5 seconds
@@ -1373,11 +1385,20 @@ public void UsePowerup(int client) {
 		ParticleOnPlayer(client, "smoke_rocket_steam", 8.0, 32.0);
 	} else if (PowerupCollected[client] == 10) {
 		// Mystery - Random powerup
-		int mysrand = 10;
-		while (mysrand == 10 || !PowerupIsEnabled(mysrand)) {
-			mysrand = GetRandomInt(1, NumberOfPowerups);
+		// Has a higher chance of picking Gyrocopter during April Fools
+		float tryGyrocopter = 0.0;
+		if (AprilFools() && PowerupIsEnabled()) {
+			float tryGyrocopter = GetRandomFloat(0.0, 99.99);
 		}
-		PowerupCollected[client] = mysrand;
+		if (tryGyrocopter < 75.0) {
+			PowerupCollected[client] = 5;
+		} else {
+			int mysrand = 10;
+			while (mysrand == 10 || !PowerupIsEnabled(mysrand)) {
+				mysrand = GetRandomInt(1, NumberOfPowerups);
+			}
+			PowerupCollected[client] = mysrand;
+		}
 		UsePowerup(client);
 	} else if (PowerupCollected[client] == 11) {
 		// Teleportation - Teleport to random active Engineer exit teleport or spawn
@@ -1849,16 +1870,36 @@ public bool TeleporterPassesNetprops(int entity) {
 /* Powerup Removal
 ==================================================================================================== */
 
-public Action Timer_RemoveMagnetism(Handle timer, int client) {
-	MagnetismHandle[client] = INVALID_HANDLE;
-	Magnetism[client] = false;
+public Action Timer_RemoveSuperBounce(Handle timer, int client) {
+	SuperBounceHandle[client] = INVALID_HANDLE;
+	SuperBounce[client] = false;
+	if (IsClientInGame(client) && AprilFools()) {
+		SetEntityGravity(client, 1.0); // Need a way to track Gyrocopter
+	}
 }
 
-public Action Timer_RemoveUltraPowerup(Handle timer, int client) {
-	UltraPowerupHandle[client] = INVALID_HANDLE;
-	UltraPowerup[client] = false;
-	if (GetClientHealth(client) > GetPlayerMaxHealth(client)) {
-		SetEntityHealth(client, GetPlayerMaxHealth(client));
+public Action Timer_RemoveShockAbsorb(Handle timer, int client) {
+	ShockAbsorberHandle[client] = INVALID_HANDLE;
+	ShockAbsorber[client] = false;
+}
+
+public Action Timer_RemoveGyrocopter(Handle timer, int client) {
+	GyrocopterHandle[client] = INVALID_HANDLE;
+	if (IsClientInGame(client)) {
+		if (SuperBounce[client] && AprilFools()) {
+			SetEntityGravity(client, 2.0);
+		} else {
+			SetEntityGravity(client, 1.0);
+		}
+	}
+}
+
+public Action Timer_RemoveTimeTravel(Handle timer, int client) {
+	TimeTravelHandle[client] = INVALID_HANDLE;
+	TimeTravel[client] = false;
+	SetThirdPerson(client, false);
+	if (IsClientInGame(client)) {
+		TF2_StunPlayer(client, 0.0, 0.0, TF_STUNFLAG_SLOWDOWN);
 	}
 }
 
@@ -1880,30 +1921,17 @@ public Action Timer_RemoveMegaMann(Handle timer, int client) {
 	}
 }
 
-public Action Timer_RemoveTimeTravel(Handle timer, int client) {
-	TimeTravelHandle[client] = INVALID_HANDLE;
-	TimeTravel[client] = false;
-	SetThirdPerson(client, false);
-	if (IsClientInGame(client)) {
-		TF2_StunPlayer(client, 0.0, 0.0, TF_STUNFLAG_SLOWDOWN);
+public Action Timer_RemoveMagnetism(Handle timer, int client) {
+	MagnetismHandle[client] = INVALID_HANDLE;
+	Magnetism[client] = false;
+}
+
+public Action Timer_RemoveUltraPowerup(Handle timer, int client) {
+	UltraPowerupHandle[client] = INVALID_HANDLE;
+	UltraPowerup[client] = false;
+	if (GetClientHealth(client) > GetPlayerMaxHealth(client)) {
+		SetEntityHealth(client, GetPlayerMaxHealth(client));
 	}
-}
-
-public Action Timer_RestoreGravity(Handle timer, int client) {
-	GyrocopterHandle[client] = INVALID_HANDLE;
-	if (IsClientInGame(client)) {
-		SetEntityGravity(client, 1.0);
-	}
-}
-
-public Action Timer_RemoveSuperBounce(Handle timer, int client) {
-	SuperBounceHandle[client] = INVALID_HANDLE;
-	SuperBounce[client] = false;
-}
-
-public Action Timer_RemoveShockAbsorb(Handle timer, int client) {
-	ShockAbsorberHandle[client] = INVALID_HANDLE;
-	ShockAbsorber[client] = false;
 }
 
 /* ClearTimer()
@@ -1918,6 +1946,8 @@ stock void ClearTimer(Handle Timer) {
 }
 
 /* DoHudText()
+The HUD function for the plugin
+On April Fools most of the powerups have the word 'Super' inserted into them
 ==================================================================================================== */
 
 public void DoHudText(int client) {
@@ -1928,31 +1958,59 @@ public void DoHudText(int client) {
 			SetHudTextParams(0.825, 0.5, 0.25, 255, 255, 0, 255);
 		}
 		if (PowerupCollected[client] == -1) {
-			ShowSyncHudText(client, PowerupText, "Collected powerup:\nULTRA POWERUP!!");
+			if (!AprilFools()) {
+				ShowSyncHudText(client, PowerupText, "Collected powerup:\nULTRA POWERUP!!");
+			} else {
+				ShowSyncHudText(client, PowerupText, "Collected powerup:\nSUPER POWERUP!!");
+			}
 		} else if (PowerupCollected[client] == 1) {
 			ShowSyncHudText(client, PowerupText, "Collected powerup:\nSuper Bounce");
 		} else if (PowerupCollected[client] == 2) {
-			ShowSyncHudText(client, PowerupText, "Collected powerup:\nShock Absorber");
+			if (!AprilFools()) {
+				ShowSyncHudText(client, PowerupText, "Collected powerup:\nShock Absorber");
+			} else {
+				ShowSyncHudText(client, PowerupText, "Collected powerup:\nSuper Absorber");
+			}
 		} else if (PowerupCollected[client] == 3) {
 			ShowSyncHudText(client, PowerupText, "Collected powerup:\nSuper Speed");
 		} else if (PowerupCollected[client] == 4) {
 			ShowSyncHudText(client, PowerupText, "Collected powerup:\nSuper Jump");
 		} else if (PowerupCollected[client] == 5) {
-			ShowSyncHudText(client, PowerupText, "Collected powerup:\nGyrocopter");
+			if (!AprilFools()) {
+				ShowSyncHudText(client, PowerupText, "Collected powerup:\nGyrocopter");
+			} else {
+				ShowSyncHudText(client, PowerupText, "Collected powerup:\nSuper Gyrocopter");
+			}
 		} else if (PowerupCollected[client] == 6) {
 			ShowSyncHudText(client, PowerupText, "Collected powerup:\nTime Travel");
 		} else if (PowerupCollected[client] == 7) {
-			ShowSyncHudText(client, PowerupText, "Collected powerup:\nBlast");
+			if (!AprilFools()) {
+				ShowSyncHudText(client, PowerupText, "Collected powerup:\nBlast");
+			} else {
+				ShowSyncHudText(client, PowerupText, "Collected powerup:\nSuper Blast");
+			}
 		} else if (PowerupCollected[client] == 8) {
-			ShowSyncHudText(client, PowerupText, "Collected powerup:\nMega Mann");
+			if (!AprilFools()) {
+				ShowSyncHudText(client, PowerupText, "Collected powerup:\nMega Mann");
+			} else {
+				ShowSyncHudText(client, PowerupText, "Collected powerup:\nSuper Mann");
+			}
 		} else if (PowerupCollected[client] == 9) {
 			ShowSyncHudText(client, PowerupText, "Collected powerup:\nFrost Touch");
 		} else if (PowerupCollected[client] == 10) {
-			ShowSyncHudText(client, PowerupText, "Collected powerup:\nMystery");
+			if (!AprilFools()) {
+				ShowSyncHudText(client, PowerupText, "Collected powerup:\nMystery");
+			} else {
+				ShowSyncHudText(client, PowerupText, "Collected powerup:\nSuper Mystery");
+			}
 		} else if (PowerupCollected[client] == 11) {
 			ShowSyncHudText(client, PowerupText, "Collected powerup:\nTeleportation");
 		} else if (PowerupCollected[client] == 12) {
-			ShowSyncHudText(client, PowerupText, "Collected powerup:\nMagnetism");
+			if (!AprilFools()) {
+				ShowSyncHudText(client, PowerupText, "Collected powerup:\nMagnetism");
+			} else {
+				ShowSyncHudText(client, PowerupText, "Collected powerup:\nSuper Magnetism");
+			}
 		} else if (PowerupCollected[client] == 13) {
 			ShowSyncHudText(client, PowerupText, "Collected powerup:\nEffect Burst");
 		} else if (PowerupCollected[client] == 14) {
@@ -2206,12 +2264,35 @@ public Action Timer_DeleteEdict(Handle timer, int entity) {
 /* Events/Holidays
 ==================================================================================================== */
 
+/* Possible holidays
+- TFHoliday_Birthday;
+- TFHoliday_Halloween;
+- TFHoliday_Christmas;
+- TFHoliday_EndOfTheLine;
+- TFHoliday_CommunityUpdate;
+- TFHoliday_ValentinesDay;
+- TFHoliday_MeetThePyro;
+- TFHoliday_FullMoon;
+- TFHoliday_HalloweenOrFullMoon;
+- TFHoliday_HalloweenOrFullMoonOrValentines;
+- TFHoliday_AprilFools; */
+
 public bool Smissmas() {
-	int FeelsLikeTheVeryFirst = sm_fortressblast_event_xmas.IntValue;
-	if (FeelsLikeTheVeryFirst == 0) {
+	int convar = sm_fortressblast_event_xmas.IntValue;
+	if (convar == 0) {
 		return false;
-	} else if (FeelsLikeTheVeryFirst == 1) {
+	} else if (convar == 1) {
 		return TF2_IsHolidayActive(TFHoliday_Christmas);
+	}
+	return true;
+}
+
+public bool AprilFools() {
+	int convar = sm_fortressblast_event_fools.IntValue;
+	if (convar == 0) {
+		return false;
+	} else if (convar == 1) {
+		return TF2_IsHolidayActive(TFHoliday_AprilFools);
 	}
 	return true;
 }
