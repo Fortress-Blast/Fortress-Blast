@@ -1314,7 +1314,7 @@ public void UsePowerup(int client) {
 	} else if (PowerupID[client] == 5) {
 		// Gyrocopter - 25% gravity for 5 seconds
 		if (SuperBounce[client] && AprilFools()) {
-			SetEntityGravity(client, 0.5);
+			SetEntityGravity(client, 0.75);
 		} else {
 			SetEntityGravity(client, 0.25);
 		}
