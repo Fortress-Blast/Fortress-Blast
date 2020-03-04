@@ -929,8 +929,8 @@ stock int SpawnPowerup(float location[3], bool respawn, int id = 0) {
 		} else if (PowerupID[entity] == 14) {
 			SetEntityRenderColor(entity, 36, 255, 255, 255);
 		}
-		DispatchKeyValue(entity, "pickup_sound", "");
-		DispatchKeyValue(entity, "pickup_particle", "");
+		DispatchKeyValue(entity, "pickup_sound", " ");
+		DispatchKeyValue(entity, "pickup_particle", " ");
 		AcceptEntityInput(entity, "EnableCollision");
 		DispatchSpawn(entity);
 		ActivateEntity(entity);
@@ -949,8 +949,8 @@ public int SpawnGift(float location[3]) {
 	int entity = CreateEntityByName("tf_halloween_pickup");
 	if (IsValidEntity(entity)) {
 		DispatchKeyValue(entity, "powerup_model", "models/items/tf_gift.mdl");
-		DispatchKeyValue(entity, "pickup_sound", "");
-		DispatchKeyValue(entity, "pickup_particle", "");
+		DispatchKeyValue(entity, "pickup_sound", " ");
+		DispatchKeyValue(entity, "pickup_particle", " ");
 		char giftidsandstuff[20];
 		Format(giftidsandstuff, sizeof(giftidsandstuff), "fb_giftid_%d", entity);
 		DispatchKeyValue(entity, "targetname", giftidsandstuff);
