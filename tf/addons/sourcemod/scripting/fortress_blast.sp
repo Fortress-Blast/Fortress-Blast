@@ -77,32 +77,32 @@ Handle texthand;
 Handle gifttext;
 
 // ConVars
-ConVar sm_fbu_action;
-ConVar sm_fbu_adminflag;
-ConVar sm_fbu_blast_buildings;
-ConVar sm_fbu_bot;
-ConVar sm_fbu_bot_min;
-ConVar sm_fbu_bot_max;
-ConVar sm_fbu_debug;
-ConVar sm_fbu_dizzy_states;
-ConVar sm_fbu_dizzy_length;
-ConVar sm_fbu_drop;
-ConVar sm_fbu_drop_rate;
-ConVar sm_fbu_drop_teams;
-ConVar sm_fbu_event_xmas;
-ConVar sm_fbu_gifthunt;
-ConVar sm_fbu_gifthunt_countbots;
-ConVar sm_fbu_gifthunt_goal;
-ConVar sm_fbu_gifthunt_increment;
-ConVar sm_fbu_gifthunt_players;
-ConVar sm_fbu_gifthunt_rate;
-ConVar sm_fbu_gifthunt_bonus;
-ConVar sm_fbu_intro;
-ConVar sm_fbu_mannpower;
-ConVar sm_fbu_powerups;
-ConVar sm_fbu_powerups_roundstart;
-ConVar sm_fbu_respawnroomkill;
-ConVar sm_fbu_ultra_rate;
+ConVar sm_fortressblast_action;
+ConVar sm_fortressblast_adminflag;
+ConVar sm_fortressblast_blast_buildings;
+ConVar sm_fortressblast_bot;
+ConVar sm_fortressblast_bot_min;
+ConVar sm_fortressblast_bot_max;
+ConVar sm_fortressblast_debug;
+ConVar sm_fortressblast_dizzy_states;
+ConVar sm_fortressblast_dizzy_length;
+ConVar sm_fortressblast_drop;
+ConVar sm_fortressblast_drop_rate;
+ConVar sm_fortressblast_drop_teams;
+ConVar sm_fortressblast_event_xmas;
+ConVar sm_fortressblast_gifthunt;
+ConVar sm_fortressblast_gifthunt_countbots;
+ConVar sm_fortressblast_gifthunt_goal;
+ConVar sm_fortressblast_gifthunt_increment;
+ConVar sm_fortressblast_gifthunt_players;
+ConVar sm_fortressblast_gifthunt_rate;
+ConVar sm_fortressblast_gifthunt_bonus;
+ConVar sm_fortressblast_intro;
+ConVar sm_fortressblast_mannpower;
+ConVar sm_fortressblast_powerups;
+ConVar sm_fortressblast_powerups_roundstart;
+ConVar sm_fortressblast_respawnroomkill;
+ConVar sm_fortressblast_ultra_rate;
 
 /* Powerup IDs
 -1 - ULTRA POWERUP!!
@@ -148,32 +148,32 @@ public void OnPluginStart() {
 	LoadTranslations("common.phrases");
 
 	// ConVars
-	sm_fbu_action = CreateConVar("sm_fbu_action", "attack3", "Which action to watch for in order to use powerups.");
-	sm_fbu_adminflag = CreateConVar("sm_fbu_adminflag", "z", "Which flag to use for admin-restricted commands outside of debug mode.");
-	sm_fbu_blast_buildings = CreateConVar("sm_fbu_blast_buildings", "100", "Percentage of Blast player damage to inflict on enemy buildings.");
-	sm_fbu_bot = CreateConVar("sm_fbu_bot", "1", "Disables or enables bots using powerups.");
-	sm_fbu_bot_min = CreateConVar("sm_fbu_bot_min", "2", "Minimum time for bots to use a powerup.");
-	sm_fbu_bot_max = CreateConVar("sm_fbu_bot_max", "15", "Maximum time for bots to use a powerup.");
-	sm_fbu_debug = CreateConVar("sm_fbu_debug", "0", "Disables or enables command permission overrides and debug messages in chat.");
-	sm_fbu_dizzy_states = CreateConVar("sm_fbu_dizzy_states", "5", "Number of rotational states Dizzy Bomb uses.");
-	sm_fbu_dizzy_length = CreateConVar("sm_fbu_dizzy_length", "5", "Length of time Dizzy Bomb lasts.");
-	sm_fbu_drop = CreateConVar("sm_fbu_drop", "1", "How to handle dropping powerups on death.");
-	sm_fbu_drop_rate = CreateConVar("sm_fbu_drop_rate", "10", "Chance out of 100 for a powerup to drop on death.");
-	sm_fbu_drop_teams = CreateConVar("sm_fbu_drop_teams", "1", "Teams that will drop powerups on death.");
-	sm_fbu_event_xmas = CreateConVar("sm_fbu_event_xmas", "1", "How to handle the TF2 Smissmas event.");
-	sm_fbu_gifthunt = CreateConVar("sm_fbu_gifthunt", "0", "Disables or enables Gift Hunt on maps with Gift Hunt .json files.");
-	sm_fbu_gifthunt_countbots = CreateConVar("sm_fbu_gifthunt_countbots", "0", "Disables or enables counting bots as players when increasing the goal.");
-	sm_fbu_gifthunt_goal = CreateConVar("sm_fbu_gifthunt_goal", "125", "Base number of gifts required to unlock the objective in Gift Hunt.");
-	sm_fbu_gifthunt_increment = CreateConVar("sm_fbu_gifthunt_increment", "25", "Amount to increase the gift goal per extra group of players.");
-	sm_fbu_gifthunt_players = CreateConVar("sm_fbu_gifthunt_players", "4", "Number of players in a group, any more and the gift goal increases.");
-	sm_fbu_gifthunt_rate = CreateConVar("sm_fbu_gifthunt_rate", "20", "Chance out of 100 for each gift to spawn once all gifts are collected.");
-	sm_fbu_gifthunt_bonus = CreateConVar("sm_fortressblsat_gifthunt_multiply", "1", "Whether or not to multiply players' gift collections once they get behind");
-	sm_fbu_intro = CreateConVar("sm_fbu_intro", "1", "Disables or enables automatically display the plugin intro message.");
-	sm_fbu_mannpower = CreateConVar("sm_fbu_mannpower", "2", "How to handle replacing Mannpower powerups.");
-	sm_fbu_powerups = CreateConVar("sm_fbu_powerups", "-1", "Bitfield of which powerups to enable.");
-	sm_fbu_powerups_roundstart = CreateConVar("sm_fbu_powerups_roundstart", "1", "Disables or enables automatically spawning powerups on round start.");
-	sm_fbu_respawnroomkill = CreateConVar("sm_fbu_respawnroomkill", "1", "Disables or enables killing enemies inside spawnrooms due to Mega Mann exploit.");
-	sm_fbu_ultra_rate = CreateConVar("sm_fbu_ultra_rate", "0.1", "Chance out of 100 for ULTRA POWERUP!! to spawn.");
+	sm_fortressblast_action = CreateConVar("sm_fortressblast_action", "attack3", "Which action to watch for in order to use powerups.");
+	sm_fortressblast_adminflag = CreateConVar("sm_fortressblast_adminflag", "z", "Which flag to use for admin-restricted commands outside of debug mode.");
+	sm_fortressblast_blast_buildings = CreateConVar("sm_fortressblast_blast_buildings", "100", "Percentage of Blast player damage to inflict on enemy buildings.");
+	sm_fortressblast_bot = CreateConVar("sm_fortressblast_bot", "1", "Disables or enables bots using powerups.");
+	sm_fortressblast_bot_min = CreateConVar("sm_fortressblast_bot_min", "2", "Minimum time for bots to use a powerup.");
+	sm_fortressblast_bot_max = CreateConVar("sm_fortressblast_bot_max", "15", "Maximum time for bots to use a powerup.");
+	sm_fortressblast_debug = CreateConVar("sm_fortressblast_debug", "0", "Disables or enables command permission overrides and debug messages in chat.");
+	sm_fortressblast_dizzy_states = CreateConVar("sm_fortressblast_dizzy_states", "5", "Number of rotational states Dizzy Bomb uses.");
+	sm_fortressblast_dizzy_length = CreateConVar("sm_fortressblast_dizzy_length", "5", "Length of time Dizzy Bomb lasts.");
+	sm_fortressblast_drop = CreateConVar("sm_fortressblast_drop", "1", "How to handle dropping powerups on death.");
+	sm_fortressblast_drop_rate = CreateConVar("sm_fortressblast_drop_rate", "10", "Chance out of 100 for a powerup to drop on death.");
+	sm_fortressblast_drop_teams = CreateConVar("sm_fortressblast_drop_teams", "1", "Teams that will drop powerups on death.");
+	sm_fortressblast_event_xmas = CreateConVar("sm_fortressblast_event_xmas", "1", "How to handle the TF2 Smissmas event.");
+	sm_fortressblast_gifthunt = CreateConVar("sm_fortressblast_gifthunt", "0", "Disables or enables Gift Hunt on maps with Gift Hunt .json files.");
+	sm_fortressblast_gifthunt_countbots = CreateConVar("sm_fortressblast_gifthunt_countbots", "0", "Disables or enables counting bots as players when increasing the goal.");
+	sm_fortressblast_gifthunt_goal = CreateConVar("sm_fortressblast_gifthunt_goal", "125", "Base number of gifts required to unlock the objective in Gift Hunt.");
+	sm_fortressblast_gifthunt_increment = CreateConVar("sm_fortressblast_gifthunt_increment", "25", "Amount to increase the gift goal per extra group of players.");
+	sm_fortressblast_gifthunt_players = CreateConVar("sm_fortressblast_gifthunt_players", "4", "Number of players in a group, any more and the gift goal increases.");
+	sm_fortressblast_gifthunt_rate = CreateConVar("sm_fortressblast_gifthunt_rate", "20", "Chance out of 100 for each gift to spawn once all gifts are collected.");
+	sm_fortressblast_gifthunt_bonus = CreateConVar("sm_fortressblsat_gifthunt_multiply", "1", "Whether or not to multiply players' gift collections once they get behind");
+	sm_fortressblast_intro = CreateConVar("sm_fortressblast_intro", "1", "Disables or enables automatically display the plugin intro message.");
+	sm_fortressblast_mannpower = CreateConVar("sm_fortressblast_mannpower", "2", "How to handle replacing Mannpower powerups.");
+	sm_fortressblast_powerups = CreateConVar("sm_fortressblast_powerups", "-1", "Bitfield of which powerups to enable.");
+	sm_fortressblast_powerups_roundstart = CreateConVar("sm_fortressblast_powerups_roundstart", "1", "Disables or enables automatically spawning powerups on round start.");
+	sm_fortressblast_respawnroomkill = CreateConVar("sm_fortressblast_respawnroomkill", "1", "Disables or enables killing enemies inside spawnrooms due to Mega Mann exploit.");
+	sm_fortressblast_ultra_rate = CreateConVar("sm_fortressblast_ultra_rate", "0.1", "Chance out of 100 for ULTRA POWERUP!! to spawn.");
 
 	// HUDs
 	texthand = CreateHudSynchronizer();
@@ -327,14 +327,14 @@ public Action FBMenu(int client, int args) {
 		PrintToServer("%s Because this command uses the MOTD, it cannot be executed from the server console.", MESSAGE_PREFIX_NO_COLOR);
 		return Plugin_Handled;
 	}
-	int bitfield = sm_fbu_powerups.IntValue;
+	int bitfield = sm_fortressblast_powerups.IntValue;
 	if (bitfield < 1 && bitfield > ((Bitfieldify(NumberOfPowerups) * 2) - 1)) {
 		bitfield = -1;
 	}
 	char url[200];
 	char action[15];
-	sm_fbu_action.GetString(action, sizeof(action));
-	Format(url, sizeof(url), "https://fortress-blast.github.io/%s?powerups-enabled=%d&action=%s&gifthunt=%b&ultra=%f", MOTD_VERSION, bitfield, action, sm_fbu_gifthunt.BoolValue, sm_fbu_ultra_rate.FloatValue);
+	sm_fortressblast_action.GetString(action, sizeof(action));
+	Format(url, sizeof(url), "https://fortress-blast.github.io/%s?powerups-enabled=%d&action=%s&gifthunt=%b&ultra=%f", MOTD_VERSION, bitfield, action, sm_fortressblast_gifthunt.BoolValue, sm_fortressblast_ultra_rate.FloatValue);
 	AdvMOTD_ShowMOTDPanel(client, "", url, MOTDPANEL_TYPE_URL, true, true, true, INVALID_FUNCTION);
 	CPrintToChat(client, "%s {haunted}Opening Fortress Blast manual... If nothing happened, open your developer console and {yellow}set cl_disablehtmlmotd to 0{haunted}, then try again.", MESSAGE_PREFIX);
 	return Plugin_Handled;
@@ -399,7 +399,7 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 	// So we dont overload read-writes
 	Format(path, sizeof(path), "scripts/fortress_blast/powerup_spawns/%s.json", map);
 	MapHasJsonFile = FileExists(path);
-	if (sm_fbu_gifthunt.BoolValue) {
+	if (sm_fortressblast_gifthunt.BoolValue) {
 		Format(path, sizeof(path), "scripts/fortress_blast/gift_spawns/%s.json", map);
 		GiftHunt = FileExists(path);
 		if (GiftHunt) {
@@ -453,10 +453,10 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 			powerup[client] = 0;
 			if (IsClientInGame(client)) {
 				// Only count bots if ConVar is true
-				if (!IsFakeClient(client) || sm_fbu_gifthunt_countbots.BoolValue) {
+				if (!IsFakeClient(client) || sm_fortressblast_gifthunt_countbots.BoolValue) {
 					PlayersAmount++;
 				}
-				if (sm_fbu_intro.BoolValue) {
+				if (sm_fortressblast_intro.BoolValue) {
 					CreateTimer(3.0, Timer_DisplayIntro, client);
 				}
 				// Remove powerup effects on round start
@@ -475,8 +475,8 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 		if (IsValidEntity(entity)) {
 			char classname[60];
 			GetEntityClassname(entity, classname, sizeof(classname));
-			if (FindEntityByClassname(0, "tf_logic_mannpower") != -1 && sm_fbu_mannpower.IntValue != 0) {
-				if ((!MapHasJsonFile || sm_fbu_mannpower.IntValue == 2)) {
+			if (FindEntityByClassname(0, "tf_logic_mannpower") != -1 && sm_fortressblast_mannpower.IntValue != 0) {
+				if ((!MapHasJsonFile || sm_fortressblast_mannpower.IntValue == 2)) {
 					if (StrEqual(classname, "item_powerup_rune") || StrEqual(classname, "item_powerup_crit") || StrEqual(classname, "item_powerup_uber") || StrEqual(classname, "info_powerup_spawn")) {
 						if (StrEqual(classname, "info_powerup_spawn")) {
 							float coords[3] = 69.420;
@@ -491,7 +491,7 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 			}
 		}
 	}
-	if (sm_fbu_powerups_roundstart.BoolValue) {
+	if (sm_fortressblast_powerups_roundstart.BoolValue) {
 		GetPowerupPlacements(false);
 	}
 	Gifts[2] = 0;
@@ -510,13 +510,13 @@ public Action teamplay_setup_finished(Event event, const char[] name, bool dontB
 }
 
 public void CalculateGiftAmountForPlayers() {
-	giftgoal = sm_fbu_gifthunt_goal.IntValue;
+	giftgoal = sm_fortressblast_gifthunt_goal.IntValue;
 	DebugText("Base gift goal is %d", giftgoal);
-	int steps = RoundToFloor((PlayersAmount - 1) / sm_fbu_gifthunt_players.FloatValue);
+	int steps = RoundToFloor((PlayersAmount - 1) / sm_fortressblast_gifthunt_players.FloatValue);
 	if (steps < 0) {
 		steps = 0;
 	}
-	giftgoal += (sm_fbu_gifthunt_increment.IntValue * steps);
+	giftgoal += (sm_fortressblast_gifthunt_increment.IntValue * steps);
 	DebugText("Calculated gift goal is %d", giftgoal);
 }
 
@@ -544,7 +544,7 @@ public Action MiscTimer(Handle timer, any data) {
 	if (NumberOfActiveGifts() == 0 && !GiftHuntSetup && (Gifts[2] < giftgoal || Gifts[3] < giftgoal)) {
 		GetPowerupPlacements(true);
 	}
-	if (GiftHuntIncrementTime < GetGameTime() && (Gifts[2] >= giftgoal || Gifts[3] >= giftgoal) && sm_fbu_gifthunt_bonus.BoolValue) {
+	if (GiftHuntIncrementTime < GetGameTime() && (Gifts[2] >= giftgoal || Gifts[3] >= giftgoal) && sm_fortressblast_gifthunt_bonus.BoolValue) {
 		if (Gifts[3] < giftgoal && GiftMultiply[3] < 5) {
 			GiftMultiply[3]++;
 			PrintCenterTextAll("Catchup bonus: Gifts are now worth x%d for BLU team.", GiftMultiply[3]);
@@ -567,11 +567,11 @@ public Action MiscTimer(Handle timer, any data) {
 				}
 			}
 			SpeedRotationsLeft[client]--;
-			if (DizzyProgress[client] <= (10 * sm_fbu_dizzy_length.FloatValue) && DizzyProgress[client] != -1) {
+			if (DizzyProgress[client] <= (10 * sm_fortressblast_dizzy_length.FloatValue) && DizzyProgress[client] != -1) {
 				float angles[3];
 				GetClientAbsAngles(client, angles);
 				if (!TF2_IsPlayerInCondition(client, TFCond_Taunting)) {
-					float ang = Sine((3.16159265 * sm_fbu_dizzy_states.FloatValue * DizzyProgress[client]) / (10 * sm_fbu_dizzy_length.FloatValue)) * ((10 * sm_fbu_dizzy_length.FloatValue) - DizzyProgress[client]);
+					float ang = Sine((3.16159265 * sm_fortressblast_dizzy_states.FloatValue * DizzyProgress[client]) / (10 * sm_fortressblast_dizzy_length.FloatValue)) * ((10 * sm_fortressblast_dizzy_length.FloatValue) - DizzyProgress[client]);
 					if (NegativeDizzy[client]) {
 						angles[2] = (ang * -1);
 					} else {
@@ -602,7 +602,7 @@ public int NumberOfActiveGifts() {
 public Action Timer_DisplayIntro(Handle timer, int client) {
 	if (IsClientInGame(client)) { // Required because player might disconnect before this fires
 		CPrintToChat(client, "%s {haunted}This server is running {yellow}Fortress Blast v%s!", MESSAGE_PREFIX, PLUGIN_VERSION);
-		CPrintToChat(client, "{haunted}If you would like to know more or are unsure what a powerup does, type the command {yellow}!fbu {haunted}into chat.");
+		CPrintToChat(client, "{haunted}If you would like to know more or are unsure what a powerup does, type the command {yellow}!fortressblast {haunted}into chat.");
 	}
 }
 
@@ -614,11 +614,11 @@ public Action teamplay_round_win(Event event, const char[] name, bool dontBroadc
 public Action player_death(Event event, const char[] name, bool dontBroadcast) {
 	powerup[GetClientOfUserId(event.GetInt("userid"))] = 0;
 	// Is dropping powerups enabled
-	if (sm_fbu_drop.IntValue == 2 || (sm_fbu_drop.BoolValue && !MapHasJsonFile)) {
+	if (sm_fortressblast_drop.IntValue == 2 || (sm_fortressblast_drop.BoolValue && !MapHasJsonFile)) {
 		// Get chance a powerup will be dropped
-		float convar = sm_fbu_drop_rate.FloatValue;
+		float convar = sm_fortressblast_drop_rate.FloatValue;
 		float randomNumber = GetRandomFloat(0.0, 99.99);
-		if (convar > randomNumber && (sm_fbu_drop_teams.IntValue == GetClientTeam(GetClientOfUserId(event.GetInt("userid"))) || sm_fbu_drop_teams.IntValue == 1)) {
+		if (convar > randomNumber && (sm_fortressblast_drop_teams.IntValue == GetClientTeam(GetClientOfUserId(event.GetInt("userid"))) || sm_fortressblast_drop_teams.IntValue == 1)) {
 			DebugText("Dropping powerup due to player death");
 			float coords[3];
 			GetEntPropVector(GetClientOfUserId(event.GetInt("userid")), Prop_Send, "m_vecOrigin", coords);
@@ -647,7 +647,7 @@ stock int SpawnPower(float location[3], bool respawn, int id = 0) {
 	DispatchKeyValue(entity, "powerup_model", "models/fortressblast/pickups/fb_pickup.mdl");
 	if (IsValidEdict(entity)) {
 		if (id == 0) {
-			if (sm_fbu_ultra_rate.FloatValue > GetRandomFloat(0.0, 99.99)) {
+			if (sm_fortressblast_ultra_rate.FloatValue > GetRandomFloat(0.0, 99.99)) {
 				powerupid[entity] = -1;
 			} else {
 				powerupid[entity] = GetRandomInt(1, NumberOfPowerups);
@@ -860,13 +860,13 @@ public void CollectedPowerup(int client) {
 		EmitSoundToClient(client, "fortressblast2/dizzybomb_pickup.mp3", client);
 	}
 	// If player is a bot and bot support is enabled
-	if (IsFakeClient(client) && sm_fbu_bot.BoolValue) {
+	if (IsFakeClient(client) && sm_fortressblast_bot.BoolValue) {
 		// Get minimum and maximum times
-		float convar1 = sm_fbu_bot_min.FloatValue;
+		float convar1 = sm_fortressblast_bot_min.FloatValue;
 		if (convar1 < 0) {
 			convar1 == 0;
 		}
-		float convar2 = sm_fbu_bot_max.FloatValue;
+		float convar2 = sm_fortressblast_bot_max.FloatValue;
 		if (convar2 < convar1) {
 			convar2 == convar1;
 		}
@@ -883,7 +883,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	}
 	if (buttons & 33554432 && (!PreviousAttack3[client]) && StringButtonInt() != 33554432) {
 		char button[40];
-		sm_fbu_action.GetString(button, sizeof(button))
+		sm_fortressblast_action.GetString(button, sizeof(button))
 		CPrintToChat(client, "%s {red}Special attack is currently disabled on this server. You are required to {yellow}perform the '%s' action to use a powerup.", MESSAGE_PREFIX, button);
 	} else if (buttons & StringButtonInt() && !BlockPowerup(client)) {
 		UsePower(client);
@@ -1203,7 +1203,7 @@ public void UsePower(int client) {
 					DizzyProgress[client2] = 0;
 					NegativeDizzy[client2] = (GetRandomInt(0, 1) == 0); // Randomly decide which direction dizziness shoudl start in
 					EmitSoundToClient(client2, "fortressblast2/dizzybomb_dizzy.mp3", client2);
-					PowerupParticle(client2, "conc_stars", sm_fbu_dizzy_length.FloatValue, 80.0);
+					PowerupParticle(client2, "conc_stars", sm_fortressblast_dizzy_length.FloatValue, 80.0);
 				}
 			}
 		}
@@ -1252,7 +1252,7 @@ public void BuildingDamage(int client, const char[] class) {
 		GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos2);
 		if (0 < bobthe <= MaxClients && IsClientInGame(bobthe) && GetClientTeam(bobthe) != GetClientTeam(client) && GetVectorDistance(pos1, pos2) <= 250.0) {
 			DebugText("%s ID %d at %f, %f, %f damaged by Blast powerup", class, entity, pos2[0], pos2[1], pos2[2]);
-			float expectedDamage = sm_fbu_blast_buildings.FloatValue / 100;
+			float expectedDamage = sm_fortressblast_blast_buildings.FloatValue / 100;
 			if (expectedDamage < 0) {
 				expectedDamage = 0.0;
 			}
@@ -1532,7 +1532,7 @@ public void GetPowerupPlacements(bool UsingGiftHunt) {
 			}
 		}
 		if (coords[0] != 0.001) {
-			if (UsingGiftHunt && (GetRandomInt(0, 99) >= sm_fbu_gifthunt_rate.IntValue)) {
+			if (UsingGiftHunt && (GetRandomInt(0, 99) >= sm_fortressblast_gifthunt_rate.IntValue)) {
 				DebugText("Not spawning gift %d because it failed random", itemloop);
 			} else {
 				if (UsingGiftHunt) {
@@ -1638,18 +1638,18 @@ public Action Timer_RemoveParticle(Handle timer, any data) {
 }
 
 public void DebugText(const char[] text, any ...) {
-	if (sm_fbu_debug.BoolValue) {
+	if (sm_fortressblast_debug.BoolValue) {
 		int len = strlen(text) + 255;
 		char[] format = new char[len];
 		VFormat(format, len, text, 2);
-		CPrintToChatAll("{orange}[FBU Debug] {white}%s", format);
-		PrintToServer("[FBU Debug] %s", format);
+		CPrintToChatAll("{orange}[FB Debug] {white}%s", format);
+		PrintToServer("[FB Debug] %s", format);
 	}
 }
 
 public int StringButtonInt() {
 	char button[40];
-	sm_fbu_action.GetString(button, sizeof(button));
+	sm_fortressblast_action.GetString(button, sizeof(button));
 	if (StrEqual(button, "attack")) {
 		return 1;
 	} else if (StrEqual(button, "jump")) {
@@ -1706,7 +1706,7 @@ public int StringButtonInt() {
 
 public int AdminFlagInt() {
 	char flag[40];
-	sm_fbu_adminflag.GetString(flag, sizeof(flag));
+	sm_fortressblast_adminflag.GetString(flag, sizeof(flag));
 	if (StrEqual(flag, "a")) {
 		return ADMFLAG_RESERVATION;
 	} else if (StrEqual(flag, "b")) {
@@ -1933,7 +1933,7 @@ public Action Timer_DeleteEdict(Handle timer, int entity) {
 
 public bool PowerupIsEnabled(int id) {
 	int max = (Bitfieldify(NumberOfPowerups) * 2) - 1;
-	int bitfield = sm_fbu_powerups.IntValue;
+	int bitfield = sm_fortressblast_powerups.IntValue;
 	if (bitfield == -1) {
 		return true; // All powerups enabled
 	} else if (bitfield < 1 || bitfield > max) {
@@ -1984,7 +1984,7 @@ public Action CoordsJson(int client, int args) {
 }
 
 public bool AdminCommand(int client) {
-	if (!CheckCommandAccess(client, "", AdminFlagInt()) && !sm_fbu_debug.BoolValue) {
+	if (!CheckCommandAccess(client, "", AdminFlagInt()) && !sm_fortressblast_debug.BoolValue) {
 		CPrintToChat(client, "%s {red}You do not have permission to use this command.", MESSAGE_PREFIX);
 		return false;
 	}
@@ -2033,7 +2033,7 @@ public void OnTouchRespawnRoom(int entity, int other) {
 	if (!IsClientInGame(other)) return;
 	if (!IsPlayerAlive(other)) return;
 	// Kill enemies inside spawnrooms
-	if (GetEntProp(entity, Prop_Send, "m_iTeamNum") != GetClientTeam(other) && sm_fbu_respawnroomkill.BoolValue && VictoryTeam == -1) {
+	if (GetEntProp(entity, Prop_Send, "m_iTeamNum") != GetClientTeam(other) && sm_fortressblast_respawnroomkill.BoolValue && VictoryTeam == -1) {
 		FakeClientCommandEx(other, "kill");
 		PrintToServer("%s %N was killed due to being inside an enemy team spawnroom.", MESSAGE_PREFIX_NO_COLOR, other);
 		CPrintToChat(other, "%s {red}You were killed because you were inside the enemy spawn.", MESSAGE_PREFIX);
@@ -2067,7 +2067,7 @@ public bool TraceFilterNotSelf(int entity, int contentsMask, any client) {
 }
 
 public bool Smissmas() {
-	int FeelsLikeTheVeryFirst = sm_fbu_event_xmas.IntValue;
+	int FeelsLikeTheVeryFirst = sm_fortressblast_event_xmas.IntValue;
 	if (FeelsLikeTheVeryFirst == 0) {
 		return false;
 	} else if (FeelsLikeTheVeryFirst == 1) {
