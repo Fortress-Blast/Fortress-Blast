@@ -559,8 +559,8 @@ public Action Event_RoundStart(Event event, const char[] name, bool dontBroadcas
 		}
 	}
 	CalculateGiftGoal();
-	RemoveAllPowerups()
-	for (int entity = 1; entity <= MAX_EDICTS ; entity++) { // Add powerups and replace Mannpower
+	RemoveAllPowerups();
+	for (int entity = 1; entity <= MAX_EDICTS; entity++) { // Add powerups and replace Mannpower
 		if (IsValidEntity(entity)) {
 			char classname[60];
 			GetEntityClassname(entity, classname, sizeof(classname));
@@ -1124,7 +1124,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	}
 	if (buttons & 33554432 && (!PreviousAttack3[client]) && ActionInit() != 33554432) {
 		char button[40];
-		sm_fortressblast_action.GetString(button, sizeof(button))
+		sm_fortressblast_action.GetString(button, sizeof(button));
 		CPrintToChat(client, "%s {red}Special attack is currently disabled on this server. You are required to {yellow}perform the '%s' action to use a powerup.", MESSAGE_PREFIX, button);
 	} else if (buttons & ActionInit() && !BlockPowerup(client)) {
 		UsePowerup(client);
