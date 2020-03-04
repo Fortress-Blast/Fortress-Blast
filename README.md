@@ -2,7 +2,9 @@
 
 ![Fortress Blast](https://fortress-blast.github.io/images/logo.png)
 
-Fortress Blast is a SourceMod plugin for Team Fortress 2, created by Naleksuh and Jack5, that adds collectable powerups from the Marble Blast series and more into TF2. It can be run on top of other game modes and server mods. Fortress Blast comes with support for some official maps, as well as an entire library of official and custom map support available in a [separate repository](https://github.com/Fortress-Blast/Fortress-Blast-Maps), but can be safely run on non-supported maps.
+Fortress Blast is a SourceMod plugin for Team Fortress 2 that adds collectable powerups from the Marble Blast series and more into TF2. It can be run on top of other game modes and server mods. Fortress Blast comes with support for some official maps, as well as an entire library of official and custom map support available in a [separate repository](https://github.com/Fortress-Blast/Fortress-Blast-Maps), but can be safely run on non-supported maps. Plugin contributors are listed on the official wiki and in the [player manual](https://fortress-blast.github.io/index.html) accessible through the in-game MOTD.
+
+To find a server running Fortress Blast Ultra, open Team Fortress 2, click **Find A Game** and then **Community Servers**. In the browser that opens, type in the tag `fortressblast`, then click **Refresh all**.
 
 A powerup bonanza!
 ------------------
@@ -30,11 +32,3 @@ Full of gifting spirit!
 -----------------------
 
 Within Fortress Blast is an optional mini game mode called **Gift Hunt**, in which teams are required to collect gifts scattered around the map before they can complete the objective. It can support both symmetrical and linear maps, and it comes with several ConVars that make it similarly customizable to the rest of the plugin.
-
-Contributors
-------------
-
-- [Naleksuh](https://www.youtube.com/Naleksuh) - Programmer
-- [Jack5](https://www.youtube.com/user/jack5vlogging) - Concept, design and graphics
-- [ChargingTurnip](https://tf2maps.net/members/true-lemon.31187) - Custom powerup model
-- [Benedevil](https://steamcommunity.com/id/MrBenedevil) - Programming contributions
