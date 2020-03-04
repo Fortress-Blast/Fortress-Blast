@@ -59,6 +59,7 @@ bool NegativeDizzy[MAXPLAYERS + 1] = false;
 bool Magnetism[MAXPLAYERS + 1] = false;
 bool UltraPowerup[MAXPLAYERS + 1] = false;
 bool MegaMannVerified[MAXPLAYERS + 1] = false;
+bool Gyrocopter[MAXPLAYERS+1] = false;
 bool GiftHuntAttackDefense = false;
 bool GiftHuntNeutralFlag = false;
 bool GiftHuntSetup = false;
@@ -1283,8 +1284,13 @@ public void UsePowerup(int client) {
 		SuperBounceHandle[client] = CreateTimer(5.0, Timer_RemoveSuperBounce, client);
 		ParticleOnPlayer(client, "teleporter_blue_charged_level2", 5.0, 0.0);
 		if (AprilFools()) {
-			SetEntityGravity(client, 2.0); // Increase gravity during April Fools, need a way to track Gyrocopter
-		}		
+			if(Gyrocopter[client]){
+				SetEntityGravity(client, 1.5);
+			}
+			else{
+				SetEntityGravity(client, 3.0); // Increase gravity during April Fools, need a way to track Gyrocopter
+			}
+		}
 	} else if (PowerupCollected[client] == 2) {
 		// Shock Absorber - 75% damage and 100% knockback resistances for 5 seconds
 		ShockAbsorber[client] = true;
@@ -1309,12 +1315,13 @@ public void UsePowerup(int client) {
 	} else if (PowerupCollected[client] == 5) {
 		// Gyrocopter - 25% gravity for 5 seconds
 		if (SuperBounce[client] && AprilFools()) {
-			SetEntityGravity(client, 0.5);
+			SetEntityGravity(client, 1.5);
 		} else {
 			SetEntityGravity(client, 0.25);
 		}
 		ClearTimer(GyrocopterHandle[client]);
 		GyrocopterHandle[client] = CreateTimer(5.0, Timer_RemoveGyrocopter, client);
+		Gyrocopter[client] = true;
 		EmitAmbientSound("fortressblast2/gyrocopter_use.mp3", vel, client);
 	} else if (PowerupCollected[client] == 6) {
 		// Time Travel - Increased speed, invisibility and can't attack for 5 seconds
@@ -1873,8 +1880,13 @@ public bool TeleporterPassesNetprops(int entity) {
 public Action Timer_RemoveSuperBounce(Handle timer, int client) {
 	SuperBounceHandle[client] = INVALID_HANDLE;
 	SuperBounce[client] = false;
-	if (IsClientInGame(client) && AprilFools()) {
-		SetEntityGravity(client, 1.0); // Need a way to track Gyrocopter
+	if (IsClientInGame(client)) {
+		if(AprilFools() && Gyrocopter[client]){
+			SetEntityGravity(client, 0.25);
+		}
+		else{
+			SetEntityGravity(client, 1.0); // Need a way to track Gyrocopter
+		}
 	}
 }
 
@@ -1884,10 +1896,11 @@ public Action Timer_RemoveShockAbsorb(Handle timer, int client) {
 }
 
 public Action Timer_RemoveGyrocopter(Handle timer, int client) {
+	Gyrocopter[client] = false;
 	GyrocopterHandle[client] = INVALID_HANDLE;
 	if (IsClientInGame(client)) {
 		if (SuperBounce[client] && AprilFools()) {
-			SetEntityGravity(client, 2.0);
+			SetEntityGravity(client, 3.0);
 		} else {
 			SetEntityGravity(client, 1.0);
 		}
