@@ -388,46 +388,52 @@ public Action Command_SetPowerup(int client, int args) {
 	char arg[MAX_NAME_LENGTH + 1];
 	char arg2[3]; // Need to have a check if there's only one argument, apply to command user
 	GetCmdArg(1, arg, sizeof(arg));
-	GetCmdArg(2, arg2, sizeof(arg2));
-	// The approach of this is deliberate, to be as if they typed like normal
-	if (StrEqual(arg, "@all")) {
-		for (int client2 = 1; client2 <= MaxClients; client2++) {
-			if (IsClientInGame(client2)) {
-				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
+	int player;
+	if (arg == "0" || StringToInt(arg) != 0) { // Name of target not included, act on client
+		player = client;
+		PowerupID[player] = StringToInt(arg);
+	} else {
+		GetCmdArg(2, arg2, sizeof(arg2));
+		// The approach of this is deliberate, to be as if they typed like normal
+		if (StrEqual(arg, "@all")) {
+			for (int client2 = 1; client2 <= MaxClients; client2++) {
+				if (IsClientInGame(client2)) {
+					FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
+				}
 			}
-		}
-		return Plugin_Handled;
-	} else if (StrEqual(arg, "@red")) {
-		for (int client2 = 1; client2 <= MaxClients; client2++) {
-			if (IsClientInGame(client2) && GetClientTeam(client2) == 2) {
-				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
+			return Plugin_Handled;
+		} else if (StrEqual(arg, "@red")) {
+			for (int client2 = 1; client2 <= MaxClients; client2++) {
+				if (IsClientInGame(client2) && GetClientTeam(client2) == 2) {
+					FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
+				}
 			}
-		}
-		return Plugin_Handled;
-	} else if (StrEqual(arg, "@blue")) {
-		for (int client2 = 1; client2 <= MaxClients; client2++) {
-			if (IsClientInGame(client2) && GetClientTeam(client2) == 3) {
-				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
+			return Plugin_Handled;
+		} else if (StrEqual(arg, "@blue")) {
+			for (int client2 = 1; client2 <= MaxClients; client2++) {
+				if (IsClientInGame(client2) && GetClientTeam(client2) == 3) {
+					FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
+				}
 			}
-		}
-		return Plugin_Handled;
-	} else if (StrEqual(arg, "@bots")) {
-		for (int client2 = 1; client2 <= MaxClients; client2++) {
-			if (IsClientInGame(client2) && IsFakeClient(client2)) {
-				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
+			return Plugin_Handled;
+		} else if (StrEqual(arg, "@bots")) {
+			for (int client2 = 1; client2 <= MaxClients; client2++) {
+				if (IsClientInGame(client2) && IsFakeClient(client2)) {
+					FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
+				}
 			}
-		}
-		return Plugin_Handled;
-	} else if (StrEqual(arg, "@humans")) {
-		for (int client2 = 1; client2 <= MaxClients; client2++) {
-			if (IsClientInGame(client2) && !IsFakeClient(client2)) {
-				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
+			return Plugin_Handled;
+		} else if (StrEqual(arg, "@humans")) {
+			for (int client2 = 1; client2 <= MaxClients; client2++) {
+				if (IsClientInGame(client2) && !IsFakeClient(client2)) {
+					FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
+				}
 			}
+			return Plugin_Handled;
 		}
-		return Plugin_Handled;
+		player = FindTarget(client, arg, false, false);
+		PowerupID[player] = StringToInt(arg2);
 	}
-	int player = FindTarget(client, arg, false, false);
-	PowerupID[player] = StringToInt(arg2);
 	CollectedPowerup(player);
 	DebugText("%N set %N's powerup to ID %d", client, player, StringToInt(arg2));
 	return Plugin_Handled;
