@@ -31,7 +31,7 @@ public Plugin myinfo = {
 	author = "Benedevil, Jack5, Naleksuh & Rushy",
 	description = "Adds powerups from Marble Blast into TF2! Can easily be combined with other plugins and game modes.",
 	version = PLUGIN_VERSION,
-	url = "https://github.com/Fortress-Blast"
+	url = "https://fortressblast.miraheze.org/wiki/Main_Page"
 };
 
 // Global Variables
@@ -106,6 +106,10 @@ ConVar sm_fortressblast_powerups;
 ConVar sm_fortressblast_powerups_roundstart;
 ConVar sm_fortressblast_respawnroomkill;
 ConVar sm_fortressblast_ultra_rate;
+
+// Modules
+#include "fortress_blast_modules/commands.sp"
+#include "fortress_blast_modules/hud.sp"
 
 /* Powerup IDs
 -1 - ULTRA POWERUP!!
@@ -317,165 +321,6 @@ public void OnMapStart() {
 	AddFileToDownloadsTable("sound/fortressblast2/gifthunt_goal_playerteam.mp3");
 
 	CreateTimer(0.1, Timer_MiscTimer, _, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE); // Timer to check gifts and calculate Super Speed and Dizzy Bomb progress
-}
-
-/* Commands
-==================================================================================================== */
-
-public bool AdminCommand(int client) {
-	if (!CheckCommandAccess(client, "", AdminFlagInit()) && !sm_fortressblast_debug.BoolValue) {
-		CPrintToChat(client, "%s {red}You do not have permission to use this command.", MESSAGE_PREFIX);
-		return false;
-	}
-	return true;
-}
-
-public Action Command_FortressBlast(int client, int args) {
-	char arg[30];
-	GetCmdArg(1, arg, sizeof(arg));
-	// Command '!fortressblast force' will print intro message to everyone if user is an admin
-	if (StrEqual(arg, "force")) {
-		if (AdminCommand(client)) {
-			for (int client2 = 1; client2 <= MaxClients; client2++) {
-				if (IsClientInGame(client2)) {
-					CreateTimer(0.0, Timer_DisplayIntro, client2);
-				}
-			}
-			return Plugin_Handled;
-		} else {
-			return Plugin_Handled;
-		}
-	}
-	if (client == 0) {
-		PrintToServer("%s Because this command uses the MOTD, it cannot be executed from the server console.", MESSAGE_PREFIX_NO_COLOR);
-		return Plugin_Handled;
-	}
-	int bitfield = sm_fortressblast_powerups.IntValue;
-	if (bitfield < 1 && bitfield > ((Bitfieldify(NumberOfPowerups) * 2) - 1)) {
-		bitfield = -1;
-	}
-	char url[200];
-	char action[15];
-	sm_fortressblast_action.GetString(action, sizeof(action));
-	Format(url, sizeof(url), "https://fortress-blast.github.io/%s?powerups-enabled=%d&action=%s&gifthunt=%b&ultra=%f", MOTD_VERSION, bitfield, action, sm_fortressblast_gifthunt.BoolValue, sm_fortressblast_ultra_rate.FloatValue);
-	AdvMOTD_ShowMOTDPanel(client, "", url, MOTDPANEL_TYPE_URL, true, true, true, INVALID_FUNCTION);
-	CPrintToChat(client, "%s {haunted}Opening Fortress Blast manual... If nothing happened, open your developer console and {yellow}set cl_disablehtmlmotd to 0{haunted}, then try again.", MESSAGE_PREFIX);
-	return Plugin_Handled;
-}
-
-public Action Command_CoordsJson(int client, int args) {
-	if (client == 0) {
-		PrintToServer("%s Because this command uses the crosshair, it cannot be executed from the server console.", MESSAGE_PREFIX_NO_COLOR);
-		return Plugin_Handled;
-	}
-	float points[3];
-	GetCollisionPoint(client, points);
-	CPrintToChat(client, "{haunted}\"#-x\": \"%d\", \"#-y\": \"%d\", \"#-z\": \"%d\",", RoundFloat(points[0]), RoundFloat(points[1]), RoundFloat(points[2]));
-	return Plugin_Handled;
-}
-
-public Action Command_RespawnPowerups(int client, int args){
-	if (!AdminCommand(client)) {
-		return Plugin_Handled;
-	}
-	RemoveAllPowerups();
-	GetSpawns(false);
-	return Plugin_Handled;
-}
-
-public Action Command_SetPowerup(int client, int args) {
-	if (!AdminCommand(client)) {
-		return Plugin_Handled;
-	}
-	char arg[MAX_NAME_LENGTH + 1];
-	char arg2[3];
-	GetCmdArg(1, arg, sizeof(arg));
-	GetCmdArg(2, arg2, sizeof(arg2));
-	// Fake client commands used intentionally, sets every player's powerup individually while allowing @ to save time
-	if ((StrEqual(arg, "0") || StringToInt(arg) != 0) && StrEqual(arg2, "")) { // Name of target not included, act on client
-		FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client), StringToInt(arg));
-		return Plugin_Handled;
-	} else if (StrEqual(arg, "@all")) {
-		for (int client2 = 1; client2 <= MaxClients; client2++) {
-			if (IsClientInGame(client2)) {
-				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
-			}
-		}
-		return Plugin_Handled;
-	} else if (StrEqual(arg, "@red")) {
-		for (int client2 = 1; client2 <= MaxClients; client2++) {
-			if (IsClientInGame(client2) && GetClientTeam(client2) == 2) {
-				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
-			}
-		}
-		return Plugin_Handled;
-	} else if (StrEqual(arg, "@blue")) {
-		for (int client2 = 1; client2 <= MaxClients; client2++) {
-			if (IsClientInGame(client2) && GetClientTeam(client2) == 3) {
-				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
-			}
-		}
-		return Plugin_Handled;
-	} else if (StrEqual(arg, "@bots")) {
-		for (int client2 = 1; client2 <= MaxClients; client2++) {
-			if (IsClientInGame(client2) && IsFakeClient(client2)) {
-				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
-			}
-		}
-		return Plugin_Handled;
-	} else if (StrEqual(arg, "@humans")) {
-		for (int client2 = 1; client2 <= MaxClients; client2++) {
-			if (IsClientInGame(client2) && !IsFakeClient(client2)) {
-				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
-			}
-		}
-		return Plugin_Handled;
-	}
-	int player = FindTarget(client, arg, false, false);
-	PowerupID[player] = StringToInt(arg2);
-	CollectedPowerup(player);
-	DebugText("%N set %N's powerup to ID %d", client, player, StringToInt(arg2));
-	return Plugin_Handled;
-}
-
-public Action Command_SpawnPowerup(int client, int args) {
-	if (!AdminCommand(client)) {
-		return Plugin_Handled;
-	}
-	if (client == 0) {
-		PrintToServer("%s Because this command uses the crosshair, it cannot be executed from the server console.", MESSAGE_PREFIX_NO_COLOR);
-		return Plugin_Handled;
-	}
-	float points[3];
-	GetCollisionPoint(client, points);
-	char arg1[3];
-	GetCmdArg(1, arg1, sizeof(arg1));
-	SpawnPowerup(points, false, StringToInt(arg1));
-	return Plugin_Handled;
-}
-
-/* Command dependencies
-==================================================================================================== */
-
-stock void GetCollisionPoint(int client, float pos[3]) {
-	float vOrigin[3];
-	float vAngles[3];
-
-	GetClientEyePosition(client, vOrigin);
-	GetClientEyeAngles(client, vAngles);
-
-	Handle trace = TR_TraceRayFilterEx(vOrigin, vAngles, MASK_SOLID, RayType_Infinite, TraceEntityFilterPlayer);
-
-	if (TR_DidHit(trace)) {
-		TR_GetEndPosition(pos, trace);
-		CloseHandle(trace);
-		return;
-	}
-	CloseHandle(trace);
-}
-
-public bool TraceEntityFilterPlayer(int entity, int contentsMask) {
-	return entity > MaxClients;
 }
 
 /* Powerups, Gifts and Respawn Room initialisation
@@ -1955,90 +1800,6 @@ stock void ClearTimer(Handle Timer) {
         CloseHandle(Timer);
         Timer = INVALID_HANDLE;
     }
-}
-
-/* DoHudText()
-The HUD function for the plugin
-On April Fools most of the powerups have the word 'Super' inserted into them
-==================================================================================================== */
-
-public void DoHudText(int client) {
-	if (PowerupID[client] != 0) {
-		if (BlockPowerup(client)) {
-			SetHudTextParams(0.825, 0.5, 0.25, 255, 0, 0, 0);
-		} else {
-			SetHudTextParams(0.825, 0.5, 0.25, 255, 255, 0, 255);
-		}
-		if (PowerupID[client] == -1) {
-			if (!AprilFools()) {
-				ShowSyncHudText(client, PowerupText, "Collected powerup:\nULTRA POWERUP!!");
-			} else {
-				ShowSyncHudText(client, PowerupText, "Collected powerup:\nSUPER POWERUP!!");
-			}
-		} else if (PowerupID[client] == 1) {
-			ShowSyncHudText(client, PowerupText, "Collected powerup:\nSuper Bounce");
-		} else if (PowerupID[client] == 2) {
-			if (!AprilFools()) {
-				ShowSyncHudText(client, PowerupText, "Collected powerup:\nShock Absorber");
-			} else {
-				ShowSyncHudText(client, PowerupText, "Collected powerup:\nSuper Absorber");
-			}
-		} else if (PowerupID[client] == 3) {
-			ShowSyncHudText(client, PowerupText, "Collected powerup:\nSuper Speed");
-		} else if (PowerupID[client] == 4) {
-			ShowSyncHudText(client, PowerupText, "Collected powerup:\nSuper Jump");
-		} else if (PowerupID[client] == 5) {
-			if (!AprilFools()) {
-				ShowSyncHudText(client, PowerupText, "Collected powerup:\nGyrocopter");
-			} else {
-				ShowSyncHudText(client, PowerupText, "Collected powerup:\nSuper Gyrocopter");
-			}
-		} else if (PowerupID[client] == 6) {
-			ShowSyncHudText(client, PowerupText, "Collected powerup:\nTime Travel");
-		} else if (PowerupID[client] == 7) {
-			if (!AprilFools()) {
-				ShowSyncHudText(client, PowerupText, "Collected powerup:\nBlast");
-			} else {
-				ShowSyncHudText(client, PowerupText, "Collected powerup:\nSuper Blast");
-			}
-		} else if (PowerupID[client] == 8) {
-			if (!AprilFools()) {
-				ShowSyncHudText(client, PowerupText, "Collected powerup:\nMega Mann");
-			} else {
-				ShowSyncHudText(client, PowerupText, "Collected powerup:\nSuper Mann");
-			}
-		} else if (PowerupID[client] == 9) {
-			ShowSyncHudText(client, PowerupText, "Collected powerup:\nFrost Touch");
-		} else if (PowerupID[client] == 10) {
-			if (!AprilFools()) {
-				ShowSyncHudText(client, PowerupText, "Collected powerup:\nMystery");
-			} else {
-				ShowSyncHudText(client, PowerupText, "Collected powerup:\nSuper Mystery");
-			}
-		} else if (PowerupID[client] == 11) {
-			ShowSyncHudText(client, PowerupText, "Collected powerup:\nTeleportation");
-		} else if (PowerupID[client] == 12) {
-			if (!AprilFools()) {
-				ShowSyncHudText(client, PowerupText, "Collected powerup:\nMagnetism");
-			} else {
-				ShowSyncHudText(client, PowerupText, "Collected powerup:\nSuper Magnetism");
-			}
-		} else if (PowerupID[client] == 13) {
-			ShowSyncHudText(client, PowerupText, "Collected powerup:\nEffect Burst");
-		} else if (PowerupID[client] == 14) {
-			ShowSyncHudText(client, PowerupText, "Collected powerup:\nDizzy Bomb");
-		}
-	}
-	if (GiftHunt && VictoryTeam == -1) {
-		SetHudTextParams(-1.0, 0.775, 0.25, 255, 255, 255, 255);
-		if (GiftMultiplier[2] < 2 && GiftMultiplier[3] < 2) {
-  			ShowSyncHudText(client, GiftText, "BLU: %d | Playing to %d gifts | RED: %d", GiftsCollected[3], GiftGoal, GiftsCollected[2]);
-		} else if (GiftMultiplier[2] < 2 && GiftMultiplier[3] >= 2) {
-  			ShowSyncHudText(client, GiftText, "BLU: %d (x%d)| Playing to %d gifts | RED: %d", GiftsCollected[3], GiftMultiplier[3], GiftGoal, GiftsCollected[2]);
-		} else if (GiftMultiplier[2] >= 2 && GiftMultiplier[3] < 2) {
-  			ShowSyncHudText(client, GiftText, "BLU: %d | Playing to %d gifts | RED: %d (x%d)", GiftsCollected[3], GiftGoal, GiftsCollected[2], GiftMultiplier[2]);
-		}
-	}
 }
 
 /* Particles
