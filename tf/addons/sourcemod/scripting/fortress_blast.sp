@@ -831,25 +831,24 @@ public int NumberOfActiveGifts() {
 	return totalgifts;
 }
 
-/* Timer_DisplayIntro()
+/* Introductory Message
 ==================================================================================================== */
 
 public Action Timer_DisplayIntro(Handle timer, int client) {
 	if (IsClientInGame(client)) { // Required because player might disconnect before this fires
-		CPrintToChat(client, "%s {haunted}This server is running %s {yellow}v%s!", MESSAGE_PREFIX, NationalColors(), PLUGIN_VERSION);
+		CPrintToChat(client, "%s {haunted}This server is running %s {yellow}v%s!", MESSAGE_PREFIX, FancyPluginName(), PLUGIN_VERSION);
 		CPrintToChat(client, "{haunted}If you would like to know more or are unsure what a powerup does, type the command {yellow}!fortressblast {haunted}into chat.");
 	}
 }
 
-stock char NationalColors(){
+stock char FancyPluginName() {
 	char intro[500];
-	// order these so that the last one is highest priority
-	intro = "{yellow}Fortress Blast";
-	if(Smissmas()){
+	if (Smissmas()) {
 		intro = "{salmon}F{limegreen}o{salmon}r{limegreen}t{salmon}r{limegreen}e{salmon}s{limegreen}s {salmon}B{limegreen}l{salmon}a{limegreen}s{salmon}t";
-	}
-	if(AprilFools()){
+	} else if (AprilFools()) {
 		intro = "{immortal}F{burlywood}o{crimson}r{lawngreen}t{lightgoldenrodyellow}r{fuchsia}e{mediumaquamarine}s{darkgoldenrod}s {sienna}B{mediumorchid}l{darkkhaki}a{thistle}s{fullred}t";
+	} else {
+		intro = "{yellow}Fortress Blast";
 	}
 	return intro;
 }
