@@ -24,8 +24,6 @@
 #define MOTD_VERSION "5.0"
 #define NUMBER_OF_POWERUPS 14 // Do not use in calculations, only for sizing arrays
 
-#define NUMBER_OF_POWERUPS 14 // do not use this definition to calculate - it is only for the variable below and for sizing arrays
-
 #define PI 3.14159265359
 
 public Plugin myinfo = {
