@@ -22,6 +22,7 @@
 #define MESSAGE_PREFIX_NO_COLOR "[Fortress Blast]"
 #define PLUGIN_VERSION "5.0 Beta"
 #define MOTD_VERSION "5.0"
+#define NUMBER_OF_POWERUPS 14 // Do not use in calculations, only for sizing arrays
 
 #define NUMBER_OF_POWERUPS 14 // do not use this definition to calculate - it is only for the variable below and for sizing arrays
 
@@ -36,7 +37,7 @@ public Plugin myinfo = {
 };
 
 // Global Variables
-int NumberOfPowerups = NUMBER_OF_POWERUPS; // DO NOT DEFINE THIS!
+int NumberOfPowerups = NUMBER_OF_POWERUPS; // Do not define, use this for calculations
 int PlayersAmount;
 int GiftGoal;
 int GiftsCollected[4] = 0;
@@ -54,7 +55,7 @@ bool GiftHunt = false;
 bool NegativeDizzy[MAXPLAYERS + 1] = false;
 bool UltraPowerup[MAXPLAYERS + 1] = false;
 bool MegaMannVerified[MAXPLAYERS + 1] = false;
-bool UsingPowerup[NUMBER_OF_POWERUPS + 1][MAXPLAYERS+1];
+bool UsingPowerup[NUMBER_OF_POWERUPS + 1][MAXPLAYERS + 1];
 bool GiftHuntAttackDefense = false;
 bool GiftHuntNeutralFlag = false;
 bool GiftHuntSetup = false;
@@ -389,16 +390,14 @@ public Action Command_SetPowerup(int client, int args) {
 		return Plugin_Handled;
 	}
 	char arg[MAX_NAME_LENGTH + 1];
-	char arg2[3]; // Need to have a check if there's only one argument, apply to command user
+	char arg2[3];
 	GetCmdArg(1, arg, sizeof(arg));
 	GetCmdArg(2, arg2, sizeof(arg2));
-	// the reason for using fake client commands here is intentional: other plugins that treat things like "all red players as an action"
-	// is not the case here, it will be as though you set every player's powerup individually, while allowing @red as a way to save time
+	// Fake client commands used intentionally, sets every player's powerup individually while allowing @ to save time
 	if ((StrEqual(arg, "0") || StringToInt(arg) != 0) && StrEqual(arg2, "")) { // Name of target not included, act on client
 		FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client), StringToInt(arg));
 		return Plugin_Handled;
-	}
-	if (StrEqual(arg, "@all")) {
+	} else if (StrEqual(arg, "@all")) {
 		for (int client2 = 1; client2 <= MaxClients; client2++) {
 			if (IsClientInGame(client2)) {
 				FakeClientCommand(client, "sm_setpowerup #%d %d", GetClientUserId(client2), StringToInt(arg2));
@@ -1071,7 +1070,8 @@ public void CollectedPowerup(int client) {
 }
 
 public Action Timer_BotUsePowerup(Handle timer, int client) {
-	if (IsClientInGame(client)) {
+	if (IsClientInGame(client) && !BlockPowerup(client)) {
+		// May need to look into getting a bot to try again a couple of times if powerup is blocked
 		DebugText("Forcing bot %N to use powerup ID %d", client, PowerupID[client]);
 		UsePowerup(client);
 	}
