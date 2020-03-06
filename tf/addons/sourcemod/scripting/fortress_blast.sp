@@ -844,7 +844,7 @@ stock char FancyPluginName() {
 	if (Smissmas()) {
 		intro = "{salmon}F{limegreen}o{salmon}r{limegreen}t{salmon}r{limegreen}e{salmon}s{limegreen}s {salmon}B{limegreen}l{salmon}a{limegreen}s{salmon}t";
 	} else if (AprilFools()) {
-		intro = "{immortal}F{burlywood}o{crimson}r{lawngreen}t{lightgoldenrodyellow}r{fuchsia}e{mediumaquamarine}s{darkgoldenrod}s {sienna}B{mediumorchid}l{darkkhaki}a{thistle}s{fullred}t";
+		intro = "{red}F{orange}o{yellow}r{green}t{cyan}r{blue}e{pink}s{blue}s {cyan}B{green}l{yellow}a{orange}s{red}t";
 	} else {
 		intro = "{yellow}Fortress Blast";
 	}
