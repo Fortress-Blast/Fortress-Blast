@@ -499,6 +499,8 @@ public Action Event_RoundStart(Event event, const char[] name, bool dontBroadcas
 				char mode[30];
 				handle.GetString("mode", mode, sizeof(mode));
 				GiftHuntAttackDefense = StrEqual(mode, "attackdefense", true);
+			} else {
+				GiftHuntAttackDefense = false;
 			}
 			GiftHuntNeutralFlag = false;
 			int flag;
