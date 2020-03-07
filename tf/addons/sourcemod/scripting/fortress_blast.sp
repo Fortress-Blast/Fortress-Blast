@@ -1252,7 +1252,9 @@ public bool BlockPowerup(int client) {
 ==================================================================================================== */
 
 public void UsePowerup(int client) {
-	UsingPowerup[PowerupID[client]][client] = true; // double array :)
+	if(PowerupID[client] > 0){
+		UsingPowerup[PowerupID[client]][client] = true; // double array :)
+	}
 	float vel[3];
 	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel);
 	if (PowerupID[client] == -1) {
