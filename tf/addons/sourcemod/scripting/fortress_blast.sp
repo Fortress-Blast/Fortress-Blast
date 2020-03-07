@@ -20,7 +20,7 @@
 #define MAX_PARTICLES 10 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
 #define MESSAGE_PREFIX "{orange}[Fortress Blast]"
 #define MESSAGE_PREFIX_NO_COLOR "[Fortress Blast]"
-#define PLUGIN_VERSION "4.2"
+#define PLUGIN_VERSION "4.2.1"
 #define MOTD_VERSION "4.2"
 #define NUMBER_OF_POWERUPS 14 // Do not use in calculations, only for sizing arrays
 
@@ -1252,8 +1252,8 @@ public bool BlockPowerup(int client) {
 ==================================================================================================== */
 
 public void UsePowerup(int client) {
-	if(PowerupID[client] > 0){
-		UsingPowerup[PowerupID[client]][client] = true; // double array :)
+	if (PowerupID[client] > 0) {
+		UsingPowerup[PowerupID[client]][client] = true; // Double array, client is using powerup
 	}
 	float vel[3];
 	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel);
