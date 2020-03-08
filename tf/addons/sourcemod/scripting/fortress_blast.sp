@@ -488,6 +488,7 @@ public Action Event_RoundStart(Event event, const char[] name, bool dontBroadcas
 	// So we dont overload read-writes
 	Format(path, sizeof(path), "scripts/fortress_blast/powerup_spots/%s.json", map);
 	MapHasJsonFile = FileExists(path);
+	GiftHuntAttackDefense = false; // Prevents round timer being paused outside of Gift Hunt
 	if (sm_fortressblast_gifthunt.BoolValue) {
 		Format(path, sizeof(path), "scripts/fortress_blast/gift_spots/%s.json", map);
 		GiftHunt = FileExists(path);
@@ -499,8 +500,6 @@ public Action Event_RoundStart(Event event, const char[] name, bool dontBroadcas
 				char mode[30];
 				handle.GetString("mode", mode, sizeof(mode));
 				GiftHuntAttackDefense = StrEqual(mode, "attackdefense", true);
-			} else {
-				GiftHuntAttackDefense = false;
 			}
 			GiftHuntNeutralFlag = false;
 			int flag;
