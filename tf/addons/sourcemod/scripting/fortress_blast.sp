@@ -20,7 +20,7 @@
 #define MAX_PARTICLES 10 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
 #define MESSAGE_PREFIX "{orange}[Fortress Blast]"
 #define MESSAGE_PREFIX_NO_COLOR "[Fortress Blast]"
-#define PLUGIN_VERSION "4.2.1"
+#define PLUGIN_VERSION "4.2.2"
 #define MOTD_VERSION "4.2"
 #define NUMBER_OF_POWERUPS 14 // Do not use in calculations, only for sizing arrays
 
@@ -171,7 +171,7 @@ public void OnPluginStart() {
 	sm_fortressblast_event_xmas = CreateConVar("sm_fortressblast_event_xmas", "1", "How to handle the TF2 Smissmas event.");
 	sm_fortressblast_gifthunt = CreateConVar("sm_fortressblast_gifthunt", "0", "Disables or enables Gift Hunt on maps with Gift Hunt .json files.");
 	sm_fortressblast_gifthunt_countbots = CreateConVar("sm_fortressblast_gifthunt_countbots", "0", "Disables or enables counting bots as players when increasing the goal.");
-	sm_fortressblast_gifthunt_goal = CreateConVar("sm_fortressblast_gifthunt_goal", "125", "Base number of gifts required to unlock the objective in Gift Hunt.");
+	sm_fortressblast_gifthunt_goal = CreateConVar("sm_fortressblast_gifthunt_goal", "75", "Base number of gifts required to unlock the objective in Gift Hunt.");
 	sm_fortressblast_gifthunt_increment = CreateConVar("sm_fortressblast_gifthunt_increment", "25", "Amount to increase the gift goal per extra group of players.");
 	sm_fortressblast_gifthunt_multiply = CreateConVar("sm_fortressblast_gifthunt_multiply", "1", "Whether or not to multiply players' gift collections once they fall behind.");
 	sm_fortressblast_gifthunt_players = CreateConVar("sm_fortressblast_gifthunt_players", "4", "Number of players in a group, any more and the gift goal increases.");
@@ -488,55 +488,51 @@ public Action Event_RoundStart(Event event, const char[] name, bool dontBroadcas
 	// So we dont overload read-writes
 	Format(path, sizeof(path), "scripts/fortress_blast/powerup_spots/%s.json", map);
 	MapHasJsonFile = FileExists(path);
-	GiftHuntAttackDefense = false; // Prevents round timer being paused outside of Gift Hunt
+	// Forcibly disable leftover Gift Hunt attributes
+	GiftHunt = false;
+	GiftHuntAttackDefense = false;
+	GiftHuntNeutralFlag = false;
+	// Check for Gift Hunt
 	if (sm_fortressblast_gifthunt.BoolValue) {
 		Format(path, sizeof(path), "scripts/fortress_blast/gift_spots/%s.json", map);
 		GiftHunt = FileExists(path);
 		if (GiftHunt) {
+			InsertServerTag("gifthunt");
 			GiftMultiplier[2] = 1;
 			GiftMultiplier[3] = 1;
+			// For single-team objective maps like Attack/Defense and Payload
 			JSONObject handle = JSONObject.FromFile(path);
-			if (handle.HasKey("mode")) { // For single-team objective maps like Attack/Defense and Payload
+			if (handle.HasKey("mode")) {
 				char mode[30];
 				handle.GetString("mode", mode, sizeof(mode));
 				GiftHuntAttackDefense = StrEqual(mode, "attackdefense", true);
-			}
-			GiftHuntNeutralFlag = false;
-			int flag;
-			while ((flag = FindEntityByClassname(flag, "item_teamflag")) != -1) {
-				if (GetEntProp(flag, Prop_Send, "m_iTeamNum") == 0) {
-					GiftHuntNeutralFlag = true;
-					AcceptEntityInput(flag, "Disable");
+				if (GiftHuntAttackDefense) {
+					GiftHuntSetup = true;
 				}
 			}
+			// Disable capturing control points
+			EntFire("trigger_capture_area", "SetTeamCanCap", "2 0");
+			EntFire("trigger_capture_area", "SetTeamCanCap", "3 0");
+			// Disable collecting intelligences
+			int flag;
+			while ((flag = FindEntityByClassname(flag, "item_teamflag")) != -1) {
+				DispatchKeyValue(flag, "VisibleWhenDisabled", "1");
+				AcceptEntityInput(flag, "Disable");
+				// Neutral intelligence support
+				if (GetEntProp(flag, Prop_Send, "m_iTeamNum") == 0) {
+					GiftHuntNeutralFlag = true;
+				}
+			}
+			// Disable Arena and King of the Hill control point cooldown
+			if (FindEntityByClassname(1, "tf_logic_arena") != -1) {
+				DispatchKeyValue(FindEntityByClassname(1, "tf_logic_arena"), "CapEnableDelay", "0");
+			} else if (FindEntityByClassname(1, "tf_logic_koth") != -1) {
+				DispatchKeyValue(FindEntityByClassname(1, "tf_logic_koth"), "timer_length", "0");
+				DispatchKeyValue(FindEntityByClassname(1, "tf_logic_koth"), "unlock_point", "0");
+			}
 		}
-	} else {
-		GiftHunt = false;
-	}
-	if (GiftHuntAttackDefense) {
-		GiftHuntSetup = true;
 	}
 	VictoryTeam = -1;
-	// Gift Hunt map logic changes
-	if (GiftHunt) {
-		InsertServerTag("gifthunt");
-		// Disable capturing control points
-		EntFire("trigger_capture_area", "SetTeamCanCap", "2 0");
-		EntFire("trigger_capture_area", "SetTeamCanCap", "3 0");
-		// Disable collecting intelligences
-		int flag;
-		while ((flag = FindEntityByClassname(flag, "item_teamflag")) != -1) {
-			DispatchKeyValue(flag, "VisibleWhenDisabled", "1");
-			AcceptEntityInput(flag, "Disable");
-		}
-		// Disable Arena and King of the Hill control point cooldown
-		if (FindEntityByClassname(1, "tf_logic_arena") != -1) {
-			DispatchKeyValue(FindEntityByClassname(1, "tf_logic_arena"), "CapEnableDelay", "0");
-		} else if (FindEntityByClassname(1, "tf_logic_koth") != -1) {
-			DispatchKeyValue(FindEntityByClassname(1, "tf_logic_koth"), "timer_length", "0");
-			DispatchKeyValue(FindEntityByClassname(1, "tf_logic_koth"), "unlock_point", "0");
-		}
-	}
 	PlayersAmount = 0;
 	if (!GameRules_GetProp("m_bInWaitingForPlayers")) {
 		for (int client = 1; client <= MaxClients; client++) {
