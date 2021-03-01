@@ -1,4 +1,4 @@
-**Fortress Blast is no longer being developed as of April 6, 2020.** [Visit the wiki](https://fortressblast.miraheze.org/) for how to install Fortress Blast, as well as more in-depth information about the plugin.
+**Fortress Blast is no longer being developed as of April 6, 2020.**
 
 ![Fortress Blast](https://fortress-blast.github.io/images/logo.png)
 
