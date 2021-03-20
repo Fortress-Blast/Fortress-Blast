@@ -1,5 +1,3 @@
-**Fortress Blast is no longer being developed as of April 6, 2020.**
-
 ![Fortress Blast](https://fortress-blast.github.io/images/logo.png)
 
 Fortress Blast is a SourceMod plugin for Team Fortress 2 that adds collectable powerups from the Marble Blast series and more into TF2. It can be run on top of other game modes and server mods. Fortress Blast comes with support for some official maps, as well as an entire library of official and custom map support available in a [separate repository](https://github.com/Fortress-Blast/Fortress-Blast-Maps), but can be safely run on non-supported maps. Plugin contributors are listed on the official wiki and in the [player manual](https://fortress-blast.github.io/index.html) accessible through the in-game MOTD.
