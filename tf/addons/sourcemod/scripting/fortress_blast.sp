@@ -1869,7 +1869,7 @@ public Action Timer_BeginTeleporter(Handle timer, int client) {
 	FakeClientCommand(client, "dropitem"); // Force player to drop intelligence
 	int teles = GetTeamTeleporters(TF2_GetClientTeam(client));
 	if (teles == 0) {
-		CPrintToChat(client, "%s {haunted}You were teleported to your spawn as there are no active Teleporter exits on your team.", MESSAGE_PREFIX);
+		CPrintToChat(client, "%s {haunted}You were respawned as there are no active Teleporter exits on your team.", MESSAGE_PREFIX);
 		TF2_RespawnPlayer(client);
 		TeleportXmasParticles(client);
 		return;
