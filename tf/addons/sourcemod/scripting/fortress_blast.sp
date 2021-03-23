@@ -301,7 +301,7 @@ public void OnMapStart() {
 	AddFileToDownloadsTable("sound/fortressblast2/dizzybomb_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/dizzybomb_use.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/dizzybomb_dizzy.mp3");
-	AddFileToDownloadsTable("sound/fortressblast2/becomesentry_use.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/becomesentry_pickup.mp3");
 
 	// Powerup sound precaching for non-custom sounds
 	PrecacheSound("items/spawn_item.wav");
