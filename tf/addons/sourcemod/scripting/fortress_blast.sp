@@ -47,9 +47,9 @@ int VictoryTeam = -1;
 int DizzyProgress[MAXPLAYERS + 1] = -1;
 int FrostTouchFrozen[MAXPLAYERS + 1] = 0;
 int GlobalVerifier = 0;
-int Building[MAXPLAYERS+1] = 0;
-int PreSentryHealth[MAXPLAYERS+1] = 0;
-bool lateload = false;
+int Building[MAXPLAYERS + 1] = 0;
+int PreSentryHealth[MAXPLAYERS + 1] = 0;
+bool LateLoad = false;
 bool PreviousAttack3[MAXPLAYERS + 1] = false;
 bool MapHasJsonFile = false;
 bool GiftHunt = false;
@@ -75,7 +75,7 @@ Handle FrostTouchUnfreezeHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle DestroyPowerupHandle[MAX_EDICTS + 1] = INVALID_HANDLE;
 Handle TeleportationHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle MagnetismHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
-Handle UltraPowerupHandle[MAXPLAYERS+1] = INVALID_HANDLE;
+Handle UltraPowerupHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 
 // HUDs
 Handle PowerupText;
@@ -187,19 +187,19 @@ public void OnPluginStart() {
 	// HUDs
 	PowerupText = CreateHudSynchronizer();
 	GiftText = CreateHudSynchronizer();
-	if(lateload){
+
+	if (LateLoad) {
 		GetSpawns(false);
 	}
 }
-
 
 public void OnPluginEnd() {
 	RemoveAllPowerups();
 }
 
-public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max){
-	if(late){
-		lateload = true;
+public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max) {
+	if (late) {
+		LateLoad = true;
 	}
 }
 
