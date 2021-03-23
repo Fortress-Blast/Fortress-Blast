@@ -48,6 +48,8 @@ int DizzyProgress[MAXPLAYERS + 1] = -1;
 int FrostTouchFrozen[MAXPLAYERS + 1] = 0;
 int GlobalVerifier = 0;
 int Building[MAXPLAYERS+1] = 0;
+int PreSentryHealth[MAXPLAYERS+1] = 0;
+bool lateload = false;
 bool PreviousAttack3[MAXPLAYERS + 1] = false;
 bool MapHasJsonFile = false;
 bool GiftHunt = false;
@@ -185,12 +187,20 @@ public void OnPluginStart() {
 	// HUDs
 	PowerupText = CreateHudSynchronizer();
 	GiftText = CreateHudSynchronizer();
-	
-	GetSpawns(false);
+	if(lateload){
+		GetSpawns(false);
+	}
 }
+
 
 public void OnPluginEnd() {
 	RemoveAllPowerups();
+}
+
+public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max){
+	if(late){
+		lateload = true;
+	}
 }
 
 /* OnConfigsExecuted() + InsertServerTag()
@@ -754,7 +764,7 @@ public void OnEntityDestroyed(int entity) {
 						SetEntityMoveType(client, MOVETYPE_WALK);
 						SetVariantString("1 0");
 						AcceptEntityInput(client, "SetModelScale");
-						SetEntityHealth(client, GetPlayerMaxHealth(client));
+						SetEntityHealth(client, PreSentryHealth[client]);
 					}
 				}
 			}
@@ -1237,12 +1247,12 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			}
 		}
 	}
-	if (Building[client] != -1) {
+	if (IsValidEntity(Building[client])) {
 		BlockAttacking(client, 0.5);
 		SetEntityHealth(client, GetEntProp(Building[client], Prop_Send, "m_iHealth"));
 		buttons &= ~IN_DUCK;
 		// User wants to leave sentry, kill the sentry
-		if (buttons & IN_ATTACK || buttons & IN_JUMP) {
+		if (!GetEntProp(Building[client], Prop_Send, "m_bHasSapper") && (buttons & IN_ATTACK || buttons & IN_JUMP)) {
 			SetVariantInt(864);
 			AcceptEntityInput(Building[client], "RemoveHealth");
 		}
@@ -1831,7 +1841,7 @@ public Action Timer_BeginTeleporter(Handle timer, int client) {
 	int countby = 1;
 	int entity;
 	while ((entity = FindEntityByClassname(entity, "obj_teleporter")) != -1) {
-		if (TF2_GetClientTeam(GetEntPropEnt(entity, Prop_Send, "m_hBuilder")) == TF2_GetClientTeam(client) && TF2_GetObjectMode(entity) == TFObjectMode_Exit && TeleporterPassesNetprops(entity)) {
+		if (TF2_GetClientTeam(GetEntPropEnt(entity, Prop_Send, "m_hBuilder")) == TF2_GetClientTeam(client) && TF2_GetObjectMode(entity) == TFObjectMode_Exit && BuildingPassesNetprops(entity)) {
 			if (countby == eli) {
 				float coords[3] = 69.420;
 				GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
@@ -1866,7 +1876,7 @@ public int GetTeamTeleporters(TFTeam team) {
 	int entity;
 	int amounter;
 	while ((entity = FindEntityByClassname(entity, "obj_teleporter")) != -1) {
-		if (TF2_GetClientTeam(GetEntPropEnt(entity, Prop_Send, "m_hBuilder")) == team && TF2_GetObjectMode(entity) == TFObjectMode_Exit && TeleporterPassesNetprops(entity)) {
+		if (TF2_GetClientTeam(GetEntPropEnt(entity, Prop_Send, "m_hBuilder")) == team && TF2_GetObjectMode(entity) == TFObjectMode_Exit && BuildingPassesNetprops(entity)) {
 			amounter++;
 		}
 	}
@@ -1874,7 +1884,7 @@ public int GetTeamTeleporters(TFTeam team) {
 	return amounter;
 }
 
-public bool TeleporterPassesNetprops(int entity) {
+public bool BuildingPassesNetprops(int entity) {
 	int state = GetEntProp(entity, Prop_Send, "m_iState");
 	if (GetEntProp(entity, Prop_Send, "m_bHasSapper") > 0) {
 		return false;
@@ -1892,6 +1902,7 @@ public bool TeleporterPassesNetprops(int entity) {
 ==================================================================================================== */
 
 public void MakeUserBuilding(int client, const char[] buildingname) { // Become Sentry
+	PreSentryHealth[client] = GetClientHealth(client);
 	Building[client] = CreateEntityByName(buildingname);
 	DispatchKeyValue(Building[client], "defaultupgrade", "2");
 	SetVariantInt(GetClientTeam(client));
