@@ -412,7 +412,7 @@ public Action sm_setpowerup(int client, int args) {
 	}
 	if ((StrEqual(arg, "0") || StringToInt(arg) != 0) && StrEqual(arg2, "")) { // Name of target not included, act on client
 		CollectedPowerup(client, StringToInt(arg));
-	} else if (StrContains(arg, "@")) {
+	} else if (StrContains(arg, "@") != -1) {
 		for (int client2 = 1; client2 <= MaxClients; client2++) {
 			if (IsClientInGame(client2) && ((GetClientTeam(client) == 2 && StrEqual(arg, "@red")) || (GetClientTeam(client) == 3 && StrEqual(arg, "@blue")) || (client2 == client && StrEqual(arg, "@me")) || StrEqual(arg, "@all"))) {
 				CollectedPowerup(client2, newpowerup);
