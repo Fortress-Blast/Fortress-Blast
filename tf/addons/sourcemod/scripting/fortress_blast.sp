@@ -47,9 +47,9 @@ int VictoryTeam = -1;
 int DizzyProgress[MAXPLAYERS + 1] = -1;
 int FrostTouchFrozen[MAXPLAYERS + 1] = 0;
 int GlobalVerifier = 0;
-int Building[MAXPLAYERS + 1] = 0;
-int PreSentryHealth[MAXPLAYERS + 1] = 0;
-bool LateLoad = false;
+int Building[MAXPLAYERS+1] = 0;
+int PreSentryHealth[MAXPLAYERS+1] = 0;
+bool lateload = false;
 bool PreviousAttack3[MAXPLAYERS + 1] = false;
 bool MapHasJsonFile = false;
 bool GiftHunt = false;
@@ -75,7 +75,7 @@ Handle FrostTouchUnfreezeHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle DestroyPowerupHandle[MAX_EDICTS + 1] = INVALID_HANDLE;
 Handle TeleportationHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
 Handle MagnetismHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
-Handle UltraPowerupHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
+Handle UltraPowerupHandle[MAXPLAYERS+1] = INVALID_HANDLE;
 
 // HUDs
 Handle PowerupText;
@@ -132,12 +132,6 @@ ConVar sm_fortressblast_ultra_spawnchance;
 ==================================================================================================== */
 
 public void OnPluginStart() {
-	// In case the plugin is reloaded mid-round
-	for (int client = 1; client <= MaxClients; client++) {
-		if (IsClientInGame(client)) {
-			OnClientPutInServer(client);
-		}
-	}
 
 	// Hooks
 	HookEvent("teamplay_round_start", teamplay_round_start);
@@ -187,19 +181,25 @@ public void OnPluginStart() {
 	// HUDs
 	PowerupText = CreateHudSynchronizer();
 	GiftText = CreateHudSynchronizer();
-
-	if (LateLoad) {
+	if(lateload){
 		GetSpawns(false);
 	}
+	// In case the plugin is reloaded mid-round
+	for (int client = 1; client <= MaxClients; client++) {
+		if (IsClientInGame(client)) {
+			OnClientPutInServer(client);
+		}
+	}
 }
+
 
 public void OnPluginEnd() {
 	RemoveAllPowerups();
 }
 
-public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max) {
-	if (late) {
-		LateLoad = true;
+public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max){
+	if(late){
+		lateload = true;
 	}
 }
 
@@ -795,19 +795,20 @@ public Action Timer_MiscTimer(Handle timer, any data) {
 	}
 	for (int client = 1 ; client <= MaxClients ; client++ ) {
 		if (IsClientInGame(client)) {
-			if (SpeedRotationsLeft[client] >= 0) {
+			if (SpeedRotationsLeft[client] > 0) {
 				if (IsPlayerAlive(client)) {
 					if (GetEntPropFloat(client, Prop_Send, "m_flMaxspeed") != SuperSpeed[client]) { // If TF2 changed the speed
 						OldSpeed[client] = GetEntPropFloat(client, Prop_Send, "m_flMaxspeed");
 					}
 					SuperSpeed[client] = OldSpeed[client] + (SpeedRotationsLeft[client] * 2);
-					if (SuperSpeed[client] > 520.0) {
+					if (SuperSpeed[client] > 520.0 && OldSpeed[client] < 520.0) {
 						SuperSpeed[client] = 520.0; // Capping manually, TF2 caps it itself but footsteps sound weird without this
 					}
 					SetEntPropFloat(client, Prop_Send, "m_flMaxspeed", SuperSpeed[client]);
 				}
-				if (SpeedRotationsLeft[client] > 0) {
-					SpeedRotationsLeft[client]--;
+				SpeedRotationsLeft[client]--;
+				if(SpeedRotationsLeft[client] == 0){
+					RemoveSpeedBonus(client);
 				}
 			}
 			if (DizzyProgress[client] <= (10 * sm_fortressblast_dizzy_length.FloatValue) && DizzyProgress[client] != -1) {
@@ -878,7 +879,7 @@ public Action player_death(Event event, const char[] name, bool dontBroadcast) {
 	if (sm_fortressblast_drop.IntValue == 2 || (sm_fortressblast_drop.BoolValue && !MapHasJsonFile)) {
 		// Get chance a powerup will be dropped
 		float convar = sm_fortressblast_drop_rate.FloatValue;
-		float randomNumber = GetRandomFloat(0.0, 99.99);
+		float randomNumber = GetSMRandomFloat(0.0, 99.99);
 		if (convar > randomNumber && (sm_fortressblast_drop_teams.IntValue == GetClientTeam(GetClientOfUserId(event.GetInt("userid"))) || sm_fortressblast_drop_teams.IntValue == 1)) {
 			DebugText("Dropping powerup due to player death");
 			float coords[3];
@@ -929,7 +930,7 @@ stock int SpawnPowerup(float location[3], bool respawn, int id = 0) {
 	DispatchKeyValue(entity, "powerup_model", "models/fortressblast/pickups/fb_pickup.mdl");
 	if (IsValidEdict(entity)) {
 		if (id == 0) {
-			if (sm_fortressblast_ultra_spawnchance.FloatValue > GetRandomFloat(0.0, 99.99)) {
+			if (sm_fortressblast_ultra_spawnchance.FloatValue > GetSMRandomFloat(0.0, 99.99)) {
 				Powerup[entity] = -1;
 			} else {
 				Powerup[entity] = GetSMRandomInt(1, NumberOfPowerups);
@@ -1098,7 +1099,7 @@ public void CollectedPowerup(int client, int newpowerup) {
 			convar2 == convar1;
 		}
 		// Get bot to use powerup within the random period
-		CreateTimer(GetRandomFloat(convar1, convar2), Timer_BotUsePowerup, client);
+		CreateTimer(GetSMRandomFloat(convar1, convar2), Timer_BotUsePowerup, client);
 	}
 }
 
@@ -1426,11 +1427,7 @@ public void UsePowerup(int client) {
 		EmitAmbientSound("fortressblast2/megamann_use.mp3", vel, client);
 		SetVariantString("1.75 0");
 		AcceptEntityInput(client, "SetModelScale");
-		int healthMultiplier = 4;
-		if (GetPlayerMaxHealth(client) >= 300) {
-			// User is assumed to be a Heavy, reduce health gained to 3x
-			healthMultiplier = 3;
-		}
+		int healthMultiplier = (TF2_GetPlayerClass(client) == TFClass_Heavy ? 3 : 4);
 		SetEntityHealth(client, (GetClientHealth(client) * healthMultiplier)); // Multiply current health
 		// Cap at expected multiplied maximum health
 		if (GetClientHealth(client) > (GetPlayerMaxHealth(client) * healthMultiplier)) {
@@ -1452,7 +1449,7 @@ public void UsePowerup(int client) {
 	} else if (Powerup[client] == 10) {
 		// Mystery - Random powerup
 		// Has a higher chance of picking Gyrocopter during April Fools
-		if (GetRandomFloat(0.0, 99.99) < 75.0 && AprilFools() && PowerupIsEnabled(5)) {
+		if (GetSMRandomFloat(0.0, 99.99) < 75.0 && AprilFools() && PowerupIsEnabled(5)) {
 			Powerup[client] = 5;
 		} else {
 			int mysrand = 10;
@@ -1968,7 +1965,7 @@ public Action Timer_RemoveTimeTravel(Handle timer, int client) {
 	UsingPowerup[6][client] = false;
 	SetThirdPerson(client, false);
 	if (IsClientInGame(client)) {
-		TF2_StunPlayer(client, 0.0, 0.0, TF_STUNFLAG_SLOWDOWN);
+		RemoveSpeedBonus(client);
 	}
 }
 
@@ -2343,6 +2340,11 @@ stock int GetSMRandomInt(int min, int max) {
 	return RoundToCeil(float(random) / (float(2147483647) / float(max - min + 1))) + min - 1;
 }
 
+stock float GetSMRandomFloat(float min, float max)
+{
+	return (GetURandomFloat() * (max  - min)) + min;
+}
+
 /* Events/Holidays
 ==================================================================================================== */
 
@@ -2377,4 +2379,8 @@ public bool AprilFools() {
 		return TF2_IsHolidayActive(TFHoliday_AprilFools);
 	}
 	return true;
+}
+
+stock void RemoveSpeedBonus(int client){
+	TF2_AddCondition(client, TFCond_SpeedBuffAlly, 0.0);
 }
