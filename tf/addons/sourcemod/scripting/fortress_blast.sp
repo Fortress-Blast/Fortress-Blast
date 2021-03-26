@@ -914,7 +914,9 @@ public void OnClientPutInServer(int client) {
 	Powerup[client] = 0;
 	SDKHook(client, SDKHook_OnTakeDamageAlive, OnTakeDamage);
 	SDKHook(client, SDKHook_StartTouch, OnStartTouchFrozen);
-	CreateTimer(3.0, Timer_DisplayIntro, client);
+	if (sm_fortressblast_intro.BoolValue) {
+		CreateTimer(3.0, Timer_DisplayIntro, client);
+	}
 	DizzyProgress[client] = -1;
 	Building[client] = -1;
 }
