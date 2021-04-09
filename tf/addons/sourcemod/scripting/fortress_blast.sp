@@ -1522,7 +1522,7 @@ public void UsePowerup(int client) {
 		float pos1[3];
 		GetClientAbsOrigin(client, pos1);
 		for (int client2 = 1 ; client2 <= MaxClients ; client2++) {
-			if (IsClientInGame(client2) && GetClientTeam(client) != GetClientTeam(client2)) {
+			if (IsClientInGame(client2) && GetClientTeam(client) != GetClientTeam(client2) && !IsValidEntity(Building[client2])) {
 				float pos2[3];
 				GetClientAbsOrigin(client2, pos2);
 				if (GetVectorDistance(pos1, pos2) < 768.0) {
