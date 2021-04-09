@@ -20,7 +20,7 @@
 #define MAX_PARTICLES 10 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
 #define MESSAGE_PREFIX "{orange}[Fortress Blast]"
 #define MESSAGE_PREFIX_NO_COLOR "[Fortress Blast]"
-#define PLUGIN_VERSION "4.3.1"
+#define PLUGIN_VERSION "4.3.2"
 #define MOTD_VERSION "4.3"
 #define NUMBER_OF_POWERUPS 15 // Do not use in calculations, only for sizing arrays
 
@@ -47,9 +47,9 @@ int VictoryTeam = -1;
 int DizzyProgress[MAXPLAYERS + 1] = -1;
 int FrostTouchFrozen[MAXPLAYERS + 1] = 0;
 int GlobalVerifier = 0;
-int Building[MAXPLAYERS+1] = 0;
-int PreSentryHealth[MAXPLAYERS+1] = 0;
-bool lateload = false;
+int Building[MAXPLAYERS + 1] = 0;
+int PreSentryHealth[MAXPLAYERS + 1] = 0;
+bool LateLoad = false;
 bool PreviousAttack3[MAXPLAYERS + 1] = false;
 bool MapHasJsonFile = false;
 bool GiftHunt = false;
@@ -65,7 +65,7 @@ float OldSpeed[MAXPLAYERS + 1] = 0.0;
 float SuperSpeed[MAXPLAYERS + 1] = 0.0;
 float VerticalVelocity[MAXPLAYERS + 1];
 float ParticleZAdjust[MAXPLAYERS + 1][MAX_PARTICLES + 1];
-float ExitSentryTime[MAXPLAYERS+1];
+float ExitSentryTime[MAXPLAYERS + 1];
 Handle SuperBounceHandle[MAXPLAYERS + 1] = null;
 Handle ShockAbsorberHandle[MAXPLAYERS + 1] = null;
 Handle GyrocopterHandle[MAXPLAYERS + 1] = null;
@@ -176,13 +176,13 @@ public void OnPluginStart() {
 	sm_fortressblast_mannpower = CreateConVar("sm_fortressblast_mannpower", "2", "How to handle replacing Mannpower powerups.");
 	sm_fortressblast_powerups = CreateConVar("sm_fortressblast_powerups", "-1", "Bitfield of which powerups to enable.");
 	sm_fortressblast_powerups_roundstart = CreateConVar("sm_fortressblast_powerups_roundstart", "1", "Disables or enables automatically spawning powerups on round start.");
-	sm_fortressblast_spawnroom_kill = CreateConVar("sm_fortressblast_spawnroom_kill", "0", "Disables or enables killing enemies inside spawnrooms due to Mega Mann exploit.");
+	sm_fortressblast_spawnroom_kill = CreateConVar("sm_fortressblast_spawnroom_kill", "0", "Disables or enables killing enemies inside spawnrooms due to potential Mega Mann exploit.");
 	sm_fortressblast_ultra_spawnchance = CreateConVar("sm_fortressblast_ultra_spawnchance", "0.1", "Chance out of 100 for ULTRA POWERUP!! to spawn.");
 
 	// HUDs
 	PowerupText = CreateHudSynchronizer();
 	GiftText = CreateHudSynchronizer();
-	if(lateload){
+	if (LateLoad) {
 		GetSpawns(false);
 	}
 	// In case the plugin is reloaded mid-round
@@ -193,14 +193,13 @@ public void OnPluginStart() {
 	}
 }
 
-
 public void OnPluginEnd() {
 	RemoveAllPowerups();
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max){
-	if(late){
-		lateload = true;
+	if (late) {
+		LateLoad = true;
 	}
 }
 
@@ -1304,12 +1303,12 @@ public bool BlockPowerup(int client, int testpowerup) {
 		return true;
 	} else if (testpowerup == 10){
 		bool allblocked = true;
-		for(int i = 1 ; i <= NumberOfPowerups ; i++){
-			if(i != 10 && PowerupIsEnabled(i) && !BlockPowerup(client, i)){
+		for (int i = 1 ; i <= NumberOfPowerups ; i++) {
+			if (i != 10 && PowerupIsEnabled(i) && !BlockPowerup(client, i)) {
 				allblocked = false;
 			}
 		}
-		if(allblocked){
+		if (allblocked) {
 			return true;
 		}
 	}
@@ -1595,7 +1594,7 @@ public void DeletePowerup(int entity, int other) {
 		CollectedGift(other);
 		return;
 	}
-	if(0 < other <= MaxClients && IsClientInGame(other)){
+	if (0 < other <= MaxClients && IsClientInGame(other)) {
 		CollectedPowerup(other, Powerup[entity]);
 	}
 }
@@ -2346,9 +2345,12 @@ stock int GetSMRandomInt(int min, int max) {
 	return RoundToCeil(float(random) / (float(2147483647) / float(max - min + 1))) + min - 1;
 }
 
-stock float GetSMRandomFloat(float min, float max)
-{
+stock float GetSMRandomFloat(float min, float max) {
 	return (GetURandomFloat() * (max  - min)) + min;
+}
+
+stock void RemoveSpeedBonus(int client) {
+	TF2_AddCondition(client, TFCond_SpeedBuffAlly, 0.0);
 }
 
 /* Events/Holidays
@@ -2385,8 +2387,4 @@ public bool AprilFools() {
 		return TF2_IsHolidayActive(TFHoliday_AprilFools);
 	}
 	return true;
-}
-
-stock void RemoveSpeedBonus(int client){
-	TF2_AddCondition(client, TFCond_SpeedBuffAlly, 0.0);
 }
