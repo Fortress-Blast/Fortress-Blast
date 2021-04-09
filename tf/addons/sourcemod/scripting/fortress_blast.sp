@@ -65,17 +65,18 @@ float OldSpeed[MAXPLAYERS + 1] = 0.0;
 float SuperSpeed[MAXPLAYERS + 1] = 0.0;
 float VerticalVelocity[MAXPLAYERS + 1];
 float ParticleZAdjust[MAXPLAYERS + 1][MAX_PARTICLES + 1];
-Handle SuperBounceHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
-Handle ShockAbsorberHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
-Handle GyrocopterHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
-Handle TimeTravelHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
-Handle MegaMannHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
-Handle FrostTouchHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
-Handle FrostTouchUnfreezeHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
-Handle DestroyPowerupHandle[MAX_EDICTS + 1] = INVALID_HANDLE;
-Handle TeleportationHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
-Handle MagnetismHandle[MAXPLAYERS + 1] = INVALID_HANDLE;
-Handle UltraPowerupHandle[MAXPLAYERS+1] = INVALID_HANDLE;
+float ExitSentryTime[MAXPLAYERS+1];
+Handle SuperBounceHandle[MAXPLAYERS + 1] = null;
+Handle ShockAbsorberHandle[MAXPLAYERS + 1] = null;
+Handle GyrocopterHandle[MAXPLAYERS + 1] = null;
+Handle TimeTravelHandle[MAXPLAYERS + 1] = null;
+Handle MegaMannHandle[MAXPLAYERS + 1] = null;
+Handle FrostTouchHandle[MAXPLAYERS + 1] = null;
+Handle FrostTouchUnfreezeHandle[MAXPLAYERS + 1] = null;
+Handle DestroyPowerupHandle[MAX_EDICTS + 1] = null;
+Handle TeleportationHandle[MAXPLAYERS + 1] = null;
+Handle MagnetismHandle[MAXPLAYERS + 1] = null;
+Handle UltraPowerupHandle[MAXPLAYERS+1] = null;
 
 // HUDs
 Handle PowerupText;
@@ -175,7 +176,7 @@ public void OnPluginStart() {
 	sm_fortressblast_mannpower = CreateConVar("sm_fortressblast_mannpower", "2", "How to handle replacing Mannpower powerups.");
 	sm_fortressblast_powerups = CreateConVar("sm_fortressblast_powerups", "-1", "Bitfield of which powerups to enable.");
 	sm_fortressblast_powerups_roundstart = CreateConVar("sm_fortressblast_powerups_roundstart", "1", "Disables or enables automatically spawning powerups on round start.");
-	sm_fortressblast_spawnroom_kill = CreateConVar("sm_fortressblast_spawnroom_kill", "1", "Disables or enables killing enemies inside spawnrooms due to Mega Mann exploit.");
+	sm_fortressblast_spawnroom_kill = CreateConVar("sm_fortressblast_spawnroom_kill", "0", "Disables or enables killing enemies inside spawnrooms due to Mega Mann exploit.");
 	sm_fortressblast_ultra_spawnchance = CreateConVar("sm_fortressblast_ultra_spawnchance", "0.1", "Chance out of 100 for ULTRA POWERUP!! to spawn.");
 
 	// HUDs
@@ -465,10 +466,8 @@ stock void GetCollisionPoint(int client, float pos[3]) {
 
 	if (TR_DidHit(trace)) {
 		TR_GetEndPosition(pos, trace);
-		CloseHandle(trace);
-		return;
 	}
-	CloseHandle(trace);
+	delete trace;
 }
 
 public bool TraceEntityFilterPlayer(int entity, int contentsMask) {
@@ -708,9 +707,11 @@ public void GetSpawns(bool UsingGiftHunt) {
 }
 
 public void RemoveAllPowerups() {
-	int entity;
+	int entity = -1;
 	while ((entity = FindEntityByClassname(entity, "tf_halloween_pickup")) != -1) {
-		RemoveEntity(entity);
+		if(0 < entity <= MAX_EDICTS && IsValidEntity(entity)){
+			RemoveEntity(entity);
+		}
 	}
 }
 
@@ -737,7 +738,8 @@ public Action teamplay_setup_finished(Event event, const char[] name, bool dontB
 
 public void OnEntityDestroyed(int entity) {
 	if (IsValidEntity(entity) && entity > 0) {
-		ClearTimer(DestroyPowerupHandle[entity]); // This causes about half a second of lag when a new round starts. but not having it causes problems
+		DebugText("Destroying handle for ID %d", entity);
+		delete DestroyPowerupHandle[entity];
 		char classname[60];
 		GetEntityClassname(entity, classname, sizeof(classname));
 		if (StrEqual(classname, "tf_halloween_pickup") && Powerup[entity] == 0) { // This is just an optimizer, the same thing would happen without this but slower
@@ -885,8 +887,9 @@ public Action player_death(Event event, const char[] name, bool dontBroadcast) {
 			float coords[3];
 			GetEntPropVector(GetClientOfUserId(event.GetInt("userid")), Prop_Send, "m_vecOrigin", coords);
 			int entity = SpawnPowerup(coords, false);
-			ClearTimer(DestroyPowerupHandle[entity]);
+			delete DestroyPowerupHandle[entity];
 			DestroyPowerupHandle[entity] = CreateTimer(15.0, Timer_DestroyPowerupTime, entity);
+			DebugText("Destroyed old timer and made new one for %d", entity);
 		}
 	}
 	// Kill sentry tied to player due to Become Sentry
@@ -907,8 +910,9 @@ public void OnClientDisconnect(int client) {
 }
 
 public Action Timer_DestroyPowerupTime(Handle timer, int entity) {
-	DestroyPowerupHandle[entity] = INVALID_HANDLE;
+	DestroyPowerupHandle[entity] = null;
 	RemoveEntity(entity);
+	DebugText("Just deleted expired powerup ID %d", entity);
 }
 
 public void OnClientPutInServer(int client) {
@@ -1255,7 +1259,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		SetEntityHealth(client, GetEntProp(Building[client], Prop_Send, "m_iHealth"));
 		buttons &= ~IN_DUCK;
 		// User wants to leave sentry, kill the sentry
-		if (!GetEntProp(Building[client], Prop_Send, "m_bHasSapper") && (buttons & IN_ATTACK || buttons & IN_JUMP)) {
+		if (!GetEntProp(Building[client], Prop_Send, "m_bHasSapper") && (buttons & IN_ATTACK || buttons & IN_JUMP) && GetGameTime() > ExitSentryTime[client]) {
 			SetVariantInt(864);
 			AcceptEntityInput(Building[client], "RemoveHealth");
 		}
@@ -1298,6 +1302,16 @@ public bool BlockPowerup(int client, int testpowerup) {
 		}
 	} else if (((testpowerup == 15) && !(GetEntityFlags(client) & FL_ONGROUND)) || (GetEntityFlags(client) & FL_INWATER)) {
 		return true;
+	} else if (testpowerup == 10){
+		bool allblocked = true;
+		for(int i = 1 ; i <= NumberOfPowerups ; i++){
+			if(i != 10 && PowerupIsEnabled(i) && !BlockPowerup(client, i)){
+				allblocked = false;
+			}
+		}
+		if(allblocked){
+			return true;
+		}
 	}
 	return false;
 }
@@ -1313,7 +1327,7 @@ public void UsePowerup(int client) {
 	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel);
 	if (Powerup[client] == -1) {
 		// Ultra Powerup - Multiple effects
-		ClearTimer(MegaMannHandle[client]);
+		delete MegaMannHandle[client];
 		UltraPowerup[client] = true;
 		UltraPowerupHandle[client] = CreateTimer(10.0, Timer_RemoveUltraPowerup, client);
 		// Super Bounce, Super Jump, Gyrocopter, Time Travel, Blast, Mystery, Teleportation, Effect Burst and Dizzy Bomb are not included
@@ -1346,7 +1360,7 @@ public void UsePowerup(int client) {
 		// Super Bounce - Uncontrollable bunny hop and fall damage resistance for 5 seconds
 		EmitAmbientSound("fortressblast2/superbounce_use.mp3", vel, client);
 		VerticalVelocity[client] = 0.0; // Cancel previously stored vertical velocity
-		ClearTimer(SuperBounceHandle[client]);
+		delete SuperBounceHandle[client];
 		SuperBounceHandle[client] = CreateTimer(5.0, Timer_RemoveSuperBounce, client);
 		ParticleOnPlayer(client, "teleporter_blue_charged_level2", 5.0, 0.0);
 		if (AprilFools()) {
@@ -1360,7 +1374,7 @@ public void UsePowerup(int client) {
 	} else if (Powerup[client] == 2) {
 		// Shock Absorber - 75% damage and 100% knockback resistances for 5 seconds
 		EmitAmbientSound("fortressblast2/shockabsorber_use.mp3", vel, client);
-		ClearTimer(ShockAbsorberHandle[client]);
+		delete ShockAbsorberHandle[client];
 		ShockAbsorberHandle[client] = CreateTimer(5.0, Timer_RemoveShockAbsorb, client);
 		ParticleOnPlayer(client, "teleporter_red_charged_level2", 5.0, 0.0);
 	} else if (Powerup[client] == 3) {
@@ -1383,7 +1397,7 @@ public void UsePowerup(int client) {
 		} else {
 			SetEntityGravity(client, 0.25);
 		}
-		ClearTimer(GyrocopterHandle[client]);
+		delete GyrocopterHandle[client];
 		GyrocopterHandle[client] = CreateTimer(5.0, Timer_RemoveGyrocopter, client);
 		EmitAmbientSound("fortressblast2/gyrocopter_use.mp3", vel, client);
 	} else if (Powerup[client] == 6) {
@@ -1391,7 +1405,7 @@ public void UsePowerup(int client) {
 		SetThirdPerson(client, true);
 		TF2_AddCondition(client, TFCond_StealthedUserBuffFade, 3.0);
 		BlockAttacking(client, 3.0);
-		ClearTimer(TimeTravelHandle[client]);
+		delete TimeTravelHandle[client];
 		TimeTravelHandle[client] = CreateTimer(3.0, Timer_RemoveTimeTravel, client);
 		EmitAmbientSound("fortressblast2/timetravel_use_3sec.mp3", vel, client);
 	} else if (Powerup[client] == 7) {
@@ -1405,7 +1419,7 @@ public void UsePowerup(int client) {
 		TF2_RemoveCondition(client, TFCond_StealthedUserBuffFade);
 		TF2_RemoveCondition(client, TFCond_Cloaked);
 		TF2_RemovePlayerDisguise(client);
-		ClearTimer(TimeTravelHandle[client]);
+		delete TimeTravelHandle[client];
 		TimeTravelHandle[client] = CreateTimer(0.0, Timer_RemoveTimeTravel, client); // Remove Time Travel instantly
 		float pos1[3];
 		GetClientAbsOrigin(client, pos1);
@@ -1433,7 +1447,7 @@ public void UsePowerup(int client) {
 		if (GetClientHealth(client) > (GetPlayerMaxHealth(client) * healthMultiplier)) {
 			SetEntityHealth(client, GetPlayerMaxHealth(client) * healthMultiplier);
 		}
-		ClearTimer(MegaMannHandle[client]);
+		delete MegaMannHandle[client];
 		MegaMannHandle[client] = CreateTimer(10.0, Timer_RemoveMegaMann, client);
 		float coords[3] = 69.420;
 		GetEntPropVector(client, Prop_Send, "m_vecOrigin", coords);
@@ -1443,7 +1457,7 @@ public void UsePowerup(int client) {
 	} else if (Powerup[client] == 9) {
 		// Frost Touch - Freeze touched players for 3 seconds within 8 seconds
 		EmitAmbientSound("fortressblast2/frosttouch_use.mp3", vel, client);
-		ClearTimer(FrostTouchHandle[client]);
+		delete FrostTouchHandle[client];
 		FrostTouchHandle[client] = CreateTimer(8.0, Timer_RemoveFrostTouch, client);
 		ParticleOnPlayer(client, "smoke_rocket_steam", 8.0, 32.0);
 	} else if (Powerup[client] == 10) {
@@ -1461,7 +1475,7 @@ public void UsePowerup(int client) {
 		UsePowerup(client);
 	} else if (Powerup[client] == 11) {
 		// Teleportation - Teleport to random active Engineer exit teleport or spawn
-		ClearTimer(TeleportationHandle[client]);
+		delete TeleportationHandle[client];
 		TeleportationHandle[client] = CreateTimer(0.5, Timer_BeginTeleporter, client);
 		EmitAmbientSound("fortressblast2/teleportation_use.mp3", vel, client);
 		ParticleOnPlayer(client, "teleported_flash", 0.5, 0.0); // Particle on using powerup
@@ -1492,7 +1506,7 @@ public void UsePowerup(int client) {
 	} else if (Powerup[client] == 12) {
 		// Magnetism - Repel or attract enemies depending on weapon slot
 		EmitAmbientSound("fortressblast2/magnetism_use.mp3", vel, client);
-		ClearTimer(MagnetismHandle[client]);
+		delete MagnetismHandle[client];
 		MagnetismHandle[client] = CreateTimer(5.0, Timer_RemoveMagnetism, client);
 		// Repeatedly produce Magnetism particle
 		float timeport = 0.1;
@@ -1547,6 +1561,7 @@ public void UsePowerup(int client) {
 		}
 	} else if (Powerup[client] == 15) {
 		MakeUserBuilding(client, "obj_sentrygun");
+		ExitSentryTime[client] = GetGameTime() + 1.0;
 	}
 	Powerup[client] = 0;
 }
@@ -1580,7 +1595,9 @@ public void DeletePowerup(int entity, int other) {
 		CollectedGift(other);
 		return;
 	}
-	CollectedPowerup(other, Powerup[entity]);
+	if(0 < other <= MaxClients && IsClientInGame(other)){
+		CollectedPowerup(other, Powerup[entity]);
+	}
 }
 
 public Action Timer_RespawnPowerup(Handle timer, any data) {
@@ -1678,7 +1695,7 @@ public Action OnStartTouchFrozen(int entity, int other) {
 				SetThirdPerson(other, true);
 			}
 			SetEntityMoveType(iRagDoll, MOVETYPE_NONE);
-			ClearTimer(FrostTouchUnfreezeHandle[other]);
+			delete FrostTouchUnfreezeHandle[other];
 			FrostTouchUnfreezeHandle[other] = CreateTimer(3.0, Timer_FrostTouchUnfreeze, other);
 			FrostTouchFrozen[other] = ((UltraPowerup[entity]) ? 2 : 1);
 			BlockAttacking(other, 3.0);
@@ -1687,7 +1704,7 @@ public Action OnStartTouchFrozen(int entity, int other) {
 }
 
 public Action Timer_FrostTouchUnfreeze(Handle timer, int client) {
-	FrostTouchUnfreezeHandle[client] = INVALID_HANDLE;
+	FrostTouchUnfreezeHandle[client] = null;
 	float vel[3];
 	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel);
 	if (IsPlayerAlive(client)) {
@@ -1819,12 +1836,12 @@ public void OnTouchRespawnRoom(int entity, int other) {
 ==================================================================================================== */
 
 public Action Timer_BeginTeleporter(Handle timer, int client) {
-	TeleportationHandle[client] = INVALID_HANDLE;
+	TeleportationHandle[client] = null;
 	if (!IsPlayerAlive(client)) {
 		return; // Do not teleport dead player
 	}
 	if (UsingPowerup[8][client]) {
-		ClearTimer(MegaMannHandle[client]);
+		delete MegaMannHandle[client];
 		MegaMannHandle[client] = CreateTimer(0.0, Timer_RemoveMegaMann, client);
 	}
 	FakeClientCommand(client, "dropitem"); // Force player to drop intelligence
@@ -1932,7 +1949,7 @@ public void MakeUserBuilding(int client, const char[] buildingname) { // Become 
 ==================================================================================================== */
 
 public Action Timer_RemoveSuperBounce(Handle timer, int client) {
-	SuperBounceHandle[client] = INVALID_HANDLE;
+	SuperBounceHandle[client] = null;
 	UsingPowerup[1][client] = false;
 	if (IsClientInGame(client)) {
 		if (AprilFools() && UsingPowerup[5][client]) {
@@ -1944,13 +1961,13 @@ public Action Timer_RemoveSuperBounce(Handle timer, int client) {
 }
 
 public Action Timer_RemoveShockAbsorb(Handle timer, int client) {
-	ShockAbsorberHandle[client] = INVALID_HANDLE;
+	ShockAbsorberHandle[client] = null;
 	UsingPowerup[2][client] = false;
 }
 
 public Action Timer_RemoveGyrocopter(Handle timer, int client) {
 	UsingPowerup[5][client] = false;
-	GyrocopterHandle[client] = INVALID_HANDLE;
+	GyrocopterHandle[client] = null;
 	if (IsClientInGame(client)) {
 		if (UsingPowerup[1][client] && AprilFools()) {
 			SetEntityGravity(client, 3.0);
@@ -1961,7 +1978,7 @@ public Action Timer_RemoveGyrocopter(Handle timer, int client) {
 }
 
 public Action Timer_RemoveTimeTravel(Handle timer, int client) {
-	TimeTravelHandle[client] = INVALID_HANDLE;
+	TimeTravelHandle[client] = null;
 	UsingPowerup[6][client] = false;
 	SetThirdPerson(client, false);
 	if (IsClientInGame(client)) {
@@ -1970,12 +1987,12 @@ public Action Timer_RemoveTimeTravel(Handle timer, int client) {
 }
 
 public Action Timer_RemoveFrostTouch(Handle timer, int client) {
-	FrostTouchHandle[client] = INVALID_HANDLE;
+	FrostTouchHandle[client] = null;
 	UsingPowerup[9][client] = false;
 }
 
 public Action Timer_RemoveMegaMann(Handle timer, int client) {
-	MegaMannHandle[client] = INVALID_HANDLE;
+	MegaMannHandle[client] = null;
 	UsingPowerup[8][client] = false;
 	if (IsClientInGame(client)) {
 		SetVariantString("1 0");
@@ -1988,27 +2005,16 @@ public Action Timer_RemoveMegaMann(Handle timer, int client) {
 }
 
 public Action Timer_RemoveMagnetism(Handle timer, int client) {
-	MagnetismHandle[client] = INVALID_HANDLE;
+	MagnetismHandle[client] = null;
 	UsingPowerup[12][client] = false;
 }
 
 public Action Timer_RemoveUltraPowerup(Handle timer, int client) {
-	UltraPowerupHandle[client] = INVALID_HANDLE;
+	UltraPowerupHandle[client] = null;
 	UltraPowerup[client] = false;
 	if (GetClientHealth(client) > GetPlayerMaxHealth(client)) {
 		SetEntityHealth(client, GetPlayerMaxHealth(client));
 	}
-}
-
-/* ClearTimer()
-From SourceMod forums
-==================================================================================================== */
-
-stock void ClearTimer(Handle Timer) {
-    if (Timer != INVALID_HANDLE) {
-        CloseHandle(Timer);
-        Timer = INVALID_HANDLE;
-    }
 }
 
 /* DoHudText()
