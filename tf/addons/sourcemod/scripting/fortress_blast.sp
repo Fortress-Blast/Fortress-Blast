@@ -416,11 +416,10 @@ public Action sm_setpowerup(int client, int args) {
 	GetCmdArg(1, arg, sizeof(arg));
 	GetCmdArg(2, arg2, sizeof(arg2));
 	int newpowerup = StringToInt(arg2);
-	if(client == 0 && StrEqual(arg2, "")){
-		PrintToServer("%s You must specify a player and powerup number", MESSAGE_PREFIX_NO_COLOR);
+	if (client == 0 && StrEqual(arg2, "")) {
+		PrintToServer("%s You must specify a player and powerup number.", MESSAGE_PREFIX_NO_COLOR);
 		return Plugin_Handled;
-	}
-	if (StrEqual(arg, "") && StrEqual(arg2, "")) {
+	} else if (StrEqual(arg, "") && StrEqual(arg2, "")) {
 		CPrintToChat(client, "%s {red}You must specify a powerup number.", MESSAGE_PREFIX);
 		return Plugin_Handled;
 	}
@@ -434,7 +433,7 @@ public Action sm_setpowerup(int client, int args) {
 		}
 	} else {
 		int player = FindTarget(client, arg, false, false);
-		if(0 < player <= MaxClients && IsClientInGame(player)){
+		if (0 < player <= MaxClients && IsClientInGame(player)) {
 			CollectedPowerup(player, newpowerup);
 		}
 	}
@@ -2154,7 +2153,6 @@ public Action Timer_RemoveParticle(Handle timer, Handle partkv) {
 
 /* DebugText()
 ==================================================================================================== */
-
 
 public void DebugText(const char[] text, any ...) {
 	if (sm_fortressblast_debug.BoolValue) {
