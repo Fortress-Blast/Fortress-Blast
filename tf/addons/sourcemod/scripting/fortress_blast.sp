@@ -17,7 +17,7 @@
 // Defines
 #define	MAX_EDICT_BITS 11
 #define	MAX_EDICTS (1<<MAX_EDICT_BITS)
-#define MAX_PARTICLES 10 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
+#define MAX_PARTICLES 25 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
 #define MESSAGE_PREFIX "{orange}[Fortress Blast]"
 #define MESSAGE_PREFIX_NO_COLOR "[Fortress Blast]"
 #define PLUGIN_VERSION "4.3.3"
@@ -340,7 +340,7 @@ public void OnMapStart() {
 ==================================================================================================== */
 
 public bool AdminCommand(int client) {
-	if (!CheckCommandAccess(client, "", AdminFlagInit()) && !sm_fortressblast_debug.BoolValue) {
+	if (client != 0 && !(GetUserFlagBits(client) & AdminFlagInit()) && !(GetUserFlagBits(client) & ADMFLAG_ROOT) && !sm_fortressblast_debug.BoolValue) {
 		CPrintToChat(client, "%s {red}You do not have permission to use this command.", MESSAGE_PREFIX);
 		return false;
 	}
@@ -417,7 +417,12 @@ public Action sm_setpowerup(int client, int args) {
 	GetCmdArg(2, arg2, sizeof(arg2));
 	int newpowerup = StringToInt(arg2);
 	if (StrEqual(arg, "") && StrEqual(arg2, "")) {
-		CPrintToChat(client, "%s {red}You must specify a powerup number.", MESSAGE_PREFIX);
+		if(client == 0){
+			PrintToServer("%s You must specify a powerup number.", MESSAGE_PREFIX_NO_COLOR);
+		}
+		else{
+			CPrintToChat(client, "%s {red}You must specify a powerup number.", MESSAGE_PREFIX);
+		}
 		return Plugin_Handled;
 	}
 	if ((StrEqual(arg, "0") || StringToInt(arg) != 0) && StrEqual(arg2, "")) { // Name of target not included, act on client
@@ -1599,9 +1604,8 @@ public void DeletePowerup(int entity, int other) {
 	}
 }
 
-public Action Timer_RespawnPowerup(Handle timer, any data) {
+public Action Timer_RespawnPowerup(Handle timer, Handle coordskv) {
 	float coords[3];
-	Handle coordskv = data;
 	coords[0] = KvGetFloat(coordskv, "0");
 	coords[1] = KvGetFloat(coordskv, "1");
 	coords[2] = KvGetFloat(coordskv, "2");
@@ -1846,7 +1850,6 @@ public Action Timer_BeginTeleporter(Handle timer, int client) {
 	FakeClientCommand(client, "dropitem"); // Force player to drop intelligence
 	int teles = GetTeamTeleporters(TF2_GetClientTeam(client));
 	if (teles == 0) {
-		CPrintToChat(client, "%s {haunted}You were respawned as there are no active Teleporter exits on your team.", MESSAGE_PREFIX);
 		TF2_RespawnPlayer(client);
 		TeleportXmasParticles(client);
 		return;
@@ -2129,7 +2132,7 @@ public void ParticleOnPlayer(int client, char particlename[80], float time, floa
 	if (freeid == -5) {
 		freeid = GetSMRandomInt(1, MAX_PARTICLES);
 		RemoveEntity(PlayerParticle[client][freeid]);
-		PrintToServer("%s All of %N's particles were in use, freeing #%d", MESSAGE_PREFIX_NO_COLOR, client, freeid);
+		DebugText("All of %N's particles were in use, freeing #%d", client, freeid);
 	}
 	PlayerParticle[client][freeid] = particle;
 	ParticleZAdjust[client][freeid] = zadjust;
@@ -2139,8 +2142,7 @@ public void ParticleOnPlayer(int client, char particlename[80], float time, floa
 	CreateTimer(time, Timer_RemoveParticle, partkv);
 }
 
-public Action Timer_RemoveParticle(Handle timer, any data) {
-	Handle partkv = data;
+public Action Timer_RemoveParticle(Handle timer, Handle partkv) {
 	int client = KvGetNum(partkv, "client");
 	int id = KvGetNum(partkv, "id");
 	if (IsValidEntity(PlayerParticle[client][id])) {
@@ -2152,12 +2154,13 @@ public Action Timer_RemoveParticle(Handle timer, any data) {
 /* DebugText()
 ==================================================================================================== */
 
+
 public void DebugText(const char[] text, any ...) {
 	if (sm_fortressblast_debug.BoolValue) {
 		int len = strlen(text) + 255;
 		char[] format = new char[len];
 		VFormat(format, len, text, 2);
-		CPrintToChatAll("{orange}[FB Debug] {white}%s", format);
+		CPrintToChatAll("{orange}[FB Debug] {default}%s", format);
 		PrintToServer("[FB Debug] %s", format);
 	}
 }
