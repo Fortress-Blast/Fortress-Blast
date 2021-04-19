@@ -1633,7 +1633,7 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
 		damageForce[1] = 0.0;
 		damageForce[2] = 0.0;
 	}
-	if (UsingPowerup[1][victim] && attacker == 0 && damagecustom != TF_CUSTOM_TRIGGER_HURT) {
+	if ((UsingPowerup[1][victim] && attacker == 0 && damagecustom != TF_CUSTOM_TRIGGER_HURT) || IsValidEntity(Building[client])) {
 		return Plugin_Handled;
 	}
 	return Plugin_Changed;
@@ -1922,7 +1922,7 @@ public bool BuildingPassesNetprops(int entity) {
 public void MakeUserBuilding(int client, const char[] buildingname) { // Become Sentry
 	PreSentryHealth[client] = GetClientHealth(client);
 	Building[client] = CreateEntityByName(buildingname);
-	DispatchKeyValue(Building[client], "defaultupgrade", "2");
+	DispatchKeyValue(Building[client], "defaultupgrade", "1");
 	SetVariantInt(GetClientTeam(client));
 	AcceptEntityInput(Building[client], "SetTeam");
 	SetVariantInt((GetClientTeam(client) * -1) + 4);
