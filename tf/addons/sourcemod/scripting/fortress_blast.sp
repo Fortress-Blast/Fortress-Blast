@@ -20,8 +20,8 @@
 #define MAX_PARTICLES 25 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
 #define MESSAGE_PREFIX "{orange}[Fortress Blast]"
 #define MESSAGE_PREFIX_NO_COLOR "[Fortress Blast]"
-#define PLUGIN_VERSION "4.3.3"
-#define MOTD_VERSION "4.3"
+#define PLUGIN_VERSION "4.4"
+#define MOTD_VERSION "4.4"
 #define NUMBER_OF_POWERUPS 15 // Do not use in calculations, only for sizing arrays
 
 #define PI 3.14159265359
@@ -509,23 +509,23 @@ public Action teamplay_round_start(Event event, const char[] name, bool dontBroa
 	RemoveAllPowerups();
 	if (sm_fortressblast_powerups_roundstart.BoolValue) {
 		GetSpawns(false);
-	}
-	// Replace Mannpower powerups
-	if (FindEntityByClassname(0, "tf_logic_mannpower") != -1 && sm_fortressblast_mannpower.IntValue != 0) {
-		for (int entity = 1; entity <= MAX_EDICTS; entity++) {
-			if (IsValidEntity(entity)) {
-				char classname[60];
-				GetEntityClassname(entity, classname, sizeof(classname));
-				if ((!MapHasJsonFile || sm_fortressblast_mannpower.IntValue == 2)) {
-					if (StrEqual(classname, "item_powerup_rune") || StrEqual(classname, "item_powerup_crit") || StrEqual(classname, "item_powerup_uber") || StrEqual(classname, "info_powerup_spawn")) {
-						if (StrEqual(classname, "info_powerup_spawn")) {
-							float coords[3] = 69.420;
-							GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
-							DebugText("Found Mannpower spawn at %f, %f, %f", coords[0], coords[1], coords[2]);
-							SpawnPowerup(coords, true);
+		// Replace Mannpower powerups
+		if (FindEntityByClassname(0, "tf_logic_mannpower") != -1 && sm_fortressblast_mannpower.IntValue != 0) {
+			for (int entity = 1; entity <= MAX_EDICTS; entity++) {
+				if (IsValidEntity(entity)) {
+					char classname[60];
+					GetEntityClassname(entity, classname, sizeof(classname));
+					if ((!MapHasJsonFile || sm_fortressblast_mannpower.IntValue == 2)) {
+						if (StrEqual(classname, "item_powerup_rune") || StrEqual(classname, "item_powerup_crit") || StrEqual(classname, "item_powerup_uber") || StrEqual(classname, "info_powerup_spawn")) {
+							if (StrEqual(classname, "info_powerup_spawn")) {
+								float coords[3] = 69.420;
+								GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
+								DebugText("Found Mannpower spawn at %f, %f, %f", coords[0], coords[1], coords[2]);
+								SpawnPowerup(coords, true);
+							}
+							DebugText("Removing entity name %s", classname);
+							RemoveEntity(entity);
 						}
-						DebugText("Removing entity name %s", classname);
-						RemoveEntity(entity);
 					}
 				}
 			}
@@ -1633,7 +1633,7 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
 		damageForce[1] = 0.0;
 		damageForce[2] = 0.0;
 	}
-	if ((UsingPowerup[1][victim] && attacker == 0 && damagecustom != TF_CUSTOM_TRIGGER_HURT) || IsValidEntity(Building[client])) {
+	if ((UsingPowerup[1][victim] && attacker == 0 && damagecustom != TF_CUSTOM_TRIGGER_HURT) || IsValidEntity(Building[victim])) {
 		return Plugin_Handled;
 	}
 	return Plugin_Changed;
