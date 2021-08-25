@@ -20,8 +20,8 @@
 #define MAX_PARTICLES 25 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
 #define MESSAGE_PREFIX "{orange}[Fortress Blast]"
 #define MESSAGE_PREFIX_NO_COLOR "[Fortress Blast]"
-#define PLUGIN_VERSION "4.4 Beta"
-#define MOTD_VERSION "4.4"
+#define PLUGIN_VERSION "4.3.3"
+#define MOTD_VERSION "4.3"
 #define NUMBER_OF_POWERUPS 15 // Do not use in calculations, only for sizing arrays
 
 #define PI 3.14159265359
@@ -1453,10 +1453,12 @@ public void UsePowerup(int client) {
 		}
 		delete MegaMannHandle[client];
 		MegaMannHandle[client] = CreateTimer(10.0, Timer_RemoveMegaMann, client);
-		float coords[3] = 69.420;
-		GetEntPropVector(client, Prop_Send, "m_vecOrigin", coords);
-		coords[2] += 16.0;
-		TeleportEntity(client, coords, NULL_VECTOR, NULL_VECTOR);
+		if(!UsingPowerup[8][client]){// Push up players if not using mega mann as it will make it harder for them to be stuck in the floor. Don't push up if already using Mega Mann as they may get stuck in the ceiling
+			float coords[3] = 69.420;
+			GetEntPropVector(client, Prop_Send, "m_vecOrigin", coords);
+			coords[2] += 16.0;
+			TeleportEntity(client, coords, NULL_VECTOR, NULL_VECTOR);
+		}
 		MegaMannVerified[client] = true;
 	} else if (Powerup[client] == 9) {
 		// Frost Touch - Freeze touched players for 3 seconds within 8 seconds
