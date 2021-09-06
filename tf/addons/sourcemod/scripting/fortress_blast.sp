@@ -2021,7 +2021,7 @@ public Action Timer_RemoveTimeTravel(Handle timer, int client) {
 		RemoveSpeedBonus(client);
 		float vel[3];
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel);
-		if(ScreamFortress()){
+		if (ScreamFortress()) {
 			EmitAmbientSound("misc/halloween/hwn_bomb_flash.wav", vel, client);
 		}
 	}
