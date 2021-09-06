@@ -870,7 +870,7 @@ public Action Timer_DisplayIntro(Handle timer, int client) {
 stock char FancyPluginName() {
 	char intro[500];
 	if (ScreamFortress()) {
-		intro = "{orange}Fo{darkorange}rt{darkgoldenrod}re{chocolate}ss {darkslategray}B{darkslateblue}l{slateblue}a{royalblue}s{cornflowerblue}t";
+		intro = "{chocolate}Fo{darkgoldenrod}rt{darkorange}re{orange}ss {cornflowerblue}B{royalblue}l{slateblue}a{darkslateblue}s{darkslategray}t";
 	} else if (Smissmas()) {
 		intro = "{salmon}F{limegreen}o{salmon}r{limegreen}t{salmon}r{limegreen}e{salmon}s{limegreen}s {salmon}B{limegreen}l{salmon}a{limegreen}s{salmon}t";
 	} else if (AprilFools()) {
@@ -1421,6 +1421,7 @@ public void UsePowerup(int client) {
 			} else {
 				EmitAmbientSound("items/halloween/witch03.wav", vel, client);
 			}
+			// Particle only lasts for 3 seconds, need to play twice to fill out 5 seconds
 			if (TF2_GetClientTeam(client) == TFTeam_Red) {
 				ParticleOnPlayer(client, "spell_batball_red", 5.0, 0.0);
 			} else if (TF2_GetClientTeam(client) == TFTeam_Blue) {
@@ -1913,7 +1914,6 @@ public Action Timer_BeginTeleporter(Handle timer, int client) {
 	}
 	TeleportXmasParticles(client);
 }
-
 
 public void TeleportXmasParticles(int client) {
 	if (Smissmas()) {
