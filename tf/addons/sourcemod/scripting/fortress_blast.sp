@@ -95,6 +95,7 @@ ConVar sm_fortressblast_dizzy_length;
 ConVar sm_fortressblast_drop;
 ConVar sm_fortressblast_drop_rate;
 ConVar sm_fortressblast_drop_teams;
+ConVar sm_fortressblast_event;
 ConVar sm_fortressblast_event_fools;
 ConVar sm_fortressblast_event_xmas;
 ConVar sm_fortressblast_gifthunt;
@@ -163,6 +164,7 @@ public void OnPluginStart() {
 	sm_fortressblast_drop = CreateConVar("sm_fortressblast_drop", "1", "How to handle dropping powerups on death.");
 	sm_fortressblast_drop_rate = CreateConVar("sm_fortressblast_drop_rate", "10", "Chance out of 100 for a powerup to drop on death.");
 	sm_fortressblast_drop_teams = CreateConVar("sm_fortressblast_drop_teams", "1", "Teams that will drop powerups on death.");
+	sm_fortressblast_event = CreateConVar("sm_fortressblast_event", "1", "How to handle the TF2 Scream Fortress event.");
 	sm_fortressblast_event_fools = CreateConVar("sm_fortressblast_event_fools", "1", "How to handle the TF2 April Fools event.");
 	sm_fortressblast_event_xmas = CreateConVar("sm_fortressblast_event_xmas", "1", "How to handle the TF2 Smissmas event.");
 	sm_fortressblast_gifthunt = CreateConVar("sm_fortressblast_gifthunt", "0", "Disables or enables Gift Hunt on maps with Gift Hunt .json files.");
@@ -318,6 +320,11 @@ public void OnMapStart() {
 	PrecacheSound("physics/flesh/flesh_impact_bullet2.wav");
 	PrecacheSound("weapons/cleaver_hit_02.wav");
 	PrecacheSound("weapons/jar_explode.wav");
+
+	// Scream Fortress sound precaching for non-custom sounds
+	PrecacheSound("items/halloween/witch01.wav");
+	PrecacheSound("items/halloween/witch02.wav");
+	PrecacheSound("items/halloween/witch03.wav");
 
 	// Smissmas sound precaching for non-custom sounds
 	PrecacheSound("misc/jingle_bells/jingle_bells_nm_01.wav");
@@ -861,7 +868,9 @@ public Action Timer_DisplayIntro(Handle timer, int client) {
 
 stock char FancyPluginName() {
 	char intro[500];
-	if (Smissmas()) {
+	if (ScreamFortress()) {
+		intro = "{orange}Fo{darkorange}rt{darkgoldenrod}re{chocolate}ss {darkslategray}B{darkslateblue}l{slateblue}a{royalblue}s{cornflowerblue}t";
+	} else if (Smissmas()) {
 		intro = "{salmon}F{limegreen}o{salmon}r{limegreen}t{salmon}r{limegreen}e{salmon}s{limegreen}s {salmon}B{limegreen}l{salmon}a{limegreen}s{salmon}t";
 	} else if (AprilFools()) {
 		intro = "{red}F{orange}o{yellow}r{green}t{cyan}r{blue}e{pink}s{blue}s {cyan}B{green}l{yellow}a{orange}s{red}t";
@@ -1387,6 +1396,9 @@ public void UsePowerup(int client) {
 		EmitAmbientSound("fortressblast2/superspeed_use.mp3", vel, client);
 	} else if (Powerup[client] == 4) {
 		// Super Jump - Launch user into air
+		if (ScreamFortress()) {
+			EmitAmbientSound("items/halloween/witch01.wav", vel, client);
+		}
 		if (UsingPowerup[8][client]) {
 			vel[2] += 600.0; // Slightly reduced height due to Mega Mann
 		} else {
@@ -1396,6 +1408,14 @@ public void UsePowerup(int client) {
 		EmitAmbientSound("fortressblast2/superjump_use.mp3", vel, client);
 	} else if (Powerup[client] == 5) {
 		// Gyrocopter - 25% gravity for 5 seconds
+		if (ScreamFortress()) {
+			int witchRandom = GetSMRandomInt(1, 2);
+			if (witchRandom == 1) {
+				EmitAmbientSound("items/halloween/witch02.wav", vel, client);
+			} else {
+				EmitAmbientSound("items/halloween/witch03.wav", vel, client);
+			}
+		}
 		if (UsingPowerup[1][client] && AprilFools()) {
 			SetEntityGravity(client, 0.75);
 		} else {
@@ -2373,6 +2393,16 @@ stock void RemoveSpeedBonus(int client) {
 - TFHoliday_HalloweenOrFullMoon;
 - TFHoliday_HalloweenOrFullMoonOrValentines;
 - TFHoliday_AprilFools; */
+
+public bool ScreamFortress() {
+	int convar = sm_fortressblast_event.IntValue;
+	if (convar == 0) {
+		return false;
+	} else if (convar == 1) {
+		return TF2_IsHolidayActive(TFHoliday_Halloween);
+	}
+	return true;
+}
 
 public bool Smissmas() {
 	int convar = sm_fortressblast_event_xmas.IntValue;
