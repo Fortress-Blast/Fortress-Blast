@@ -325,6 +325,7 @@ public void OnMapStart() {
 	PrecacheSound("items/halloween/witch01.wav");
 	PrecacheSound("items/halloween/witch02.wav");
 	PrecacheSound("items/halloween/witch03.wav");
+	PrecacheSound("misc/halloween/hwn_bomb_flash.wav");
 
 	// Smissmas sound precaching for non-custom sounds
 	PrecacheSound("misc/jingle_bells/jingle_bells_nm_01.wav");
@@ -1398,6 +1399,11 @@ public void UsePowerup(int client) {
 		// Super Jump - Launch user into air
 		if (ScreamFortress()) {
 			EmitAmbientSound("items/halloween/witch01.wav", vel, client);
+			if (TF2_GetClientTeam(client) == TFTeam_Red) {
+				ParticleOnPlayer(client, "spell_batball_impact_red", 1.0, 0.0);
+			} else if (TF2_GetClientTeam(client) == TFTeam_Blue) {
+				ParticleOnPlayer(client, "spell_batball_impact_blue", 1.0, 0.0);
+			}
 		}
 		if (UsingPowerup[8][client]) {
 			vel[2] += 600.0; // Slightly reduced height due to Mega Mann
@@ -1414,6 +1420,11 @@ public void UsePowerup(int client) {
 				EmitAmbientSound("items/halloween/witch02.wav", vel, client);
 			} else {
 				EmitAmbientSound("items/halloween/witch03.wav", vel, client);
+			}
+			if (TF2_GetClientTeam(client) == TFTeam_Red) {
+				ParticleOnPlayer(client, "spell_batball_red", 5.0, 0.0);
+			} else if (TF2_GetClientTeam(client) == TFTeam_Blue) {
+				ParticleOnPlayer(client, "spell_batball_blue", 5.0, 0.0);
 			}
 		}
 		if (UsingPowerup[1][client] && AprilFools()) {
@@ -2008,6 +2019,9 @@ public Action Timer_RemoveTimeTravel(Handle timer, int client) {
 	SetThirdPerson(client, false);
 	if (IsClientInGame(client)) {
 		RemoveSpeedBonus(client);
+		float vel[3];
+		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel);
+		EmitAmbientSound("misc/halloween/hwn_bomb_flash.wav", vel, client);
 	}
 }
 
