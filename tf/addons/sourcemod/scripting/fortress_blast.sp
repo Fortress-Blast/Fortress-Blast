@@ -95,7 +95,7 @@ ConVar sm_fortressblast_dizzy_length;
 ConVar sm_fortressblast_drop;
 ConVar sm_fortressblast_drop_rate;
 ConVar sm_fortressblast_drop_teams;
-ConVar sm_fortressblast_event;
+ConVar sm_fortressblast_event_scream;
 ConVar sm_fortressblast_event_fools;
 ConVar sm_fortressblast_event_xmas;
 ConVar sm_fortressblast_gifthunt;
@@ -164,7 +164,7 @@ public void OnPluginStart() {
 	sm_fortressblast_drop = CreateConVar("sm_fortressblast_drop", "1", "How to handle dropping powerups on death.");
 	sm_fortressblast_drop_rate = CreateConVar("sm_fortressblast_drop_rate", "10", "Chance out of 100 for a powerup to drop on death.");
 	sm_fortressblast_drop_teams = CreateConVar("sm_fortressblast_drop_teams", "1", "Teams that will drop powerups on death.");
-	sm_fortressblast_event = CreateConVar("sm_fortressblast_event", "1", "How to handle the TF2 Scream Fortress event.");
+	sm_fortressblast_event_scream = CreateConVar("sm_fortressblast_event_scream", "1", "How to handle the TF2 Scream Fortress event.");
 	sm_fortressblast_event_fools = CreateConVar("sm_fortressblast_event_fools", "1", "How to handle the TF2 April Fools event.");
 	sm_fortressblast_event_xmas = CreateConVar("sm_fortressblast_event_xmas", "1", "How to handle the TF2 Smissmas event.");
 	sm_fortressblast_gifthunt = CreateConVar("sm_fortressblast_gifthunt", "0", "Disables or enables Gift Hunt on maps with Gift Hunt .json files.");
@@ -1475,8 +1475,6 @@ public void UsePowerup(int client) {
 	} else if (Powerup[client] == 8) {
 		// Mega Mann - Giant and 4x health for 10 seconds
 		EmitAmbientSound("fortressblast2/megamann_use.mp3", vel, client);
-		SetVariantString("1.75 0");
-		AcceptEntityInput(client, "SetModelScale");
 		int healthMultiplier = (TF2_GetPlayerClass(client) == TFClass_Heavy ? 3 : 4);
 		SetEntityHealth(client, (GetClientHealth(client) * healthMultiplier)); // Multiply current health
 		// Cap at expected multiplied maximum health
@@ -1492,6 +1490,8 @@ public void UsePowerup(int client) {
 			coords[2] += 16.0;
 			TeleportEntity(client, coords, NULL_VECTOR, NULL_VECTOR);
 		}
+		SetVariantString("1.75 0");
+		AcceptEntityInput(client, "SetModelScale");
 		MegaMannVerified[client] = true;
 	} else if (Powerup[client] == 9) {
 		// Frost Touch - Freeze touched players for 3 seconds within 8 seconds
@@ -2021,7 +2021,9 @@ public Action Timer_RemoveTimeTravel(Handle timer, int client) {
 		RemoveSpeedBonus(client);
 		float vel[3];
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel);
-		EmitAmbientSound("misc/halloween/hwn_bomb_flash.wav", vel, client);
+		if(ScreamFortress()){
+			EmitAmbientSound("misc/halloween/hwn_bomb_flash.wav", vel, client);
+		}
 	}
 }
 
@@ -2409,7 +2411,7 @@ stock void RemoveSpeedBonus(int client) {
 - TFHoliday_AprilFools; */
 
 public bool ScreamFortress() {
-	int convar = sm_fortressblast_event.IntValue;
+	int convar = sm_fortressblast_event_scream.IntValue;
 	if (convar == 0) {
 		return false;
 	} else if (convar == 1) {
