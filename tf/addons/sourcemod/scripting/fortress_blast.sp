@@ -22,7 +22,7 @@
 #define MESSAGE_PREFIX_NO_COLOR "[Fortress Blast]"
 #define PLUGIN_VERSION "4.4 Beta"
 #define MOTD_VERSION "4.4"
-#define NUMBER_OF_POWERUPS 16 // Do not use in calculations, only for sizing arrays
+#define NUMBER_OF_POWERUPS 17 // Do not use in calculations, only for sizing arrays
 
 #define PI 3.14159265359
 
@@ -128,7 +128,10 @@ ConVar sm_fortressblast_ultra_spawnchance;
 11 - Teleportation
 12 - Magnetism
 13 - Effect Burst
-14 - Dizzy Bomb */
+14 - Dizzy Bomb
+15 - Become Sentry
+16 - Ghost
+17 - Catapult */
 
 /* OnPluginStart() + OnPluginEnd()
 ==================================================================================================== */
@@ -716,7 +719,7 @@ public void GetSpawns(bool UsingGiftHunt) {
 public void RemoveAllPowerups() {
 	int entity = -1;
 	while ((entity = FindEntityByClassname(entity, "tf_halloween_pickup")) != -1) {
-		if(0 < entity <= MAX_EDICTS && IsValidEntity(entity)){
+		if (0 < entity <= MAX_EDICTS && IsValidEntity(entity)) {
 			RemoveEntity(entity);
 		}
 	}
@@ -816,7 +819,7 @@ public Action Timer_MiscTimer(Handle timer, any data) {
 					SetEntPropFloat(client, Prop_Send, "m_flMaxspeed", SuperSpeed[client]);
 				}
 				SpeedRotationsLeft[client]--;
-				if(SpeedRotationsLeft[client] == 0){
+				if (SpeedRotationsLeft[client] == 0) {
 					RemoveSpeedBonus(client);
 				}
 			}
@@ -955,8 +958,6 @@ stock int SpawnPowerup(float location[3], bool respawn, int id = 0) {
 			Powerup[entity] = id;
 		}
 		// Set colors
-
-
 		if (Powerup[entity] == 1) {
 			SetEntityRenderColor(entity, 85, 102, 255, 255);
 		} else if (Powerup[entity] == 2) {
@@ -989,16 +990,15 @@ stock int SpawnPowerup(float location[3], bool respawn, int id = 0) {
 			SetEntityRenderColor(entity, 255, 0, 255, 255);
 		} else if (Powerup[entity] == 16) {
 			SetEntityRenderColor(entity, 109, 72, 182, 255);
-		}
-
-		// End colors
-
-		if(Powerup[entity] == -1){
+		} else if (Powerup[entity] == 17) {
+			SetEntityRenderColor(entity, 255, 102, 85, 255);
+		} else if (Powerup[entity] == -1) {
 			Handle kv = CreateKeyValues("");
 			KvSetNum(kv, "powerup", entity);
 			KvSetNum(kv, "rainbowid", 0);
 			CreateTimer(0.0, UpdateRainbowPowerup, kv);
 		}
+		// End colors
 		DispatchKeyValue(entity, "pickup_sound", " ");
 		DispatchKeyValue(entity, "pickup_particle", " ");
 		AcceptEntityInput(entity, "EnableCollision");
@@ -1153,7 +1153,9 @@ public void CollectedPowerup(int client, int newpowerup) {
 	} else if (Powerup[client] == 15) {
 		EmitSoundToClient(client, "fortressblast2/becomesentry_pickup.mp3", client);
 	} else if (Powerup[client] == 16) {
-		EmitSoundToClient(client, "fortressblast2/timetravel_pickup.mp3", client);
+		// Need sound for Ghost
+	} else if (Powerup[client] == 17) {
+		// Need sound for Catapult
 	}
 	// If player is a bot and bot support is enabled
 	if (IsFakeClient(client) && sm_fortressblast_bot.BoolValue && !BlockPowerup(client, 0)) {
@@ -1469,7 +1471,7 @@ public void UsePowerup(int client) {
 			}
 		}
 		if (UsingPowerup[8][client]) {
-			vel[2] += 600.0; // Slightly reduced height due to Mega Mann
+			vel[2] += 600.0; // Slightly reduced velocity due to Mega Mann
 		} else {
 			vel[2] += 800.0;
 		}
@@ -1665,10 +1667,33 @@ public void UsePowerup(int client) {
 		MakeUserBuilding(client, "obj_sentrygun");
 		ExitSentryTime[client] = GetGameTime() + 1.0;
 	} else if (Powerup[client] == 16) {
-		EmitAmbientSound("fortressblast2/superspeed_use.mp3", vel, client);
+		// Ghost - Turn user into ghost that scares nearby enemies
+		// Need sound for Ghost
 		delete GhostHandle[client];
 		GhostHandle[client] = CreateTimer(5.0, Timer_RemoveGhost, GetClientUserId(client));
 		TF2_AddCondition(client, TFCond_HalloweenGhostMode, 5.0);
+	} else if (Powerup[client] == 17) {
+		// Catapult - Launch user forward
+		// Need sound for Catapult
+		if (ScreamFortress()) {
+			// Need cat sound and particles for Catapult on Halloween
+		}
+		float ang[3];
+		GetClientEyeAngles(client, ang);
+		ang[0] = -17.5;
+		float vec[3] = {0.0, 0.0, 0.0};
+		if (UsingPowerup[8][client]) {
+			vec[0] = 600.0; // Slightly reduced velocity due to Mega Mann
+		} else {
+			vec[0] = 800.0;
+		}
+		float vel2[3];
+		RotateVector(vec, ang, vel2);
+		vel[0] += vel2[0];
+		vel[1] += vel2[1];
+		vel[2] += vel2[2];
+		// Must lift player off ground in order to launch properly, currently causes player to slide if on the ground
+		TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vel);
 	}
 	Powerup[client] = 0;
 }
@@ -2038,6 +2063,42 @@ public void MakeUserBuilding(int client, const char[] buildingname) { // Become 
 	BlockAttacking(client, 0.5);
 }
 
+/* RotateVector()
+Vector rotation from smlib
+==================================================================================================== */
+
+void RotateVector(float points[3], float angles[3], float result[3]) {
+	float rad[3];
+	rad[0] = DegToRad(angles[2]);
+	rad[1] = DegToRad(angles[0]);
+	rad[2] = DegToRad(angles[1]);
+	float cosAlpha = Cosine(rad[0]);
+	float sinAlpha = Sine(rad[0]);
+	float cosBeta = Cosine(rad[1]);
+	float sinBeta = Sine(rad[1]);
+	float cosGamma = Cosine(rad[2]);
+	float sinGamma = Sine(rad[2]);
+	float x = points[0];
+	float y = points[1];
+	float z = points[2];
+	float newX, newY, newZ;
+	newY = cosAlpha*y - sinAlpha*z;
+	newZ = cosAlpha*z + sinAlpha*y;
+	y = newY;
+	z = newZ;
+	newX = cosBeta*x + sinBeta*z;
+	newZ = cosBeta*z - sinBeta*x;
+	x = newX;
+	z = newZ;
+	newX = cosGamma*x - sinGamma*y;
+	newY = cosGamma*y + sinGamma*x;
+	x = newX;
+	y = newY;
+	result[0] = x;
+	result[1] = y;
+	result[2] = z;
+}
+
 /* Powerup Removal
 ==================================================================================================== */
 
@@ -2078,7 +2139,7 @@ public Action Timer_RemoveTimeTravel(Handle timer, int client) {
 		RemoveSpeedBonus(client);
 		float vel[3];
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel);
-		if(ScreamFortress()){
+		if (ScreamFortress()) {
 			EmitAmbientSound("misc/halloween/hwn_bomb_flash.wav", vel, client);
 		}
 	}
@@ -2206,6 +2267,12 @@ public void DoHudText(int client) {
 				ShowSyncHudText(client, PowerupText, "Collected powerup:\nGhost");
 			} else {
 				ShowSyncHudText(client, PowerupText, "Collected powerup:\nSuper Ghost");
+			}
+		} else if (Powerup[client] == 17) {
+			if (!AprilFools()) {
+				ShowSyncHudText(client, PowerupText, "Collected powerup:\nCatapult");
+			} else {
+				ShowSyncHudText(client, PowerupText, "Collected powerup:\nSuper Catapult");
 			}
 		}
 	}
