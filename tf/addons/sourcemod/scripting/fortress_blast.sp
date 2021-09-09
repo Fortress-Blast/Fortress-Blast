@@ -1043,29 +1043,21 @@ public Action UpdateUltraPowerupColor(Handle timer, Handle kv) {
 	}
 	if (rainbowid > 7) {
 		rainbowid = 0;
-	}
-	if (rainbowid == 0) {
+	} else if (rainbowid == 0) {
 		SetEntityRenderColor(powerup, 255, 0, 0, 255); // Red
-	}
-	if (rainbowid == 1) {
+	} else if (rainbowid == 1) {
 		SetEntityRenderColor(powerup, 255, 128, 0, 255); // Orange
-	}
-	if (rainbowid == 2) {
+	} else if (rainbowid == 2) {
 		SetEntityRenderColor(powerup, 255, 255, 0, 255); // Yellow
-	}
-	if (rainbowid == 3) {
+	} else if (rainbowid == 3) {
 		SetEntityRenderColor(powerup, 0, 255, 145, 255); // Green
-	}
-	if (rainbowid == 4) {
+	} else if (rainbowid == 4) {
 		SetEntityRenderColor(powerup, 36, 255, 255, 255); // Cyan
-	}
-	if (rainbowid == 5) {
+	} else if (rainbowid == 5) {
 		SetEntityRenderColor(powerup, 85, 102, 255, 255); // Blue
-	}
-	if (rainbowid == 6) {
+	} else if (rainbowid == 6) {
 		SetEntityRenderColor(powerup, 109, 0, 255, 255); // Purple
-	}
-	if (rainbowid == 7) {
+	} else if (rainbowid == 7) {
 		SetEntityRenderColor(powerup, 255, 0, 218, 255); // Magenta
 	}
 	Handle kv2 = CreateKeyValues("");
