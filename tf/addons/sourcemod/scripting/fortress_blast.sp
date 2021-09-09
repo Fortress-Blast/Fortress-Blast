@@ -1499,8 +1499,7 @@ public void UsePowerup(int client) {
 	} else if (Powerup[client] == 5) {
 		// Gyrocopter - 25% gravity for 5 seconds
 		if (ScreamFortress()) {
-			int witchRandom = GetSMRandomInt(1, 2);
-			if (witchRandom == 1) {
+			if (GetSMRandomInt(1, 2) == 1) {
 				EmitAmbientSound("items/halloween/witch02.wav", vel, client);
 			} else {
 				EmitAmbientSound("items/halloween/witch03.wav", vel, client);
