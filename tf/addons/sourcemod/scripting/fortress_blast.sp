@@ -283,7 +283,7 @@ public void OnMapStart() {
 	PrecacheSound("fortressblast2/dizzybomb_use.mp3");
 	PrecacheSound("fortressblast2/dizzybomb_dizzy.mp3");
 	PrecacheSound("fortressblast2/becomesentry_pickup.mp3");
-	PrecacheSound("fortressblast2/ghost_use.mp3");
+	PrecacheSound("fortressblast2/ghost_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/ultrapowerup_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/ultrapowerup_use.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/superbounce_pickup.mp3");
@@ -317,6 +317,7 @@ public void OnMapStart() {
 	AddFileToDownloadsTable("sound/fortressblast2/dizzybomb_use.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/dizzybomb_dizzy.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/becomesentry_pickup.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/ghost_pickup.mp3");
 
 	// Powerup model and sound precaching for non-custom content
 	PrecacheModel("models/props_halloween/ghost_no_hat.mdl");
@@ -1354,6 +1355,24 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 				float coords2[3];
 				GetClientAbsOrigin(client2, coords2);
 				if (GetVectorDistance(coords1, coords2) <= 200.0) {
+					if(!TF2_IsPlayerInCondition(client2, TFCond_Dazed)){
+						int boorandom = GetSMRandomInt(1, 7);
+						if (boorandom == 1) {
+							EmitAmbientSound("vo/halloween_boo1.mp3", vel, client);
+						} else if (boorandom == 2) {
+							EmitAmbientSound("vo/halloween_boo2.mp3", vel, client);
+						} else if (boorandom == 3) {
+							EmitAmbientSound("vo/halloween_boo3.mp3", vel, client);
+						} else if (boorandom == 4) {
+							EmitAmbientSound("vo/halloween_boo4.mp3", vel, client);
+						} else if (boorandom == 5) {
+							EmitAmbientSound("vo/halloween_boo5.mp3", vel, client);
+						} else if (boorandom == 6) {
+							EmitAmbientSound("vo/halloween_boo6.mp3", vel, client);
+						} else if (boorandom == 7) {
+							EmitAmbientSound("vo/halloween_boo7.mp3", vel, client);
+						}
+					}
 					TF2_StunPlayer(client2, 2.0, _, TF_STUNFLAGS_GHOSTSCARE, 0);
 				}
 			}
