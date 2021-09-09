@@ -284,6 +284,7 @@ public void OnMapStart() {
 	PrecacheSound("fortressblast2/dizzybomb_dizzy.mp3");
 	PrecacheSound("fortressblast2/becomesentry_pickup.mp3");
 	PrecacheSound("fortressblast2/ghost_pickup.mp3");
+	PrecacheSound("fortressblast2/catapult_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/ultrapowerup_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/ultrapowerup_use.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/superbounce_pickup.mp3");
@@ -318,6 +319,7 @@ public void OnMapStart() {
 	AddFileToDownloadsTable("sound/fortressblast2/dizzybomb_dizzy.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/becomesentry_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/ghost_pickup.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/catapult_pickup.mp3");
 
 	// Powerup model and sound precaching for non-custom content
 	PrecacheModel("models/props_halloween/ghost_no_hat.mdl");
@@ -1172,7 +1174,7 @@ public void CollectedPowerup(int client, int newpowerup) {
 	} else if (Powerup[client] == 16) {
 		EmitSoundToClient(client, "fortressblast2/ghost_pickup.mp3", client);
 	} else if (Powerup[client] == 17) {
-		// Need sound for Catapult
+		EmitSoundToClient(client, "fortressblast2/catapult_pickup.mp3", client);
 	}
 	// If player is a bot and bot support is enabled
 	if (IsFakeClient(client) && sm_fortressblast_bot.BoolValue && !BlockPowerup(client, 0)) {
@@ -1720,14 +1722,14 @@ public void UsePowerup(int client) {
 		TF2_AddCondition(client, TFCond_HalloweenGhostMode, 5.0);
 	} else if (Powerup[client] == 17) {
 		// Catapult - Launch user forward
-		// Need regular sound for Catapult
-		if (ScreamFortress()) {
+		if (!AprilFools()) {
+			// Need regular sound for Catapult
+		} else {
 			if (GetSMRandomInt(1, 2) == 1) {
 				EmitAmbientSound("items/halloween/cat02.wav", vel, client);
 			} else {
 				EmitAmbientSound("items/halloween/cat03.wav", vel, client);
 			}
-			// Need particles for Catapult on Halloween
 		}
 		float ang[3];
 		GetClientEyeAngles(client, ang);
@@ -1743,7 +1745,10 @@ public void UsePowerup(int client) {
 		vel[0] += vel2[0];
 		vel[1] += vel2[1];
 		vel[2] += vel2[2];
-		// Must lift player off ground in order to launch properly, currently causes player to slide if on the ground
+		// Must lift player off ground in order to launch properly
+		if (vel[2] < 270.0) {
+			vel[2] = 270.0;
+		}
 		TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vel);
 	}
 	Powerup[client] = 0;
