@@ -1355,7 +1355,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 				float coords2[3];
 				GetClientAbsOrigin(client2, coords2);
 				if (GetVectorDistance(coords1, coords2) <= 200.0) {
-					if(!TF2_IsPlayerInCondition(client2, TFCond_Dazed)){
+					if (!TF2_IsPlayerInCondition(client2, TFCond_Dazed)) {
 						int boorandom = GetSMRandomInt(1, 7);
 						if (boorandom == 1) {
 							EmitAmbientSound("vo/halloween_boo1.mp3", vel, client);
