@@ -1704,8 +1704,7 @@ public void UsePowerup(int client) {
 		// Catapult - Launch user forward
 		// Need regular sound for Catapult
 		if (ScreamFortress()) {
-			int catRandom = GetSMRandomInt(1, 2);
-			if (witchRandom == 1) {
+			if (GetSMRandomInt(1, 2) == 1) {
 				EmitAmbientSound("items/halloween/cat02.wav", vel, client);
 			} else {
 				EmitAmbientSound("items/halloween/cat03.wav", vel, client);
