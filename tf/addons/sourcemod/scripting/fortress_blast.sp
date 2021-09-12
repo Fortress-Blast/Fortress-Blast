@@ -20,7 +20,7 @@
 #define MAX_PARTICLES 25 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
 #define MESSAGE_PREFIX "{orange}[Fortress Blast]"
 #define MESSAGE_PREFIX_NO_COLOR "[Fortress Blast]"
-#define PLUGIN_VERSION "5.0"
+#define PLUGIN_VERSION "5.0 Beta"
 #define MOTD_VERSION "5.0"
 #define NUMBER_OF_POWERUPS 17 // Do not use in calculations, only for sizing arrays
 
@@ -156,33 +156,33 @@ public void OnPluginStart() {
 	LoadTranslations("common.phrases");
 
 	// ConVars
-	sm_fortressblast_action_use = CreateConVar("sm_fortressblast_action_use", "attack3", "Which action to watch for in order to use powerups.");
-	sm_fortressblast_admin_flag = CreateConVar("sm_fortressblast_admin_flag", "z", "Which flag to use for admin-restricted commands outside of debug mode.");
-	sm_fortressblast_blast_buildings = CreateConVar("sm_fortressblast_blast_buildings", "100", "Percentage of Blast player damage to inflict on enemy buildings.");
-	sm_fortressblast_bot = CreateConVar("sm_fortressblast_bot", "1", "Disables or enables bots using powerups.");
-	sm_fortressblast_bot_min = CreateConVar("sm_fortressblast_bot_min", "2", "Minimum time for bots to use a powerup.");
-	sm_fortressblast_bot_max = CreateConVar("sm_fortressblast_bot_max", "15", "Maximum time for bots to use a powerup.");
-	sm_fortressblast_debug = CreateConVar("sm_fortressblast_debug", "0", "Disables or enables command permission overrides and debug messages in chat.");
-	sm_fortressblast_dizzy_states = CreateConVar("sm_fortressblast_dizzy_states", "5", "Number of rotational states Dizzy Bomb uses.");
-	sm_fortressblast_dizzy_length = CreateConVar("sm_fortressblast_dizzy_length", "5", "Length of time Dizzy Bomb lasts.");
-	sm_fortressblast_drop = CreateConVar("sm_fortressblast_drop", "1", "How to handle dropping powerups on death.");
-	sm_fortressblast_drop_rate = CreateConVar("sm_fortressblast_drop_rate", "10", "Chance out of 100 for a powerup to drop on death.");
-	sm_fortressblast_drop_teams = CreateConVar("sm_fortressblast_drop_teams", "1", "Teams that will drop powerups on death.");
-	sm_fortressblast_event_scream = CreateConVar("sm_fortressblast_event_scream", "1", "How to handle the TF2 Scream Fortress event.");
-	sm_fortressblast_event_fools = CreateConVar("sm_fortressblast_event_fools", "1", "How to handle the TF2 April Fools event.");
-	sm_fortressblast_event_xmas = CreateConVar("sm_fortressblast_event_xmas", "1", "How to handle the TF2 Smissmas event.");
-	sm_fortressblast_gifthunt = CreateConVar("sm_fortressblast_gifthunt", "0", "Disables or enables Gift Hunt on maps with Gift Hunt .json files.");
-	sm_fortressblast_gifthunt_countbots = CreateConVar("sm_fortressblast_gifthunt_countbots", "0", "Disables or enables counting bots as players when increasing the goal.");
-	sm_fortressblast_gifthunt_goal = CreateConVar("sm_fortressblast_gifthunt_goal", "75", "Base number of gifts required to unlock the objective in Gift Hunt.");
-	sm_fortressblast_gifthunt_increment = CreateConVar("sm_fortressblast_gifthunt_increment", "25", "Amount to increase the gift goal per extra group of players.");
-	sm_fortressblast_gifthunt_multiply = CreateConVar("sm_fortressblast_gifthunt_multiply", "1", "Whether or not to multiply players' gift collections once they fall behind.");
-	sm_fortressblast_gifthunt_players = CreateConVar("sm_fortressblast_gifthunt_players", "4", "Number of players in a group, any more and the gift goal increases.");
-	sm_fortressblast_gifthunt_rate = CreateConVar("sm_fortressblast_gifthunt_rate", "20", "Chance out of 100 for each gift to spawn once all gifts are collected.");
-	sm_fortressblast_intro = CreateConVar("sm_fortressblast_intro", "1", "Disables or enables automatically display the plugin intro message.");
-	sm_fortressblast_mannpower = CreateConVar("sm_fortressblast_mannpower", "2", "How to handle replacing Mannpower powerups.");
-	sm_fortressblast_powerups = CreateConVar("sm_fortressblast_powerups", "-1", "Bitfield of which powerups to enable.");
-	sm_fortressblast_powerups_roundstart = CreateConVar("sm_fortressblast_powerups_roundstart", "1", "Disables or enables automatically spawning powerups on round start.");
-	sm_fortressblast_ultra_spawnchance = CreateConVar("sm_fortressblast_ultra_spawnchance", "0.1", "Chance out of 100 for ULTRA POWERUP!! to spawn.");
+	sm_fortressblast_action_use = CreateConVar("sm_fortressblast_action_use", "attack3", "Which input a player must send in order to use a powerup.");
+	sm_fortressblast_admin_flag = CreateConVar("sm_fortressblast_admin_flag", "z", "Which SourceMod flag should be checked for admin-restricted commands outside of debug mode. Only accepts one flag.");
+	sm_fortressblast_blast_buildings = CreateConVar("sm_fortressblast_blast_buildings", "100.0", "How much damage the Blast powerup should deal to buildings. 100.0 = 100%.");
+	sm_fortressblast_bot = CreateConVar("sm_fortressblast_bot", "1", "Whether bots should use powerups.");
+	sm_fortressblast_bot_min = CreateConVar("sm_fortressblast_bot_min", "2.0", "The minimum amount of time within which a bot will use a powerup.");
+	sm_fortressblast_bot_max = CreateConVar("sm_fortressblast_bot_max", "15.0", "The maximum amount of time within which a bot will use a powerup.");
+	sm_fortressblast_debug = CreateConVar("sm_fortressblast_debug", "0", "Whether debug mode should be enabled, which activates command permission overrides and debug messages in chat.");
+	sm_fortressblast_dizzy_length = CreateConVar("sm_fortressblast_dizzy_length", "5.0", "How long the dizziness effect of Dizzy Bomb lasts. Useful for preventing vertigo.");
+	sm_fortressblast_dizzy_states = CreateConVar("sm_fortressblast_dizzy_states", "5.0", "How many side-to-side rotations the dizziness effect of Dizzy Bomb has. Useful for preventing vertigo.");
+	sm_fortressblast_drop = CreateConVar("sm_fortressblast_drop", "1", "When players should drop powerups on death. 0 = Never, 1 = If the map has no .json file, 2 = Always.");
+	sm_fortressblast_drop_rate = CreateConVar("sm_fortressblast_drop_rate", "10.0", "The chance that a player will drop a powerup on death. 100.0 = 100%.");
+	sm_fortressblast_drop_teams = CreateConVar("sm_fortressblast_drop_teams", "1", "Which team's players will drop powerups on death. 1 = Both, 2 = RED, 3 = BLU.");
+	sm_fortressblast_event_scream = CreateConVar("sm_fortressblast_event_scream", "1", "When Fortress Blast's Scream Fortress event should be active. 0 = Never, 1 = If TF2 Halloween is active, 2 = Always.");
+	sm_fortressblast_event_fools = CreateConVar("sm_fortressblast_event_fools", "1", "This is not a ConVar in Fortress Blast. This setting will have no effect on the game.");
+	sm_fortressblast_event_xmas = CreateConVar("sm_fortressblast_event_xmas", "1", "When Fortress Blast's Smissmas event should be active. 0 = Never, 1 = If TF2 Christmas is active, 2 = Always.");
+	sm_fortressblast_gifthunt = CreateConVar("sm_fortressblast_gifthunt", "0", "Whether Gift Hunt should be enabled on maps with Gift Hunt .json files.");
+	sm_fortressblast_gifthunt_countbots = CreateConVar("sm_fortressblast_gifthunt_countbots", "0", "Whether bots should be counted as players when increasing the Gift Hunt goal.");
+	sm_fortressblast_gifthunt_goal = CreateConVar("sm_fortressblast_gifthunt_goal", "75", "The lowest possible number of gifts required to unlock the objective in Gift Hunt.");
+	sm_fortressblast_gifthunt_increment = CreateConVar("sm_fortressblast_gifthunt_increment", "25", "The amount the Gift Hunt goal should increase with every additional group of players.");
+	sm_fortressblast_gifthunt_multiply = CreateConVar("sm_fortressblast_gifthunt_multiply", "1", "Whether to start multiplying the gifts players collect if they are on the losing team.");
+	sm_fortressblast_gifthunt_players = CreateConVar("sm_fortressblast_gifthunt_players", "4", "How large each group of players is when increasing the Gift Hunt goal.");
+	sm_fortressblast_gifthunt_rate = CreateConVar("sm_fortressblast_gifthunt_rate", "20.0", "The chance that a gift will appear at an available spawn in Gift Hunt. Client may crash if too high. 100.0 = 100%.");
+	sm_fortressblast_intro = CreateConVar("sm_fortressblast_intro", "1", "Whether to automatically display the Fortress Blast intro message.");
+	sm_fortressblast_mannpower = CreateConVar("sm_fortressblast_mannpower", "2", "When Mannpower powerups should be replaced by Fortress Blast powerups. 0 = Never, 1 = If the map does not have a .json file, 2 = Always.");
+	sm_fortressblast_powerups = CreateConVar("sm_fortressblast_powerups", "-1", "Which powerups can spawn in bitfield form. -1 = None, 1 = Super Bounce, 2 = Shock Absorber, 4 = Super Speed, etc.");
+	sm_fortressblast_powerups_roundstart = CreateConVar("sm_fortressblast_powerups_roundstart", "1", "Whether powerups should appear at the spawn points defined in a .json file when a round starts.");
+	sm_fortressblast_ultra_spawnchance = CreateConVar("sm_fortressblast_ultra_spawnchance", "0.1", "The chance that the ULTRA POWERUP!! will spawn. Server may crash if too high. 100.0 = 100%.");
 
 	// HUDs
 	PowerupText = CreateHudSynchronizer();
@@ -486,8 +486,8 @@ public Action sm_spawnpowerup(int client, int args) {
 	return Plugin_Handled;
 }
 
-public Action eureka_teleport(int client, int args){
-	if(UsingPowerup[8][client]){
+public Action eureka_teleport(int client, int args) {
+	if (UsingPowerup[8][client]) {
 		return Plugin_Handled;
 	}
 	return Plugin_Continue;
@@ -1411,8 +1411,8 @@ public bool BlockPowerup(int client, int testpowerup) {
 		return true;
 	// Mega Mann pre-stuck checking
 	} else if (testpowerup == 8 && !UsingPowerup[8][client]) {
-		if(TF2_IsPlayerInCondition(client, TFCond_Teleporting)){
-			return true;// don't allow using mega mann while about to teleport
+		if (TF2_IsPlayerInCondition(client, TFCond_Teleporting)) {
+			return true; // Don't allow Mega Mann while about to teleport
 		}
 		SetVariantString("1.75 0");
 		AcceptEntityInput(client, "SetModelScale");
@@ -1443,8 +1443,8 @@ public bool BlockPowerup(int client, int testpowerup) {
 			return true;
 		}
 	} else if (testpowerup == 16) {
-		if(!ScreamFortress()){// these can't even spawn without scream fortress, this is just here for mystery
-			return true;
+		if (!ScreamFortress()) {
+			return true; // Ghost is a Halloween-restricted powerup
 		}
 	}
 	return false;
