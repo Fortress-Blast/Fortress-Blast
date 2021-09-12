@@ -150,6 +150,7 @@ public void OnPluginStart() {
 	RegConsoleCmd("sm_respawnpowerups", sm_respawnpowerups);
 	RegConsoleCmd("sm_setpowerup", sm_setpowerup);
 	RegConsoleCmd("sm_spawnpowerup", sm_spawnpowerup);
+	RegConsoleCmd("eureka_teleport", eureka_teleport);
 
 	// Translations
 	LoadTranslations("common.phrases");
@@ -403,7 +404,7 @@ public Action sm_fortressblast(int client, int args) {
 	char url[200];
 	char action[15];
 	sm_fortressblast_action_use.GetString(action, sizeof(action));
-	Format(url, sizeof(url), "https://fortress-blast.github.io/%s?powerups-enabled=%d&action=%s&gifthunt=%b&ultra=%f", MOTD_VERSION, bitfield, action, sm_fortressblast_gifthunt.BoolValue, sm_fortressblast_ultra_spawnchance.FloatValue);
+	Format(url, sizeof(url), "https://fortress-blast.github.io/%s?powerups-enabled=%d&action=%s&gifthunt=%b&ultra=%f&scream=%b", MOTD_VERSION, bitfield, action, sm_fortressblast_gifthunt.BoolValue, sm_fortressblast_ultra_spawnchance.FloatValue, ScreamFortress());
 	AdvMOTD_ShowMOTDPanel(client, "", url, MOTDPANEL_TYPE_URL, true, true, true, INVALID_FUNCTION);
 	QueryClientConVar(client, "cl_disablehtmlmotd", OnMOTDDisabledCheck); // Check if HTML MOTDs are disabled
 	return Plugin_Handled;
@@ -483,6 +484,13 @@ public Action sm_spawnpowerup(int client, int args) {
 	GetCmdArg(1, arg1, sizeof(arg1));
 	SpawnPowerup(points, false, StringToInt(arg1));
 	return Plugin_Handled;
+}
+
+public Action eureka_teleport(int client, int args){
+	if(UsingPowerup[8][client]){
+		return Plugin_Handled;
+	}
+	return Plugin_Continue;
 }
 
 /* Command dependencies
@@ -624,7 +632,7 @@ public void GetSpawns(bool UsingGiftHunt) {
 	}
 	if (!UsingGiftHunt) {
 		Format(path, sizeof(path), "scripts/fortress_blast/powerup_spots/%s.json", map);
-		GlobalVerifier = GetSMRandomInt(1, 999999999); // Large integer used to avoid duplicate powerups where possible
+		GlobalVerifier = GetGameTickCount(); // Large integer used to avoid duplicate powerups where possible
 	} else {
 		Format(path, sizeof(path), "scripts/fortress_blast/gift_spots/%s.json", map);
 	}
@@ -1403,6 +1411,9 @@ public bool BlockPowerup(int client, int testpowerup) {
 		return true;
 	// Mega Mann pre-stuck checking
 	} else if (testpowerup == 8 && !UsingPowerup[8][client]) {
+		if(TF2_IsPlayerInCondition(client, TFCond_Teleporting)){
+			return true;// don't allow using mega mann while about to teleport
+		}
 		SetVariantString("1.75 0");
 		AcceptEntityInput(client, "SetModelScale");
 		float coords[3] = 69.420;
@@ -1810,7 +1821,7 @@ public Action Timer_RespawnPowerup(Handle timer, Handle coordskv) {
 ==================================================================================================== */
 
 public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int damagecustom) {
-	if (damagecustom != TF_CUSTOM_TELEFRAG && (UsingPowerup[2][victim] || FrostTouchFrozen[victim] == 1 || UltraPowerup[victim])) {
+	if (damagecustom != TF_CUSTOM_TELEFRAG && damagecustom != TF_CUSTOM_BACKSTAB && (UsingPowerup[2][victim] || FrostTouchFrozen[victim] == 1 || UltraPowerup[victim])) {
 		if (FrostTouchFrozen[victim] == 1) {
 			damage = damage * 0.1;
 			DebugText("%N was in frozen state %d", victim, FrostTouchFrozen[victim]);
