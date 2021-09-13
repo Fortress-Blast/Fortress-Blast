@@ -285,6 +285,7 @@ public void OnMapStart() {
 	PrecacheSound("fortressblast2/becomesentry_pickup.mp3");
 	PrecacheSound("fortressblast2/ghost_pickup.mp3");
 	PrecacheSound("fortressblast2/catapult_pickup.mp3");
+	PrecacheSound("fortressblast2/catapult_use.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/ultrapowerup_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/ultrapowerup_use.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/superbounce_pickup.mp3");
@@ -320,6 +321,7 @@ public void OnMapStart() {
 	AddFileToDownloadsTable("sound/fortressblast2/becomesentry_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/ghost_pickup.mp3");
 	AddFileToDownloadsTable("sound/fortressblast2/catapult_pickup.mp3");
+	AddFileToDownloadsTable("sound/fortressblast2/catapult_use.mp3");
 
 	// Powerup model and sound precaching for non-custom content
 	PrecacheModel("models/props_halloween/ghost_no_hat.mdl");
@@ -1730,7 +1732,7 @@ public void UsePowerup(int client) {
 	} else if (Powerup[client] == 17) {
 		// Catapult - Launch user forward
 		if (!AprilFools()) {
-			// Need regular sound for Catapult
+			EmitAmbientSound("fortressblast2/catapult_use.mp3", vel, client);
 		} else {
 			if (GetSMRandomInt(1, 2) == 1) {
 				EmitAmbientSound("items/halloween/cat02.wav", vel, client);
