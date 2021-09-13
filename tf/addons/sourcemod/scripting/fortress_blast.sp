@@ -2249,6 +2249,7 @@ public Action Timer_RemoveGhost(Handle timer, int userid) {
 	UsingPowerup[16][client] = false;
 	if (IsEntityStuck(client)) {
 		TF2_RespawnPlayer(client);
+		CPrintToChat(client, "%s {haunted}You were respawned as you were stuck after using the Ghost powerup.", MESSAGE_PREFIX);
 	}
 }
 
