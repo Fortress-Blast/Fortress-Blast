@@ -1554,10 +1554,11 @@ public void UsePowerup(int client) {
 			}
 			// Particle only lasts for 3 seconds, need to play twice to fill out 5 seconds
 			if (TF2_GetClientTeam(client) == TFTeam_Red) {
-				ParticleOnPlayer(client, "spell_batball_red", 5.0, 0.0);
+				ParticleOnPlayer(client, "spell_batball_red", 2.5, 0.0);
 			} else if (TF2_GetClientTeam(client) == TFTeam_Blue) {
-				ParticleOnPlayer(client, "spell_batball_blue", 5.0, 0.0);
+				ParticleOnPlayer(client, "spell_batball_blue", 2.5, 0.0);
 			}
+			CreateTimer(2.5, GyrocopterParticleRepeater, client);
 		}
 		if (UsingPowerup[1][client] && AprilFools()) {
 			SetEntityGravity(client, 0.75);
@@ -1734,16 +1735,25 @@ public void UsePowerup(int client) {
 		ExitSentryTime[client] = GetGameTime() + 1.0;
 	} else if (Powerup[client] == 16) {
 		// Ghost - Turn user into ghost that scares nearby enemies
-		int moanRandom = GetSMRandomInt(1, 4);
-		if (moanRandom == 1) {
-			EmitAmbientSound("vo/halloween_moan1.mp3", vel, client);
-		} else if (moanRandom == 2) {
-			EmitAmbientSound("vo/halloween_moan2.mp3", vel, client);
-		} else if (moanRandom == 3) {
-			EmitAmbientSound("vo/halloween_moan3.mp3", vel, client);
+		if (!AprilFools()) {
+			int moanRandom = GetSMRandomInt(1, 4);
+			if (moanRandom == 1) {
+				EmitAmbientSound("vo/halloween_moan1.mp3", vel, client);
+			} else if (moanRandom == 2) {
+				EmitAmbientSound("vo/halloween_moan2.mp3", vel, client);
+			} else if (moanRandom == 3) {
+				EmitAmbientSound("vo/halloween_moan3.mp3", vel, client);
+			} else {
+				EmitAmbientSound("vo/halloween_moan4.mp3", vel, client);
+			}
 		} else {
-			EmitAmbientSound("vo/halloween_moan4.mp3", vel, client);
+			if (GetSMRandomInt(1, 2) == 1) {
+				EmitAmbientSound("items/halloween/spooky01.mp3", vel, client);
+			} else {
+				EmitAmbientSound("items/halloween/spooky02.mp3", vel, client);
+			}
 		}
+		ParticleOnPlayer(client, "ghost_appearation", 1.0, 0.0);
 		delete GhostHandle[client];
 		GhostHandle[client] = CreateTimer(5.0, Timer_RemoveGhost, GetClientUserId(client));
 		TF2_AddCondition(client, TFCond_HalloweenGhostMode, 5.0);
@@ -1751,7 +1761,15 @@ public void UsePowerup(int client) {
 		// Catapult - Launch user forward
 		if (!AprilFools()) {
 			EmitAmbientSound("fortressblast2/catapult_use.mp3", vel, client);
-		} else {
+			if (ScreamFortress()) {
+				if (TF2_GetClientTeam(client) == TFTeam_Red) {
+					ParticleOnPlayer(client, "spell_batball_impact_red", 1.0, 0.0);
+				} else if (TF2_GetClientTeam(client) == TFTeam_Blue) {
+					ParticleOnPlayer(client, "spell_batball_impact_blue", 1.0, 0.0);
+				}
+			}
+		}
+		if (ScreamFortress() || AprilFools()) {
 			if (GetSMRandomInt(1, 2) == 1) {
 				EmitAmbientSound("items/halloween/cat02.wav", vel, client);
 			} else {
@@ -1852,6 +1870,16 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
 
 /* Particle Repeaters
 ==================================================================================================== */
+
+public Action GyrocopterParticleRepeater(Handle timer, int client) {
+	if (IsClientInGame(client) && IsPlayerAlive(client) && UsingPowerup[5][client]) {
+		if (TF2_GetClientTeam(client) == TFTeam_Red) {
+			ParticleOnPlayer(client, "spell_batball_red", 2.5, 0.0);
+		} else if (TF2_GetClientTeam(client) == TFTeam_Blue) {
+			ParticleOnPlayer(client, "spell_batball_blue", 2.5, 0.0);
+		}
+	}
+}
 
 public Action MagnetismParticleRepeater(Handle timer, int client) {
 	if (IsClientInGame(client) && IsPlayerAlive(client) && UsingPowerup[12][client]) {
@@ -2265,6 +2293,7 @@ public Action Timer_RemoveGhost(Handle timer, int userid) {
 	if (client < 1) {
 		return;
 	}
+	ParticleOnPlayer(client, "ghost_appearation", 1.0, 0.0);
 	GhostHandle[client] = null;
 	UsingPowerup[16][client] = false;
 	if (IsPlayerAlive(client) && IsEntityStuck(client)) {
