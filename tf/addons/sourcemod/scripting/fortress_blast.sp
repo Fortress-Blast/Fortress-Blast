@@ -1731,6 +1731,7 @@ public void UsePowerup(int client) {
 			}
 		}
 	} else if (Powerup[client] == 15) {
+		// Become Sentry - Turn user into Level 2 Sentry
 		MakeUserBuilding(client, "obj_sentrygun");
 		ExitSentryTime[client] = GetGameTime() + 1.0;
 	} else if (Powerup[client] == 16) {
