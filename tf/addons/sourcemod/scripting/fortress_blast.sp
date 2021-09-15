@@ -75,8 +75,8 @@ Handle FrostTouchUnfreezeHandle[MAXPLAYERS + 1] = null;
 Handle DestroyPowerupHandle[MAX_EDICTS + 1] = null;
 Handle TeleportationHandle[MAXPLAYERS + 1] = null;
 Handle MagnetismHandle[MAXPLAYERS + 1] = null;
-Handle UltraPowerupHandle[MAXPLAYERS+1] = null;
-Handle GhostHandle[MAXPLAYERS+1] = null;
+Handle UltraPowerupHandle[MAXPLAYERS + 1] = null;
+Handle GhostHandle[MAXPLAYERS + 1] = null;
 
 // HUDs
 Handle PowerupText;
