@@ -1330,7 +1330,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			buttons &= ~IN_ATTACK;
 		}
 	}
-	if ((UsingPowerup[12][client] || UltraPowerup[client]) && IsPlayerAlive(client)) {
+	if ((UsingPowerup[12][client] || UltraPowerup[client]) && IsPlayerAlive(client) && GameRules_GetProp("m_bTruceActive") == 0) {
 		float pos1[3];
 		GetClientAbsOrigin(client, pos1);
 		for (int client2 = 1 ; client2 <= MaxClients ; client2++ ) {
@@ -1421,7 +1421,7 @@ public bool BlockPowerup(int client, int testpowerup) {
 	// Player is a building
 	} else if (IsValidEntity(Building[client])) {
 		return true;
-
+	// Truce is active for certain powerups
 	} else if (GameRules_GetProp("m_bTruceActive") > 0 && (testpowerup == 7 || testpowerup == 9 || testpowerup == 12 || testpowerup == 13 || testpowerup == 14 || testpowerup == 16)) {
 		return true;
 	// Mega Mann pre-stuck checking
@@ -1773,7 +1773,7 @@ public void UsePowerup(int client) {
 				}
 			}
 		}
-		if (AprilFools()) {
+		if (ScreamFortress() || AprilFools()) {
 			if (GetSMRandomInt(1, 2) == 1) {
 				EmitAmbientSound("items/halloween/cat02.wav", vel, client);
 			} else {
@@ -1928,7 +1928,7 @@ public void BuildingDamage(int client, const char[] class) {
 public Action OnStartTouchFrozen(int entity, int other) {
 	// Test that using player and touched player are both valid targets
 	if (entity > 0 && entity <= MaxClients && other > 0 && other <= MaxClients && IsClientInGame(entity) && IsClientInGame(other)) {
-		if ((UsingPowerup[9][entity] || UltraPowerup[entity]) && FrostTouchFrozen[other] == 0) {
+		if ((UsingPowerup[9][entity] || UltraPowerup[entity]) && FrostTouchFrozen[other] == 0 && GameRules_GetProp("m_bTruceActive") == 0) {
 			float vel[3];
 			GetEntPropVector(other, Prop_Data, "m_vecVelocity", vel);
 			EmitAmbientSound("fortressblast2/frosttouch_freeze.mp3", vel, other);
