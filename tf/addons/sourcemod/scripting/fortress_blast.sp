@@ -898,12 +898,12 @@ public Action Timer_DisplayIntro(Handle timer, int client) {
 
 stock char FancyPluginName() {
 	char intro[500];
-	if (ScreamFortress()) {
+	if (AprilFools()) {
+		intro = "{red}F{orange}o{yellow}r{green}t{cyan}r{blue}e{pink}s{blue}s {cyan}B{green}l{yellow}a{orange}s{red}t";
+	} else if (ScreamFortress()) {
 		intro = "{chocolate}Fo{darkgoldenrod}rt{darkorange}re{orange}ss {cornflowerblue}B{royalblue}l{slateblue}a{darkslateblue}s{darkslategray}t";
 	} else if (Smissmas()) {
 		intro = "{salmon}F{limegreen}o{salmon}r{limegreen}t{salmon}r{limegreen}e{salmon}s{limegreen}s {salmon}B{limegreen}l{salmon}a{limegreen}s{salmon}t";
-	} else if (AprilFools()) {
-		intro = "{red}F{orange}o{yellow}r{green}t{cyan}r{blue}e{pink}s{blue}s {cyan}B{green}l{yellow}a{orange}s{red}t";
 	} else {
 		intro = "{yellow}Fortress Blast";
 	}
@@ -1421,6 +1421,9 @@ public bool BlockPowerup(int client, int testpowerup) {
 	// Player is a building
 	} else if (IsValidEntity(Building[client])) {
 		return true;
+
+	} else if (GameRules_GetProp("m_bTruceActive") > 0 && (testpowerup == 7 || testpowerup == 9 || testpowerup == 12 || testpowerup == 13 || testpowerup == 14 || testpowerup == 16)) {
+		return true;
 	// Mega Mann pre-stuck checking
 	} else if (testpowerup == 8 && !UsingPowerup[8][client]) {
 		if (TF2_IsPlayerInCondition(client, TFCond_Teleporting)) {
@@ -1770,7 +1773,7 @@ public void UsePowerup(int client) {
 				}
 			}
 		}
-		if (ScreamFortress() || AprilFools()) {
+		if (AprilFools()) {
 			if (GetSMRandomInt(1, 2) == 1) {
 				EmitAmbientSound("items/halloween/cat02.wav", vel, client);
 			} else {
