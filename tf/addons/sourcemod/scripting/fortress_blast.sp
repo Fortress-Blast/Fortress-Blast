@@ -343,8 +343,6 @@ public void OnMapStart() {
 	PrecacheSound("weapons/jar_explode.wav");
 
 	// Scream Fortress sound precaching for non-custom sounds
-	PrecacheSound("items/halloween/cat02.wav");
-	PrecacheSound("items/halloween/cat03.wav");
 	PrecacheSound("items/halloween/witch01.wav");
 	PrecacheSound("items/halloween/witch02.wav");
 	PrecacheSound("items/halloween/witch03.wav");
@@ -1771,13 +1769,6 @@ public void UsePowerup(int client) {
 				} else if (TF2_GetClientTeam(client) == TFTeam_Blue) {
 					ParticleOnPlayer(client, "spell_batball_impact_blue", 1.0, 0.0);
 				}
-			}
-		}
-		if (ScreamFortress() || AprilFools()) {
-			if (GetSMRandomInt(1, 2) == 1) {
-				EmitAmbientSound("items/halloween/cat02.wav", vel, client);
-			} else {
-				EmitAmbientSound("items/halloween/cat03.wav", vel, client);
 			}
 		}
 		float ang[3];
