@@ -20,7 +20,7 @@
 #define MAX_PARTICLES 25 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
 #define MESSAGE_PREFIX "{orange}[Fortress Blast]"
 #define MESSAGE_PREFIX_NO_COLOR "[Fortress Blast]"
-#define PLUGIN_VERSION "5.0 Beta"
+#define PLUGIN_VERSION "5.0"
 #define MOTD_VERSION "5.0"
 #define NUMBER_OF_POWERUPS 17 // Do not use in calculations, only for sizing arrays
 
