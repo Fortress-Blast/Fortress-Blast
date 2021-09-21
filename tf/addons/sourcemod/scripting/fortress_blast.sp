@@ -1761,16 +1761,7 @@ public void UsePowerup(int client) {
 		TF2_AddCondition(client, TFCond_HalloweenGhostMode, 5.0);
 	} else if (Powerup[client] == 17) {
 		// Catapult - Launch user forward
-		if (!AprilFools()) {
-			EmitAmbientSound("fortressblast2/catapult_use.mp3", vel, client);
-			if (ScreamFortress()) {
-				if (TF2_GetClientTeam(client) == TFTeam_Red) {
-					ParticleOnPlayer(client, "spell_batball_impact_red", 1.0, 0.0);
-				} else if (TF2_GetClientTeam(client) == TFTeam_Blue) {
-					ParticleOnPlayer(client, "spell_batball_impact_blue", 1.0, 0.0);
-				}
-			}
-		}
+		EmitAmbientSound("fortressblast2/catapult_use.mp3", vel, client);
 		float ang[3];
 		GetClientEyeAngles(client, ang);
 		ang[0] = -17.5;
