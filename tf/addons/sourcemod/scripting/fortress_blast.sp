@@ -1281,6 +1281,9 @@ public void CollectedGift(int client) {
 ==================================================================================================== */
 
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float ang[3], int &weapon) {
+	if(sm_fortressblast_debug.BoolValue){
+		PrintCenterText(client, "%d", buttons);
+	}
 	float coords[3] = 0.0; // Placeholder value
 	GetEntPropVector(client, Prop_Send, "m_vecOrigin", coords);
 	if (UsingPowerup[6][client]) {
