@@ -20,7 +20,7 @@
 #define MAX_PARTICLES 25 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
 #define MESSAGE_PREFIX "{orange}[Fortress Blast]"
 #define MESSAGE_PREFIX_NO_COLOR "[Fortress Blast]"
-#define PLUGIN_VERSION "5.0"
+#define PLUGIN_VERSION "5.0.1 Beta"
 #define MOTD_VERSION "5.0"
 #define NUMBER_OF_POWERUPS 17 // Do not use in calculations, only for sizing arrays
 
@@ -917,16 +917,17 @@ public Action teamplay_round_win(Event event, const char[] name, bool dontBroadc
 }
 
 public Action player_death(Event event, const char[] name, bool dontBroadcast) {
-	Powerup[GetClientOfUserId(event.GetInt("userid"))] = 0;
+	int client = GetClientOfUserId(event.GetInt("userid"));
+	Powerup[client] = 0;
 	// Is dropping powerups enabled
 	if (sm_fortressblast_drop.IntValue == 2 || (sm_fortressblast_drop.BoolValue && !MapHasJsonFile)) {
 		// Get chance a powerup will be dropped
 		float convar = sm_fortressblast_drop_rate.FloatValue;
 		float randomNumber = GetSMRandomFloat(0.0, 99.99);
-		if (convar > randomNumber && (sm_fortressblast_drop_teams.IntValue == GetClientTeam(GetClientOfUserId(event.GetInt("userid"))) || sm_fortressblast_drop_teams.IntValue == 1)) {
+		if (convar > randomNumber && (sm_fortressblast_drop_teams.IntValue == GetClientTeam(client) || sm_fortressblast_drop_teams.IntValue == 1)) {
 			DebugText("Dropping powerup due to player death");
 			float coords[3];
-			GetEntPropVector(GetClientOfUserId(event.GetInt("userid")), Prop_Send, "m_vecOrigin", coords);
+			GetEntPropVector(client, Prop_Send, "m_vecOrigin", coords);
 			int entity = SpawnPowerup(coords, false);
 			delete DestroyPowerupHandle[entity];
 			DestroyPowerupHandle[entity] = CreateTimer(15.0, Timer_DestroyPowerupTime, entity);
@@ -934,10 +935,10 @@ public Action player_death(Event event, const char[] name, bool dontBroadcast) {
 		}
 	}
 	// Kill sentry tied to player due to Become Sentry
-	if (IsValidEntity(Building[GetClientOfUserId(event.GetInt("userid"))])) {
+	if (IsValidEntity(Building[client])) {
 		SetVariantInt(864);
-		AcceptEntityInput(Building[GetClientOfUserId(event.GetInt("userid"))], "RemoveHealth");
-		Building[GetClientOfUserId(event.GetInt("userid"))] = -1;
+		AcceptEntityInput(Building[client], "RemoveHealth");
+		Building[client] = -1;
 	}
 }
 
@@ -981,10 +982,9 @@ stock int SpawnPowerup(float location[3], bool respawn, int id = 0) {
 			if (sm_fortressblast_ultra_spawnchance.FloatValue > GetSMRandomFloat(0.0, 99.99)) {
 				Powerup[entity] = -1;
 			} else {
-				Powerup[entity] = GetSMRandomInt(1, NumberOfPowerups);
-				while (!PowerupIsEnabled(Powerup[entity]) || (Powerup[entity] == 16 && !ScreamFortress())) {
+				do {
 					Powerup[entity] = GetSMRandomInt(1, NumberOfPowerups);
-				}
+				} while (!PowerupIsEnabled(Powerup[entity]) || (Powerup[entity] == 16 && !ScreamFortress()));
 			}
 		} else {
 			Powerup[entity] = id;
@@ -1455,10 +1455,8 @@ public bool BlockPowerup(int client, int testpowerup) {
 		if (allblocked) {
 			return true;
 		}
-	} else if (testpowerup == 16) {
-		if (!ScreamFortress()) {
-			return true; // Check specific to Mystery, Ghost is a halloween-restricted powerup
-		}
+	} else if (testpowerup == 16 && !ScreamFortress()) {
+		return true; // Check specific to Mystery, Ghost is a halloween-restricted powerup
 	}
 	return false;
 }
