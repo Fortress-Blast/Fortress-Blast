@@ -1351,10 +1351,10 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 					GetEntPropVector(client2, Prop_Data, "m_vecVelocity", playerVel);
 					NegateVector(direction);
 					float multiplier = Pow(distanceScale * 4, 2.0);
-					// Polarities are reversed during April Fools
 					if (GetEntPropEnt(client, Prop_Data, "m_hActiveWeapon") != GetPlayerWeaponSlot(client, 2)) {
 						multiplier = multiplier * -1.25;
 					}
+					// Polarities are reversed during April Fools
 					if(AprilFools()){
 						multiplier = multiplier * -1;
 					}
