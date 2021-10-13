@@ -20,7 +20,7 @@
 #define MAX_PARTICLES 25 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
 #define MESSAGE_PREFIX "{orange}[Fortress Blast]"
 #define MESSAGE_PREFIX_NO_COLOR "[Fortress Blast]"
-#define PLUGIN_VERSION "5.0.1 Beta"
+#define PLUGIN_VERSION "5.0.1"// stop putting beta here jack5
 #define MOTD_VERSION "5.0"
 #define NUMBER_OF_POWERUPS 17 // Do not use in calculations, only for sizing arrays
 
@@ -803,7 +803,12 @@ public void OnEntityDestroyed(int entity) {
 						SetThirdPerson(client, false);
 						ColorizePlayer(client, {255, 255, 255, 255});
 						SetEntityMoveType(client, MOVETYPE_WALK);
-						SetVariantString("1 0");
+						if(UsingPowerup[8][client]){
+							SetVariantString("1.75 0");
+						}
+						else{
+							SetVariantString("1 0");
+						}
 						AcceptEntityInput(client, "SetModelScale");
 						SetEntityHealth(client, PreSentryHealth[client]);
 					}
@@ -976,15 +981,16 @@ public void OnClientPutInServer(int client) {
 
 stock int SpawnPowerup(float location[3], bool respawn, int id = 0) {
 	int entity = CreateEntityByName("tf_halloween_pickup");
+	Powerup[entity] = 0;
 	DispatchKeyValue(entity, "powerup_model", "models/fortressblast/pickups/fb_pickup.mdl");
 	if (IsValidEdict(entity)) {
 		if (id == 0) {
 			if (sm_fortressblast_ultra_spawnchance.FloatValue > GetSMRandomFloat(0.0, 99.99)) {
 				Powerup[entity] = -1;
 			} else {
-				do {
+				while (Powerup[entity] == 0 || !PowerupIsEnabled(Powerup[entity]) || (Powerup[entity] == 16 && !ScreamFortress())) {
 					Powerup[entity] = GetSMRandomInt(1, NumberOfPowerups);
-				} while (!PowerupIsEnabled(Powerup[entity]) || (Powerup[entity] == 16 && !ScreamFortress()));
+				}
 			}
 		} else {
 			Powerup[entity] = id;
@@ -1332,7 +1338,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		float pos1[3];
 		GetClientAbsOrigin(client, pos1);
 		for (int client2 = 1 ; client2 <= MaxClients ; client2++ ) {
-			if (IsClientInGame(client2) && TF2_GetClientTeam(client2) != TF2_GetClientTeam(client) && IsPlayerAlive(client2)) {
+			if (IsClientInGame(client2) && TF2_GetClientTeam(client2) != TF2_GetClientTeam(client) && IsPlayerAlive(client2) && GetEntityMoveType(client2) != MOVETYPE_NONE) {
 				float pos2[3];
 				GetClientAbsOrigin(client2, pos2);
 				float distanceScale = (1024 - GetVectorDistance(pos1, pos2)) / 1024;
@@ -1346,8 +1352,11 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 					NegateVector(direction);
 					float multiplier = Pow(distanceScale * 4, 2.0);
 					// Polarities are reversed during April Fools
-					if ((GetEntPropEnt(client, Prop_Data, "m_hActiveWeapon") != GetPlayerWeaponSlot(client, 2) && !AprilFools()) || (GetEntPropEnt(client, Prop_Data, "m_hActiveWeapon") == GetPlayerWeaponSlot(client, 2) && AprilFools())) {
+					if (GetEntPropEnt(client, Prop_Data, "m_hActiveWeapon") != GetPlayerWeaponSlot(client, 2)) {
 						multiplier = multiplier * -1.25;
+					}
+					if(AprilFools()){
+						multiplier = multiplier * -1;
 					}
 					direction[0] = direction[0] * multiplier;
 					direction[1] = direction[1] * multiplier;
@@ -2254,6 +2263,9 @@ public Action Timer_RemoveMegaMann(Handle timer, int client) {
 		// Remove excess overheal, but leave injuries
 		if (GetClientHealth(client) > GetPlayerMaxHealth(client)) {
 			SetEntityHealth(client, GetPlayerMaxHealth(client));
+		}
+		if(UsingPowerup[15][client] && PreSentryHealth[client] > GetPlayerMaxHealth(client)){
+			PreSentryHealth[client] = GetPlayerMaxHealth(client);
 		}
 	}
 }
