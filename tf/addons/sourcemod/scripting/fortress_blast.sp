@@ -2080,7 +2080,7 @@ public Action Timer_BeginTeleporter(Handle timer, int client) {
 	int countby = 1;
 	int entity;
 	while ((entity = FindEntityByClassname(entity, "obj_teleporter")) != -1) {
-		if (TF2_GetClientTeam(GetEntPropEnt(entity, Prop_Send, "m_hBuilder")) == TF2_GetClientTeam(client) && TF2_GetObjectMode(entity) == TFObjectMode_Exit && BuildingPassesNetprops(entity)) {
+		if (GetEntProp(entity, Prop_Send, "m_iTeamNum") == GetClientTeam(client) && TF2_GetObjectMode(entity) == TFObjectMode_Exit && BuildingPassesNetprops(entity)) {
 			if (countby == eli) {
 				float coords[3] = 69.420;
 				GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
@@ -2114,7 +2114,8 @@ public int GetTeamTeleporters(TFTeam team) {
 	int entity;
 	int amounter;
 	while ((entity = FindEntityByClassname(entity, "obj_teleporter")) != -1) {
-		if (TF2_GetClientTeam(GetEntPropEnt(entity, Prop_Send, "m_hBuilder")) == team && TF2_GetObjectMode(entity) == TFObjectMode_Exit && BuildingPassesNetprops(entity)) {
+		DebugText("Tele with team %d", GetEntProp(entity, Prop_Send, "m_iTeamNum"));
+		if (GetEntProp(entity, Prop_Send, "m_iTeamNum") == view_as<int>(team) && TF2_GetObjectMode(entity) == TFObjectMode_Exit && BuildingPassesNetprops(entity)) {
 			amounter++;
 		}
 	}
