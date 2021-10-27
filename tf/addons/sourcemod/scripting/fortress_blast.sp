@@ -2080,7 +2080,7 @@ public Action Timer_BeginTeleporter(Handle timer, int client) {
 	int countby = 1;
 	int entity;
 	while ((entity = FindEntityByClassname(entity, "obj_teleporter")) != -1) {
-		if (GetEntProp(entity, Prop_Send, "m_iTeamNum") == GetClientTeam(client) && TF2_GetObjectMode(entity) == TFObjectMode_Exit && BuildingPassesNetprops(entity)) {
+		if ((GetEntProp(entity, Prop_Send, "m_iTeamNum") == GetClientTeam(client) || TF2_GetPlayerClass(client) == TFClass_Spy) && TF2_GetObjectMode(entity) == TFObjectMode_Exit && BuildingPassesNetprops(entity)) {
 			if (countby == eli) {
 				float coords[3] = 69.420;
 				GetEntPropVector(entity, Prop_Send, "m_vecOrigin", coords);
