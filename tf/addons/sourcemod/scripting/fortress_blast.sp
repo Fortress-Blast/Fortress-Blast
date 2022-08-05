@@ -668,7 +668,7 @@ public void GetSpawns(bool UsingGiftHunt) {
 	IntToString(itemloop, stringamount, sizeof(stringamount));
 	bool spcontinue = true;
 	while (spcontinue) {
-		float coords[3];
+		float coords[3] = {0.001, ...};
 		char query[80];
 		for (int to = 0; to <= 2; to++) {
 			char string[15];
