@@ -20,11 +20,9 @@
 #define MAX_PARTICLES 25 // If a player needs more than this number, a random one is deleted, but too many might cause memory problems
 #define MESSAGE_PREFIX "{orange}[Fortress Blast]"
 #define MESSAGE_PREFIX_NO_COLOR "[Fortress Blast]"
-#define PLUGIN_VERSION "5.0.2"// stop putting beta here jack5
-#define MOTD_VERSION "5.0"
+#define PLUGIN_VERSION "5.1"// stop putting beta here jack5
+#define MOTD_VERSION "5.1"
 #define NUMBER_OF_POWERUPS 17 // Do not use in calculations, only for sizing arrays
-
-#define PI 3.14159265359
 
 public Plugin myinfo = {
 	name = "Fortress Blast",
@@ -54,11 +52,11 @@ bool MapHasJsonFile = false;
 bool GiftHunt = false;
 bool NegativeDizzy[MAXPLAYERS + 1] = {false, ...};
 bool UltraPowerup[MAXPLAYERS + 1] = {false, ...};
-bool MegaMannVerified[MAXPLAYERS + 1] = {false, ...};
 bool UsingPowerup[NUMBER_OF_POWERUPS + 1][MAXPLAYERS + 1];
 bool GiftHuntAttackDefense = false;
 bool GiftHuntNeutralFlag = false;
 bool GiftHuntSetup = false;
+float RoundTime = 0.0;
 float GiftHuntIncrementTime = 0.0;
 float OldSpeed[MAXPLAYERS + 1] = {0.0, ...};
 float SuperSpeed[MAXPLAYERS + 1] = {0.0, ...};
@@ -168,7 +166,7 @@ public void OnPluginStart() {
 	sm_fortressblast_drop_rate = CreateConVar("sm_fortressblast_drop_rate", "10.0", "The chance that a player will drop a powerup on death. 100.0 = 100%.");
 	sm_fortressblast_drop_teams = CreateConVar("sm_fortressblast_drop_teams", "1", "Which team's players will drop powerups on death. 1 = Both, 2 = RED, 3 = BLU.");
 	sm_fortressblast_event_scream = CreateConVar("sm_fortressblast_event_scream", "1", "When Fortress Blast's Scream Fortress event should be active. 0 = Never, 1 = If TF2 Halloween is active, 2 = Always.");
-	sm_fortressblast_event_fools = CreateConVar("sm_fortressblast_event_fools", "1", "This is not a ConVar in Fortress Blast. This setting will have no effect on the game.");
+	sm_fortressblast_event_fools = CreateConVar("sm_fortressblast_event_fools", "1", "When Fortress Blast's April Fools event should be active. 0 = Never, 1 = If TF2 April Fools is active, 2 = Always.");
 	sm_fortressblast_event_xmas = CreateConVar("sm_fortressblast_event_xmas", "1", "When Fortress Blast's Smissmas event should be active. 0 = Never, 1 = If TF2 Christmas is active, 2 = Always.");
 	sm_fortressblast_gifthunt = CreateConVar("sm_fortressblast_gifthunt", "0", "Whether Gift Hunt should be enabled on maps with Gift Hunt .json files.");
 	sm_fortressblast_gifthunt_countbots = CreateConVar("sm_fortressblast_gifthunt_countbots", "0", "Whether bots should be counted as players when increasing the Gift Hunt goal.");
@@ -179,9 +177,9 @@ public void OnPluginStart() {
 	sm_fortressblast_gifthunt_rate = CreateConVar("sm_fortressblast_gifthunt_rate", "20.0", "The chance that a gift will appear at an available spawn in Gift Hunt. Client may crash if too high. 100.0 = 100%.");
 	sm_fortressblast_intro = CreateConVar("sm_fortressblast_intro", "1", "Whether to automatically display the Fortress Blast intro message.");
 	sm_fortressblast_mannpower = CreateConVar("sm_fortressblast_mannpower", "2", "When Mannpower powerups should be replaced by Fortress Blast powerups. 0 = Never, 1 = If the map does not have a .json file, 2 = Always.");
-	sm_fortressblast_powerups = CreateConVar("sm_fortressblast_powerups", "-1", "Which powerups can spawn in bitfield form. -1 = None, 1 = Super Bounce, 2 = Shock Absorber, 4 = Super Speed, etc.");
+	sm_fortressblast_powerups = CreateConVar("sm_fortressblast_powerups", "-1", "Which powerups can spawn in bitfield form 1 = Super Bounce, 2 = Shock Absorber, 4 = Super Speed, etc. Use -1 for all");
 	sm_fortressblast_powerups_roundstart = CreateConVar("sm_fortressblast_powerups_roundstart", "1", "Whether powerups should appear at the spawn points defined in a .json file when a round starts.");
-	sm_fortressblast_ultra_spawnchance = CreateConVar("sm_fortressblast_ultra_spawnchance", "0.1", "The chance that the ULTRA POWERUP!! will spawn. Server may crash if too high. 100.0 = 100%.");
+	sm_fortressblast_ultra_spawnchance = CreateConVar("sm_fortressblast_ultra_spawnchance", "0.1", "The chance that any spawned powerup will be ULTRA POWERUP!!");
 
 	// HUDs
 	PowerupText = CreateHudSynchronizer();
@@ -408,6 +406,9 @@ public Action sm_fortressblast(int client, int args) {
 	if (ScreamFortress()) {
 		Format(url, sizeof(url), "%s&scream=1", url);
 	}
+	if (AprilFools()) {
+		Format(url, sizeof(url), "%s&fools=1", url);
+	}
 	AdvMOTD_ShowMOTDPanel(client, "", url, MOTDPANEL_TYPE_URL, true, true, true, INVALID_FUNCTION);
 	QueryClientConVar(client, "cl_disablehtmlmotd", OnMOTDDisabledCheck); // Check if HTML MOTDs are disabled
 	return Plugin_Handled;
@@ -449,9 +450,12 @@ public Action sm_setpowerup(int client, int args) {
 	GetCmdArg(1, arg, sizeof(arg));
 	GetCmdArg(2, arg2, sizeof(arg2));
 	int newpowerup = StringToInt(arg2);
-	if (client == 0 && StrEqual(arg2, "")) {
-		PrintToServer("%s You must specify a player and powerup number.", MESSAGE_PREFIX_NO_COLOR);
-		return Plugin_Handled;
+	if (client == 0) {
+		if(StrEqual(arg, "")){
+			PrintToServer("%s You must specify a player.", MESSAGE_PREFIX_NO_COLOR);
+			return Plugin_Handled;
+		}
+		newpowerup = RandomPowerup(true);
 	} else if (StrEqual(arg, "") && StrEqual(arg2, "")) {
 		CPrintToChat(client, "%s {red}You must specify a powerup number.", MESSAGE_PREFIX);
 		return Plugin_Handled;
@@ -460,7 +464,7 @@ public Action sm_setpowerup(int client, int args) {
 		CollectedPowerup(client, StringToInt(arg));
 	} else if (StrContains(arg, "@") != -1) {
 		for (int client2 = 1; client2 <= MaxClients; client2++) {
-			if (IsClientInGame(client2) && ((GetClientTeam(client) == 2 && StrEqual(arg, "@red")) || (GetClientTeam(client) == 3 && StrEqual(arg, "@blue")) || (client2 == client && StrEqual(arg, "@me")) || StrEqual(arg, "@all"))) {
+			if (IsClientInGame(client2) && ((GetClientTeam(client) == 2 && StrEqual(arg, "@red")) || (GetClientTeam(client) == 3 && StrEqual(arg, "@blue")) || (IsFakeClient(client2) && StrEqual(arg, "@bots")) || (!IsFakeClient(client2) && StrEqual(arg, "@humans")) || (client2 == client && StrEqual(arg, "@me")) || StrEqual(arg, "@all"))) {
 				CollectedPowerup(client2, newpowerup);
 			}
 		}
@@ -485,7 +489,12 @@ public Action sm_spawnpowerup(int client, int args) {
 	GetCollisionPoint(client, points);
 	char arg1[3];
 	GetCmdArg(1, arg1, sizeof(arg1));
-	SpawnPowerup(points, false, StringToInt(arg1));
+	if(StringToInt(arg1) == -2){
+		SpawnGift(points);
+	}
+	else{
+		SpawnPowerup(points, false, StringToInt(arg1));
+	}
 	return Plugin_Handled;
 }
 
@@ -522,6 +531,7 @@ public bool TraceEntityFilterPlayer(int entity, int contentsMask) {
 ==================================================================================================== */
 
 public Action teamplay_round_start(Event event, const char[] name, bool dontBroadcast) {
+	RoundTime = GetGameTime();
 	VictoryTeam = -1;
 	PlayersAmount = 0;
 	if (!GameRules_GetProp("m_bInWaitingForPlayers")) {
@@ -701,42 +711,20 @@ public void GetSpawns(bool UsingGiftHunt) {
 					DebugText("Spawning powerup %d at %f, %f, %f", itemloop, coords[0], coords[1], coords[2]);
 					SpawnPowerup(coords, true);
 				}
-				if (flipx && flipy) {
-					if (coords[0] != centerx || coords[1] != centery) {
-						coords[0] = coords[0] - ((coords[0] - centerx) * 2);
-						coords[1] = coords[1] - ((coords[1] - centery) * 2);
-						DebugText("Flipping both axes, new entity created at %f, %f, %f", coords[0], coords[1], coords[2]);
-						if (UsingGiftHunt) {
-							SpawnGift(coords);
-						} else {
-							SpawnPowerup(coords, true);
-						}
+				bool flipped = false;
+				if(flipx && coords[0] != centerx){
+					flipped = true;
+					coords[0] = coords[0] - ((coords[0] - centerx) * 2);
+				}
+				if(flipy && coords[1] != centery){
+					flipped = true;
+					coords[1] = coords[1] - ((coords[1] - centery) * 2);
+				}
+				if(flipped){
+					if (UsingGiftHunt) {
+						SpawnGift(coords);
 					} else {
-						DebugText("Entity is at the center and will not be flipped");
-   	 				}
-				} else if (flipx) {
-					if (coords[0] != centerx) {
-						coords[0] = coords[0] - ((coords[0] - centerx) * 2);
-						DebugText("Flipping X axis, new entity created at %f, %f, %f", coords[0], coords[1], coords[2]);
-						if (UsingGiftHunt) {
-							SpawnGift(coords);
-						} else {
-							SpawnPowerup(coords, true);
-						}
-					} else {
-						DebugText("Entity is at the X axis center and will not be flipped");
-    				}
-				} else if (flipy) {
-					if (coords[1] != centery) {
-						coords[1] = coords[1] - ((coords[1] - centery) * 2);
-						DebugText("Flipping Y axis, new entity created at %f, %f, %f", coords[0], coords[1], coords[2]);
-						if (UsingGiftHunt) {
-							SpawnGift(coords);
-						} else {
-							SpawnPowerup(coords, true);
-						}
-					} else {
-						DebugText("Entity is at the Y axis center and will not be flipped");
+						SpawnPowerup(coords, true);
 					}
 				}
 			}
@@ -750,7 +738,7 @@ public void GetSpawns(bool UsingGiftHunt) {
 public void RemoveAllPowerups() {
 	int entity = -1;
 	while ((entity = FindEntityByClassname(entity, "tf_halloween_pickup")) != -1) {
-		if (0 < entity <= MAX_EDICTS && IsValidEntity(entity)) {
+		if (0 < entity <= MAX_EDICTS && IsValidEntity(entity) && Powerup[entity] != 0) {
 			RemoveEntity(entity);
 		}
 	}
@@ -784,7 +772,7 @@ public void OnEntityDestroyed(int entity) {
 		delete DestroyPowerupHandle[entity];
 		char classname[60];
 		GetEntityClassname(entity, classname, sizeof(classname));
-		if (StrEqual(classname, "tf_halloween_pickup") && Powerup[entity] == 0) { // This is just an optimizer, the same thing would happen without this but slower
+		if (StrEqual(classname, "tf_halloween_pickup") && Powerup[entity] == -2) { // This is just an optimizer, the same thing would happen without this but slower
 			char giftidsandstuff[20];
 			Format(giftidsandstuff, sizeof(giftidsandstuff), "fb_giftid_%d", entity);
 			int entity2 = 0;
@@ -830,7 +818,7 @@ public Action Timer_MiscTimer(Handle timer, any data) {
 		if (NumberOfActiveGifts() == 0 && !GiftHuntSetup && (GiftsCollected[2] < GiftGoal || GiftsCollected[3] < GiftGoal)) {
 			GetSpawns(true);
 		}
-		if (GiftHuntIncrementTime < GetGameTime() && (GiftsCollected[2] >= GiftGoal || GiftsCollected[3] >= GiftGoal) && sm_fortressblast_gifthunt_multiply.BoolValue) {
+		if (GiftHuntIncrementTime < (GetGameTime() - RoundTime) && (GiftsCollected[2] >= GiftGoal || GiftsCollected[3] >= GiftGoal) && sm_fortressblast_gifthunt_multiply.BoolValue) {
 			if (GiftsCollected[3] < GiftGoal && GiftMultiplier[3] < 5) {
 				GiftMultiplier[3]++;
 				PrintCenterTextAll("Catchup bonus: Gifts are now worth x%d for BLU team.", GiftMultiplier[3]);
@@ -838,8 +826,8 @@ public Action Timer_MiscTimer(Handle timer, any data) {
 				GiftMultiplier[2]++;
 				PrintCenterTextAll("Catchup bonus: Gifts are now worth x%d for RED team.", GiftMultiplier[2]);
 			}
-			DebugText("Incremenet time is %f , game time is %f", GiftHuntIncrementTime, GetGameTime());
-			GiftHuntIncrementTime = GetGameTime() + 60.0;
+			DebugText("Incremenet time is %f , round time time is %f", GiftHuntIncrementTime, (GetGameTime() - RoundTime));
+			GiftHuntIncrementTime = (GetGameTime() - RoundTime) + 60.0;
 		}
 	}
 	for (int client = 1 ; client <= MaxClients ; client++ ) {
@@ -864,7 +852,7 @@ public Action Timer_MiscTimer(Handle timer, any data) {
 				float angles[3];
 				GetClientAbsAngles(client, angles);
 				if (!TF2_IsPlayerInCondition(client, TFCond_Taunting)) {
-					float ang = Sine((3.16159265 * sm_fortressblast_dizzy_states.FloatValue * DizzyProgress[client]) / (10 * sm_fortressblast_dizzy_length.FloatValue)) * ((10 * sm_fortressblast_dizzy_length.FloatValue) - DizzyProgress[client]);
+					float ang = Sine((3.14159265 * sm_fortressblast_dizzy_states.FloatValue * DizzyProgress[client]) / (10 * sm_fortressblast_dizzy_length.FloatValue)) * ((10 * sm_fortressblast_dizzy_length.FloatValue) - DizzyProgress[client]);
 					if (NegativeDizzy[client]) {
 						angles[2] = (ang * -1);
 					} else {
@@ -886,7 +874,7 @@ public int NumberOfActiveGifts() {
 	int totalgifts;
 	int entity;
 	while ((entity = FindEntityByClassname(entity, "tf_halloween_pickup")) != -1) {
-		if (Powerup[entity] == 0) {
+		if (Powerup[entity] == -2) {
 			totalgifts++;
 		}
 	}
@@ -984,6 +972,7 @@ public void OnClientPutInServer(int client) {
 	}
 	DizzyProgress[client] = -1;
 	Building[client] = -1;
+	SpeedRotationsLeft[client] = 0;
 }
 
 /* SpawnPowerup() + SpawnGift()
@@ -995,13 +984,7 @@ stock int SpawnPowerup(float location[3], bool respawn, int id = 0) {
 	DispatchKeyValue(entity, "powerup_model", "models/fortressblast/pickups/fb_pickup.mdl");
 	if (IsValidEdict(entity)) {
 		if (id == 0) {
-			if (sm_fortressblast_ultra_spawnchance.FloatValue > GetSMRandomFloat(0.0, 99.99)) {
-				Powerup[entity] = -1;
-			} else {
-				while (Powerup[entity] == 0 || !PowerupIsEnabled(Powerup[entity]) || (Powerup[entity] == 16 && !ScreamFortress())) {
-					Powerup[entity] = GetSMRandomInt(1, NumberOfPowerups);
-				}
-			}
+			Powerup[entity] = RandomPowerup(true);
 		} else {
 			Powerup[entity] = id;
 		}
@@ -1127,7 +1110,7 @@ public int SpawnGift(float location[3]) {
 		ActivateEntity(entity);
 		TeleportEntity(entity, location, NULL_VECTOR, NULL_VECTOR);
 		SDKHook(entity, SDKHook_StartTouch, OnStartTouchDontRespawn);
-		Powerup[entity] = 0;
+		Powerup[entity] = -2;
 		int entity2 = CreateEntityByName("env_sprite");
 		if (IsValidEntity(entity2)) {
 			DispatchKeyValue(entity2, "model", "sprites/fortressblast/gift_located_here.vmt");
@@ -1258,7 +1241,7 @@ public void CollectedGift(int client) {
 	GiftsCollected[team] = GiftsCollected[team] + GiftMultiplier[team];
 	// A team has reached the gift goal
 	if (GiftsCollected[team] >= GiftGoal && GiftsCollected[team] < (GiftGoal + GiftMultiplier[team])) {
-		GiftHuntIncrementTime = GetGameTime() + 60.0;
+		GiftHuntIncrementTime = (GetGameTime() - RoundTime) + 60.0;
 		if (team == 2) {
 			GiftMultiplier[2] = 1;
 			PrintCenterTextAll("RED team has collected the required number of gifts!");
@@ -1344,11 +1327,6 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	if (UsingPowerup[6][client] || FrostTouchFrozen[client]) {
 		buttons &= ~IN_ATTACK;
 		buttons &= ~IN_ATTACK2;
-	}
-	if (IsValidEntity(GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon"))) {
-		if (GetEntProp(GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon"), Prop_Send, "m_iItemDefinitionIndex") == 28 && !MegaMannVerified[client] && UsingPowerup[8][client]) {
-			buttons &= ~IN_ATTACK;
-		}
 	}
 	if ((UsingPowerup[12][client] || UltraPowerup[client]) && IsPlayerAlive(client) && GameRules_GetProp("m_bTruceActive") == 0) {
 		float pos1[3];
@@ -1649,7 +1627,6 @@ public void UsePowerup(int client) {
 		}
 		SetVariantString("1.75 0");
 		AcceptEntityInput(client, "SetModelScale");
-		MegaMannVerified[client] = true;
 	} else if (Powerup[client] == 9) {
 		// Frost Touch - Freeze touched players for 3 seconds within 8 seconds
 		EmitAmbientSound("fortressblast2/frosttouch_use.mp3", vel, client);
@@ -1662,11 +1639,7 @@ public void UsePowerup(int client) {
 		if (GetSMRandomFloat(0.0, 99.99) < 75.0 && AprilFools() && PowerupIsEnabled(5)) {
 			Powerup[client] = 5;
 		} else {
-			int mysrand = 10;
-			while (mysrand == 10 || !PowerupIsEnabled(mysrand) || (BlockPowerup(client, mysrand) && !BlockPowerup(client, 10))) {
-				mysrand = GetSMRandomInt(1, NumberOfPowerups);
-			}
-			Powerup[client] = mysrand;
+			Powerup[client] = RandomPowerup(false);
 		}
 		UsePowerup(client);
 	} else if (Powerup[client] == 11) {
@@ -1835,7 +1808,7 @@ public Action OnStartTouchDontRespawn(int entity, int other) {
 
 public void DeletePowerup(int entity, int other) {
 	RemoveEntity(entity);
-	if (Powerup[entity] == 0) {
+	if (Powerup[entity] == -2) {
 		CollectedGift(other);
 		return;
 	}
@@ -1863,7 +1836,7 @@ public Action Timer_RespawnPowerup(Handle timer, Handle coordskv) {
 ==================================================================================================== */
 
 public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int damagecustom) {
-	if (damagecustom != TF_CUSTOM_TELEFRAG && damagecustom != TF_CUSTOM_BACKSTAB && (UsingPowerup[2][victim] || FrostTouchFrozen[victim] == 1 || UltraPowerup[victim])) {
+	if (damagecustom != TF_CUSTOM_TELEFRAG && damagecustom != TF_CUSTOM_BACKSTAB && (weapon < 1 || GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") != 460)/* The Enforcer-- could check stats instead of index ID, this would make new dependencies*/ && (UsingPowerup[2][victim] || FrostTouchFrozen[victim] == 1 || UltraPowerup[victim])) {
 		if (FrostTouchFrozen[victim] == 1) {
 			damage = damage * 0.1;
 			DebugText("%N was in frozen state %d", victim, FrostTouchFrozen[victim]);
@@ -2656,7 +2629,7 @@ public int AdminFlagInit() {
 	return ADMFLAG_ROOT;
 }
 
-public void BlockAttacking(int client, float time) { // Roll the Dice function with new syntax
+public void BlockAttacking(int client, float time) {
 	for (int weapon = 0; weapon <= 5 ; weapon++) {
 		if (GetPlayerWeaponSlot(client, weapon) != -1) {
 			SetEntPropFloat(GetPlayerWeaponSlot(client, weapon), Prop_Send, "m_flNextPrimaryAttack", GetGameTime() + time);
@@ -2739,6 +2712,18 @@ stock float GetSMRandomFloat(float min, float max) {
 
 stock void RemoveSpeedBonus(int client) {
 	TF2_AddCondition(client, TFCond_SpeedBuffAlly, 0.0);
+}
+
+stock int RandomPowerup(bool CanChooseMystery){
+	if (sm_fortressblast_ultra_spawnchance.FloatValue > GetSMRandomFloat(0.0, 99.99)) {
+		return -1;
+	} else {
+		int returnpowerup;
+		while (returnpowerup == 0 || !PowerupIsEnabled(returnpowerup) || (returnpowerup == 16 && !ScreamFortress()) || (returnpowerup == 10 && !CanChooseMystery)) {
+			returnpowerup = GetSMRandomInt(1, NumberOfPowerups);
+		}
+		return returnpowerup;
+	}
 }
 
 /* Events/Holidays
