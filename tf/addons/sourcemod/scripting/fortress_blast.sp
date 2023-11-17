@@ -55,7 +55,6 @@ bool UltraPowerup[MAXPLAYERS + 1] = {false, ...};
 bool UsingPowerup[NUMBER_OF_POWERUPS + 1][MAXPLAYERS + 1];
 bool GiftHuntAttackDefense = false;
 bool GiftHuntNeutralFlag = false;
-bool GiftHuntSetup = false;
 float RoundTime = 0.0;
 float GiftHuntIncrementTime = 0.0;
 float OldSpeed[MAXPLAYERS + 1] = {0.0, ...};
@@ -611,9 +610,6 @@ public void GetSpawns(bool UsingGiftHunt) {
 				char mode[30];
 				handle.GetString("mode", mode, sizeof(mode));
 				GiftHuntAttackDefense = StrEqual(mode, "attackdefense", true);
-				if (GiftHuntAttackDefense) {
-					GiftHuntSetup = true;
-				}
 			}
 			// Disable capturing control points
 			EntFire("trigger_capture_area", "SetTeamCanCap", "2 0");
@@ -739,7 +735,7 @@ public void RemoveAllPowerups() {
 	int entity = -1;
 	while ((entity = FindEntityByClassname(entity, "tf_halloween_pickup")) != -1) {
 		if (0 < entity <= MAX_EDICTS && IsValidEntity(entity) && Powerup[entity] != 0) {
-			RemoveEntity(entity);
+			RemovePowerup(entity);
 		}
 	}
 }
@@ -757,7 +753,6 @@ public void CalculateGiftGoal() {
 
 public Action teamplay_setup_finished(Event event, const char[] name, bool dontBroadcast) {
 	if (GiftHuntAttackDefense) {
-		GiftHuntSetup = false;
 		EntFire("team_round_timer", "Pause");
 	}
 	return Plugin_Continue;
@@ -815,7 +810,7 @@ Handles multiple plugin features including Gift Hunt, Super Speed and Dizzy Bomb
 
 public Action Timer_MiscTimer(Handle timer, any data) {
 	if (GiftHunt) {
-		if (NumberOfActiveGifts() == 0 && !GiftHuntSetup && (GiftsCollected[2] < GiftGoal || GiftsCollected[3] < GiftGoal)) {
+		if (NumberOfActiveGifts() == 0 && !GameRules_GetProp("m_bInSetup") && (GiftsCollected[2] < GiftGoal || GiftsCollected[3] < GiftGoal)) {
 			GetSpawns(true);
 		}
 		if (GiftHuntIncrementTime < (GetGameTime() - RoundTime) && (GiftsCollected[2] >= GiftGoal || GiftsCollected[3] >= GiftGoal) && sm_fortressblast_gifthunt_multiply.BoolValue) {
@@ -1806,7 +1801,7 @@ public Action OnStartTouchDontRespawn(int entity, int other) {
 	return Plugin_Continue;
 }
 
-public void DeletePowerup(int entity, int other) {
+public void DeletePowerup(int entity, int other = 0) {
 	RemoveEntity(entity);
 	if (Powerup[entity] == -2) {
 		CollectedGift(other);
@@ -1815,6 +1810,7 @@ public void DeletePowerup(int entity, int other) {
 	if (0 < other <= MaxClients && IsClientInGame(other)) {
 		CollectedPowerup(other, Powerup[entity]);
 	}
+	Powerup[entity] = 0;
 }
 
 public Action Timer_RespawnPowerup(Handle timer, Handle coordskv) {
