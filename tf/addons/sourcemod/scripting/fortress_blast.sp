@@ -1128,7 +1128,9 @@ public int SpawnGift(float location[3]) {
 public bool PowerupIsEnabled(int id) {
 	int max = (Bitfieldify(NumberOfPowerups) * 2) - 1;
 	int bitfield = sm_fortressblast_powerups.IntValue;
-	if (bitfield == -1) {
+	if(id == 16 && !ScreamFortress()){// Put this first so that the "all powerups" fallback doesn't inadverdantly enable Ghost
+		return false;
+	} else if (bitfield == -1) {
 		return true; // All powerups enabled
 	} else if (bitfield < 1 || bitfield > max) {
 		PrintToServer("%s Your powerup whitelist ConVar is out of range. As a fallback, all powerups are allowed.", MESSAGE_PREFIX_NO_COLOR);
@@ -1455,7 +1457,7 @@ public bool BlockPowerup(int client, int testpowerup) {
 			return true;
 		}
 	} else if (testpowerup == 16 && !ScreamFortress()) {
-		return true; // Check specific to Mystery, Ghost is a halloween-restricted powerup
+		return true; // Check specific to Mystery, Ghost is a halloween-restricted powerup. Do we still need this now that the logic has moved? Maybe keep it just for sm_setpowerup usage
 	}
 	return false;
 }
@@ -2715,7 +2717,7 @@ stock int RandomPowerup(bool CanChooseMystery){
 		return -1;
 	} else {
 		int returnpowerup;
-		while (returnpowerup == 0 || !PowerupIsEnabled(returnpowerup) || (returnpowerup == 16 && !ScreamFortress()) || (returnpowerup == 10 && !CanChooseMystery)) {
+		while (returnpowerup == 0 || !PowerupIsEnabled(returnpowerup) || (returnpowerup == 10 && !CanChooseMystery)) {
 			returnpowerup = GetSMRandomInt(1, NumberOfPowerups);
 		}
 		return returnpowerup;
